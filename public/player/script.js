@@ -321,24 +321,22 @@ class AdvancedVideoPlayerBrowser {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
     
-                // Encode each segment of the path for proper URL handling
+                // Encode path for Nginx alias
                 const encodedPath = item.path
                     .split('/')
                     .map(segment => encodeURIComponent(segment))
                     .join('/');
     
-                // Set video source using path segments, not query parameters
                 this.videoSource.src = `/player/videos/${encodedPath}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
-    
                 this.videoPlayer.style.display = 'block';
                 this.updateVideoInfo(videoData);
     
                 // Restore progress if available
                 this.restoreProgress(item.path);
     
-                // Switch to browser tab (or keep as needed)
+                // Switch to browser tab
                 this.switchTab('browser');
             } else {
                 alert('Error loading video: ' + videoData.error);
