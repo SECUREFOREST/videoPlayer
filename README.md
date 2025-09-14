@@ -64,7 +64,7 @@ A comprehensive Node.js application for browsing files and watching videos with 
    npm run dev
    ```
 
-5. **Open your browser** and go to `http://localhost:3000`
+5. **Open your browser** and go to `http://localhost:4000`
 
 ## 📁 Project Structure
 

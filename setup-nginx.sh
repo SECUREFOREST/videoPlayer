@@ -104,7 +104,7 @@ ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
-Environment=PORT=3000
+Environment=PORT=4000
 
 [Install]
 WantedBy=multi-user.target

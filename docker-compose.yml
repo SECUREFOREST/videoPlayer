@@ -5,7 +5,7 @@ services:
     build: .
     container_name: video-player-app
     ports:
-      - "3000:3000"
+      - "4000:4000"
     volumes:
       - ./videos:/app/videos
       - ./thumbnails:/app/thumbnails
@@ -14,10 +14,10 @@ services:
       - ./favorites.json:/app/favorites.json
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=4000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/browse', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/browse', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3
