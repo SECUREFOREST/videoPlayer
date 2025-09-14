@@ -17,9 +17,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Serve static files from the public directory
-app.use('/videos', express.static(path.join(__dirname, 'videos')));
-app.use('/thumbnails', express.static(path.join(__dirname, 'thumbnails')));
+// Serve static files from the public directory under /player/ path
+app.use('/player/videos', express.static(path.join(__dirname, 'videos')));
+app.use('/player/thumbnails', express.static(path.join(__dirname, 'thumbnails')));
 
 // Helper function to check if file is video
 function isVideoFile(extension) {
@@ -44,7 +44,7 @@ function getVideoMimeType(extension) {
 }
 
 // API endpoint to get directory contents
-app.get('/api/browse', (req, res) => {
+app.get('/player/api/browse', (req, res) => {
   const directoryPath = req.query.path || process.cwd();
   const search = req.query.search || '';
   const sortBy = req.query.sortBy || 'name';
@@ -123,7 +123,7 @@ app.get('/api/browse', (req, res) => {
 });
 
 // API endpoint to get video info
-app.get('/api/video-info', (req, res) => {
+app.get('/player/api/video-info', (req, res) => {
   const videoPath = req.query.path;
   
   if (!videoPath) {
@@ -152,7 +152,7 @@ app.get('/api/video-info', (req, res) => {
 });
 
 // API endpoint to generate video thumbnail
-app.get('/api/thumbnail', async (req, res) => {
+app.get('/player/api/thumbnail', async (req, res) => {
   const videoPath = req.query.path;
   const timestamp = req.query.timestamp || '00:00:05';
   
@@ -177,7 +177,7 @@ app.get('/api/thumbnail', async (req, res) => {
     
     // Check if thumbnail already exists
     if (fs.existsSync(thumbnailPath)) {
-      return res.json({ thumbnailUrl: `/thumbnails/${path.basename(thumbnailPath)}` });
+      return res.json({ thumbnailUrl: `/player/thumbnails/${path.basename(thumbnailPath)}` });
     }
     
     // Generate thumbnail using ffmpeg
@@ -185,7 +185,7 @@ app.get('/api/thumbnail', async (req, res) => {
     
     try {
       await execAsync(command);
-      res.json({ thumbnailUrl: `/thumbnails/${path.basename(thumbnailPath)}` });
+      res.json({ thumbnailUrl: `/player/thumbnails/${path.basename(thumbnailPath)}` });
     } catch (ffmpegError) {
       // If ffmpeg fails, return a default thumbnail
       res.json({ thumbnailUrl: null });
@@ -196,7 +196,7 @@ app.get('/api/thumbnail', async (req, res) => {
 });
 
 // API endpoint to search files recursively
-app.get('/api/search', (req, res) => {
+app.get('/player/api/search', (req, res) => {
   const searchTerm = req.query.q;
   const searchPath = req.query.path || process.cwd();
   const fileType = req.query.type || 'all';
@@ -262,7 +262,7 @@ app.get('/api/search', (req, res) => {
 });
 
 // API endpoint to manage playlists
-app.get('/api/playlists', (req, res) => {
+app.get('/player/api/playlists', (req, res) => {
   try {
     const playlistsFile = path.join(__dirname, 'playlists.json');
     if (fs.existsSync(playlistsFile)) {
@@ -276,7 +276,7 @@ app.get('/api/playlists', (req, res) => {
   }
 });
 
-app.post('/api/playlists', (req, res) => {
+app.post('/player/api/playlists', (req, res) => {
   try {
     const playlistsFile = path.join(__dirname, 'playlists.json');
     const { name, videos } = req.body;
@@ -304,7 +304,7 @@ app.post('/api/playlists', (req, res) => {
 });
 
 // API endpoint to manage favorites
-app.get('/api/favorites', (req, res) => {
+app.get('/player/api/favorites', (req, res) => {
   try {
     const favoritesFile = path.join(__dirname, 'favorites.json');
     if (fs.existsSync(favoritesFile)) {
@@ -318,7 +318,7 @@ app.get('/api/favorites', (req, res) => {
   }
 });
 
-app.post('/api/favorites', (req, res) => {
+app.post('/player/api/favorites', (req, res) => {
   try {
     const favoritesFile = path.join(__dirname, 'favorites.json');
     const { path: filePath, name } = req.body;
@@ -351,7 +351,7 @@ app.post('/api/favorites', (req, res) => {
   }
 });
 
-app.delete('/api/favorites/:id', (req, res) => {
+app.delete('/player/api/favorites/:id', (req, res) => {
   try {
     const favoritesFile = path.join(__dirname, 'favorites.json');
     const { id } = req.params;
@@ -371,9 +371,14 @@ app.delete('/api/favorites/:id', (req, res) => {
   }
 });
 
-// Serve the main HTML file
-app.get('/', (req, res) => {
+// Serve the main HTML file under /player/ path
+app.get('/player/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Redirect root to /player/
+app.get('/', (req, res) => {
+  res.redirect('/player/');
 });
 
 app.listen(PORT, () => {

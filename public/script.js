@@ -150,7 +150,7 @@ class AdvancedVideoPlayerBrowser {
                 filterType: this.filterType.value
             });
             
-            const response = await fetch(`/api/browse?${params}`);
+            const response = await fetch(`/player/api/browse?${params}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -275,7 +275,7 @@ class AdvancedVideoPlayerBrowser {
     
     async loadThumbnail(item, container) {
         try {
-            const response = await fetch(`/api/thumbnail?path=${encodeURIComponent(item.path)}`);
+            const response = await fetch(`/player/api/thumbnail?path=${encodeURIComponent(item.path)}`);
             const data = await response.json();
             
             if (data.thumbnailUrl) {
@@ -314,13 +314,13 @@ class AdvancedVideoPlayerBrowser {
     
     async playVideo(item) {
         try {
-            const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
+            const response = await fetch(`/player/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
             
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
-                this.videoSource.src = `/videos?path=${encodeURIComponent(item.path)}`;
+                this.videoSource.src = `/player/videos?path=${encodeURIComponent(item.path)}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
@@ -498,7 +498,7 @@ class AdvancedVideoPlayerBrowser {
         if (!searchTerm) return;
         
         try {
-            const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value}`);
+            const response = await fetch(`/player/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -556,7 +556,7 @@ class AdvancedVideoPlayerBrowser {
     
     async loadPlaylists() {
         try {
-            const response = await fetch('/api/playlists');
+            const response = await fetch('/player/api/playlists');
             const data = await response.json();
             
             if (response.ok) {
@@ -601,7 +601,7 @@ class AdvancedVideoPlayerBrowser {
     
     async loadFavorites() {
         try {
-            const response = await fetch('/api/favorites');
+            const response = await fetch('/player/api/favorites');
             const data = await response.json();
             
             if (response.ok) {
@@ -676,7 +676,7 @@ class AdvancedVideoPlayerBrowser {
         const videos = this.currentVideo ? [this.currentVideo] : [];
         
         try {
-            const response = await fetch('/api/playlists', {
+            const response = await fetch('/player/api/playlists', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, videos })
@@ -699,7 +699,7 @@ class AdvancedVideoPlayerBrowser {
         if (!this.currentVideo) return;
         
         try {
-            const response = await fetch('/api/favorites', {
+            const response = await fetch('/player/api/favorites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -727,7 +727,7 @@ class AdvancedVideoPlayerBrowser {
     
     async removeFavorite(id) {
         try {
-            const response = await fetch(`/api/favorites/${id}`, { method: 'DELETE' });
+            const response = await fetch(`/player/api/favorites/${id}`, { method: 'DELETE' });
             
             if (response.ok) {
                 this.loadFavorites();
