@@ -316,24 +316,29 @@ class AdvancedVideoPlayerBrowser {
         try {
             const response = await fetch(`/player/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
-            
+    
             if (response.ok) {
-                console.log(videoData)
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
-                const filePath = item.path.split('/').map(encodeURIComponent).join('/');
-                console.log(filePath)
-                videoSource.src = `/player/videos/${filePath}`;
-                console.log(videoSource.src)
+    
+                // Encode each segment of the path for proper URL handling
+                const encodedPath = item.path
+                    .split('/')
+                    .map(segment => encodeURIComponent(segment))
+                    .join('/');
+    
+                // Set video source using path segments, not query parameters
+                this.videoSource.src = `/player/videos/${encodedPath}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
+    
                 this.videoPlayer.style.display = 'block';
                 this.updateVideoInfo(videoData);
-                
+    
                 // Restore progress if available
                 this.restoreProgress(item.path);
-                
-                // Switch to video player tab
+    
+                // Switch to browser tab (or keep as needed)
                 this.switchTab('browser');
             } else {
                 alert('Error loading video: ' + videoData.error);
