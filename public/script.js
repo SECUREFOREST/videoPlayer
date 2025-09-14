@@ -320,9 +320,10 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
-                
                 const filePath = item.path.split('/').map(encodeURIComponent).join('/');
-                videoSource.src = `/player/videos${filePath}`;
+                console.log(filePath)
+                videoSource.src = `/player/videos/${filePath}`;
+                console.log(videoSource.src)
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
