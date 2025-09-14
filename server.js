@@ -61,7 +61,9 @@ app.get('/player/api/browse', (req, res) => {
     let directoryPath;
     try {
         directoryPath = resolveSafePath(relativePath);
+        console.log(directoryPath)
     } catch (err) {
+        console.log(err)
         return res.status(403).json({ error: 'Access denied' });
     }
     const search = req.query.search || '';
