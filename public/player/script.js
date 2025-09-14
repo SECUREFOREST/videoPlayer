@@ -320,14 +320,15 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
-    
+                console.log(item.path)
                 // Encode path for Nginx alias
                 const encodedPath = item.path
                 .split('/')
                 .map(segment => encodeURIComponent(segment))
                 .join('/');
-            
+                console.log(encodedPath)
             this.videoSource.src = `/player/videos/${encodedPath}`;
+            console.log(this.videoSource.src)
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
