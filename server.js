@@ -74,23 +74,25 @@ app.get('/player/api/browse', (req, res) => {
     try {
         const items = fs.readdirSync(directoryPath, { withFileTypes: true });
 
-        let result = items.map(item => {
-            const fullPath = path.join(directoryPath, item.name);
-            const stats = fs.statSync(fullPath);
-            const extension = path.extname(item.name).toLowerCase();
-        
-            return {
-                name: item.name,
-                path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
-                isDirectory: item.isDirectory(),
-                isFile: item.isFile(),
-                size: stats.size,
-                modified: stats.mtime,
-                extension: extension,
-                isVideo: isVideoFile(extension),
-                mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null
-            };
-        });
+        let result = items
+            .filter(item => !item.name.startsWith('._'))
+            .map(item => {
+                const fullPath = path.join(directoryPath, item.name);
+                const stats = fs.statSync(fullPath);
+                const extension = path.extname(item.name).toLowerCase();
+
+                return {
+                    name: item.name,
+                    path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
+                    isDirectory: item.isDirectory(),
+                    isFile: item.isFile(),
+                    size: stats.size,
+                    modified: stats.mtime,
+                    extension: extension,
+                    isVideo: isVideoFile(extension),
+                    mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null
+                };
+            });
 
         // Apply search filter
         if (search) {
@@ -221,11 +223,11 @@ app.get('/player/api/search', (req, res) => {
     const searchTerm = req.query.q;
     const relativePath = req.query.path || '';
     let searchPath;
-  
+
     try {
-      searchPath = resolveSafePath(relativePath);
+        searchPath = resolveSafePath(relativePath);
     } catch (err) {
-      return res.status(403).json({ error: 'Access denied' });
+        return res.status(403).json({ error: 'Access denied' });
     }
     const fileType = req.query.type || 'all';
 
