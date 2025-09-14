@@ -78,10 +78,10 @@ app.get('/player/api/browse', (req, res) => {
             const fullPath = path.join(directoryPath, item.name);
             const stats = fs.statSync(fullPath);
             const extension = path.extname(item.name).toLowerCase();
-
+        
             return {
                 name: item.name,
-                path: fullPath,
+                path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
                 isDirectory: item.isDirectory(),
                 isFile: item.isFile(),
                 size: stats.size,
@@ -145,7 +145,7 @@ app.get('/player/api/browse', (req, res) => {
 
 // API endpoint to get video info
 app.get('/player/api/video-info', (req, res) => {
-    const videoPath = req.query.path;
+    const videoPath = resolveSafePath(req.query.path)
 
     if (!videoPath) {
         return res.status(400).json({ error: 'Video path is required' });
