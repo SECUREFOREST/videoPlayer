@@ -16,6 +16,7 @@ const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/player', express.static(path.join(__dirname, 'public')));
 
 // Serve static files from the public directory under /player/ path
 app.use('/player/videos', express.static(path.join(__dirname, 'videos')));
