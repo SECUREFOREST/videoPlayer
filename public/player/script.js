@@ -323,11 +323,11 @@ class AdvancedVideoPlayerBrowser {
     
                 // Encode path for Nginx alias
                 const encodedPath = item.path
-                    .split('/')
-                    .map(segment => encodeURIComponent(segment))
-                    .join('/');
-    
-                this.videoSource.src = `/player/videos/${encodedPath}`;
+                .split('/')
+                .map(segment => encodeURIComponent(segment))
+                .join('/');
+            
+            this.videoSource.src = `/player/videos/${encodedPath}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
