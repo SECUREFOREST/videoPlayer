@@ -8,9 +8,20 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 4000;
+const VIDEOS_ROOT = path.join(__dirname, 'videos');
 
 // Supported video formats
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
+
+function resolveSafePath(requestedPath) {
+    // Resolve the absolute path
+    const fullPath = path.join(VIDEOS_ROOT, requestedPath || '');
+    // Ensure the resolved path is inside VIDEOS_ROOT
+    if (!fullPath.startsWith(VIDEOS_ROOT)) {
+        throw new Error('Access denied');
+    }
+    return fullPath;
+}
 
 // Middleware
 app.use(cors());
@@ -24,365 +35,378 @@ app.use('/player/thumbnails', express.static(path.join(__dirname, 'thumbnails'))
 
 // Helper function to check if file is video
 function isVideoFile(extension) {
-  return VIDEO_EXTENSIONS.includes(extension.toLowerCase());
+    return VIDEO_EXTENSIONS.includes(extension.toLowerCase());
 }
 
 // Helper function to get MIME type
 function getVideoMimeType(extension) {
-  const mimeTypes = {
-    '.mp4': 'video/mp4',
-    '.avi': 'video/x-msvideo',
-    '.mov': 'video/quicktime',
-    '.mkv': 'video/x-matroska',
-    '.webm': 'video/webm',
-    '.m4v': 'video/mp4',
-    '.flv': 'video/x-flv',
-    '.wmv': 'video/x-ms-wmv',
-    '.3gp': 'video/3gpp',
-    '.ogv': 'video/ogg'
-  };
-  return mimeTypes[extension.toLowerCase()] || 'video/mp4';
+    const mimeTypes = {
+        '.mp4': 'video/mp4',
+        '.avi': 'video/x-msvideo',
+        '.mov': 'video/quicktime',
+        '.mkv': 'video/x-matroska',
+        '.webm': 'video/webm',
+        '.m4v': 'video/mp4',
+        '.flv': 'video/x-flv',
+        '.wmv': 'video/x-ms-wmv',
+        '.3gp': 'video/3gpp',
+        '.ogv': 'video/ogg'
+    };
+    return mimeTypes[extension.toLowerCase()] || 'video/mp4';
 }
 
 // API endpoint to get directory contents
 app.get('/player/api/browse', (req, res) => {
-  const directoryPath = req.query.path || process.cwd();
-  const search = req.query.search || '';
-  const sortBy = req.query.sortBy || 'name';
-  const sortOrder = req.query.sortOrder || 'asc';
-  const filterType = req.query.filterType || 'all';
-  
-  try {
-    const items = fs.readdirSync(directoryPath, { withFileTypes: true });
-    
-    let result = items.map(item => {
-      const fullPath = path.join(directoryPath, item.name);
-      const stats = fs.statSync(fullPath);
-      const extension = path.extname(item.name).toLowerCase();
-      
-      return {
-        name: item.name,
-        path: fullPath,
-        isDirectory: item.isDirectory(),
-        isFile: item.isFile(),
-        size: stats.size,
-        modified: stats.mtime,
-        extension: extension,
-        isVideo: isVideoFile(extension),
-        mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null
-      };
-    });
-
-    // Apply search filter
-    if (search) {
-      result = result.filter(item => 
-        item.name.toLowerCase().includes(search.toLowerCase())
-      );
+    const relativePath = req.query.path || '';
+    let directoryPath;
+    try {
+        directoryPath = resolveSafePath(relativePath);
+    } catch (err) {
+        return res.status(403).json({ error: 'Access denied' });
     }
+    const search = req.query.search || '';
+    const sortBy = req.query.sortBy || 'name';
+    const sortOrder = req.query.sortOrder || 'asc';
+    const filterType = req.query.filterType || 'all';
 
-    // Apply type filter
-    if (filterType !== 'all') {
-      if (filterType === 'videos') {
-        result = result.filter(item => item.isVideo);
-      } else if (filterType === 'directories') {
-        result = result.filter(item => item.isDirectory);
-      } else if (filterType === 'files') {
-        result = result.filter(item => item.isFile && !item.isVideo);
-      }
+    try {
+        const items = fs.readdirSync(directoryPath, { withFileTypes: true });
+
+        let result = items.map(item => {
+            const fullPath = path.join(directoryPath, item.name);
+            const stats = fs.statSync(fullPath);
+            const extension = path.extname(item.name).toLowerCase();
+
+            return {
+                name: item.name,
+                path: fullPath,
+                isDirectory: item.isDirectory(),
+                isFile: item.isFile(),
+                size: stats.size,
+                modified: stats.mtime,
+                extension: extension,
+                isVideo: isVideoFile(extension),
+                mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null
+            };
+        });
+
+        // Apply search filter
+        if (search) {
+            result = result.filter(item =>
+                item.name.toLowerCase().includes(search.toLowerCase())
+            );
+        }
+
+        // Apply type filter
+        if (filterType !== 'all') {
+            if (filterType === 'videos') {
+                result = result.filter(item => item.isVideo);
+            } else if (filterType === 'directories') {
+                result = result.filter(item => item.isDirectory);
+            } else if (filterType === 'files') {
+                result = result.filter(item => item.isFile && !item.isVideo);
+            }
+        }
+
+        // Apply sorting
+        result.sort((a, b) => {
+            let comparison = 0;
+
+            if (sortBy === 'name') {
+                comparison = a.name.localeCompare(b.name);
+            } else if (sortBy === 'size') {
+                comparison = a.size - b.size;
+            } else if (sortBy === 'modified') {
+                comparison = new Date(a.modified) - new Date(b.modified);
+            } else if (sortBy === 'type') {
+                comparison = a.extension.localeCompare(b.extension);
+            }
+
+            // Sort directories first, then files
+            if (a.isDirectory && !b.isDirectory) return -1;
+            if (!a.isDirectory && b.isDirectory) return 1;
+
+            return sortOrder === 'desc' ? -comparison : comparison;
+        });
+
+        res.json({
+            currentPath: directoryPath,
+            parentPath: path.dirname(directoryPath),
+            items: result,
+            totalItems: result.length
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to read directory' });
     }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      let comparison = 0;
-      
-      if (sortBy === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === 'size') {
-        comparison = a.size - b.size;
-      } else if (sortBy === 'modified') {
-        comparison = new Date(a.modified) - new Date(b.modified);
-      } else if (sortBy === 'type') {
-        comparison = a.extension.localeCompare(b.extension);
-      }
-      
-      // Sort directories first, then files
-      if (a.isDirectory && !b.isDirectory) return -1;
-      if (!a.isDirectory && b.isDirectory) return 1;
-      
-      return sortOrder === 'desc' ? -comparison : comparison;
-    });
-    
-    res.json({
-      currentPath: directoryPath,
-      parentPath: path.dirname(directoryPath),
-      items: result,
-      totalItems: result.length
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to read directory' });
-  }
 });
 
 // API endpoint to get video info
 app.get('/player/api/video-info', (req, res) => {
-  const videoPath = req.query.path;
-  
-  if (!videoPath) {
-    return res.status(400).json({ error: 'Video path is required' });
-  }
-  
-  try {
-    const stats = fs.statSync(videoPath);
-    const ext = path.extname(videoPath).toLowerCase();
-    
-    if (!isVideoFile(ext)) {
-      return res.status(400).json({ error: 'File is not a supported video format' });
+    const videoPath = req.query.path;
+
+    if (!videoPath) {
+        return res.status(400).json({ error: 'Video path is required' });
     }
-    
-    res.json({
-      path: videoPath,
-      size: stats.size,
-      modified: stats.mtime,
-      name: path.basename(videoPath),
-      extension: ext,
-      mimeType: getVideoMimeType(ext)
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to read video file' });
-  }
+
+    try {
+        const stats = fs.statSync(videoPath);
+        const ext = path.extname(videoPath).toLowerCase();
+
+        if (!isVideoFile(ext)) {
+            return res.status(400).json({ error: 'File is not a supported video format' });
+        }
+
+        res.json({
+            path: videoPath,
+            size: stats.size,
+            modified: stats.mtime,
+            name: path.basename(videoPath),
+            extension: ext,
+            mimeType: getVideoMimeType(ext)
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to read video file' });
+    }
 });
 
 // API endpoint to generate video thumbnail
 app.get('/player/api/thumbnail', async (req, res) => {
-  const videoPath = req.query.path;
-  const timestamp = req.query.timestamp || '00:00:05';
-  
-  if (!videoPath) {
-    return res.status(400).json({ error: 'Video path is required' });
-  }
-  
-  try {
-    const ext = path.extname(videoPath).toLowerCase();
-    if (!isVideoFile(ext)) {
-      return res.status(400).json({ error: 'File is not a supported video format' });
+    const videoPath = req.query.path;
+    const timestamp = req.query.timestamp || '00:00:05';
+
+    if (!videoPath) {
+        return res.status(400).json({ error: 'Video path is required' });
     }
-    
-    // Create thumbnails directory if it doesn't exist
-    const thumbnailsDir = path.join(__dirname, 'thumbnails');
-    if (!fs.existsSync(thumbnailsDir)) {
-      fs.mkdirSync(thumbnailsDir, { recursive: true });
-    }
-    
-    const videoName = path.basename(videoPath, ext);
-    const thumbnailPath = path.join(thumbnailsDir, `${videoName}_thumb.jpg`);
-    
-    // Check if thumbnail already exists
-    if (fs.existsSync(thumbnailPath)) {
-      return res.json({ thumbnailUrl: `/player/thumbnails/${path.basename(thumbnailPath)}` });
-    }
-    
-    // Generate thumbnail using ffmpeg
-    const command = `ffmpeg -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
-    
+
     try {
-      await execAsync(command);
-      res.json({ thumbnailUrl: `/player/thumbnails/${path.basename(thumbnailPath)}` });
-    } catch (ffmpegError) {
-      // If ffmpeg fails, return a default thumbnail
-      res.json({ thumbnailUrl: null });
+        const ext = path.extname(videoPath).toLowerCase();
+        if (!isVideoFile(ext)) {
+            return res.status(400).json({ error: 'File is not a supported video format' });
+        }
+
+        // Create thumbnails directory if it doesn't exist
+        const thumbnailsDir = path.join(__dirname, 'thumbnails');
+        if (!fs.existsSync(thumbnailsDir)) {
+            fs.mkdirSync(thumbnailsDir, { recursive: true });
+        }
+
+        const videoName = path.basename(videoPath, ext);
+        const thumbnailPath = path.join(thumbnailsDir, `${videoName}_thumb.jpg`);
+
+        // Check if thumbnail already exists
+        if (fs.existsSync(thumbnailPath)) {
+            return res.json({ thumbnailUrl: `/player/thumbnails/${path.basename(thumbnailPath)}` });
+        }
+
+        // Generate thumbnail using ffmpeg
+        const command = `ffmpeg -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+
+        try {
+            await execAsync(command);
+            res.json({ thumbnailUrl: `/player/thumbnails/${path.basename(thumbnailPath)}` });
+        } catch (ffmpegError) {
+            // If ffmpeg fails, return a default thumbnail
+            res.json({ thumbnailUrl: null });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to generate thumbnail' });
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to generate thumbnail' });
-  }
 });
 
 // API endpoint to search files recursively
 app.get('/player/api/search', (req, res) => {
-  const searchTerm = req.query.q;
-  const searchPath = req.query.path || process.cwd();
-  const fileType = req.query.type || 'all';
+    const searchTerm = req.query.q;
+    const relativePath = req.query.path || '';
+    let searchPath;
   
-  if (!searchTerm) {
-    return res.status(400).json({ error: 'Search term is required' });
-  }
-  
-  try {
-    const results = [];
-    
-    function searchDirectory(dirPath) {
-      try {
-        const items = fs.readdirSync(dirPath, { withFileTypes: true });
-        
-        items.forEach(item => {
-          const fullPath = path.join(dirPath, item.name);
-          
-          if (item.isDirectory()) {
-            searchDirectory(fullPath);
-          } else {
-            const ext = path.extname(item.name).toLowerCase();
-            const stats = fs.statSync(fullPath);
-            
-            const isVideo = isVideoFile(ext);
-            const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            if (matchesSearch) {
-              if (fileType === 'all' || 
-                  (fileType === 'videos' && isVideo) ||
-                  (fileType === 'files' && !isVideo)) {
-                results.push({
-                  name: item.name,
-                  path: fullPath,
-                  isDirectory: false,
-                  isFile: true,
-                  size: stats.size,
-                  modified: stats.mtime,
-                  extension: ext,
-                  isVideo: isVideo,
-                  mimeType: isVideo ? getVideoMimeType(ext) : null,
-                  relativePath: path.relative(searchPath, fullPath)
-                });
-              }
-            }
-          }
-        });
-      } catch (error) {
-        // Skip directories we can't read
-      }
+    try {
+      searchPath = resolveSafePath(relativePath);
+    } catch (err) {
+      return res.status(403).json({ error: 'Access denied' });
     }
-    
-    searchDirectory(searchPath);
-    
-    res.json({
-      results: results,
-      totalResults: results.length,
-      searchTerm: searchTerm
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Search failed' });
-  }
+    const fileType = req.query.type || 'all';
+
+    if (!searchTerm) {
+        return res.status(400).json({ error: 'Search term is required' });
+    }
+
+    try {
+        const results = [];
+
+        function searchDirectory(dirPath) {
+            try {
+                const items = fs.readdirSync(dirPath, { withFileTypes: true });
+
+                items.forEach(item => {
+                    const fullPath = path.join(dirPath, item.name);
+
+                    if (item.isDirectory()) {
+                        searchDirectory(fullPath);
+                    } else {
+                        const ext = path.extname(item.name).toLowerCase();
+                        const stats = fs.statSync(fullPath);
+
+                        const isVideo = isVideoFile(ext);
+                        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+                        if (matchesSearch) {
+                            if (fileType === 'all' ||
+                                (fileType === 'videos' && isVideo) ||
+                                (fileType === 'files' && !isVideo)) {
+                                results.push({
+                                    name: item.name,
+                                    path: fullPath,
+                                    isDirectory: false,
+                                    isFile: true,
+                                    size: stats.size,
+                                    modified: stats.mtime,
+                                    extension: ext,
+                                    isVideo: isVideo,
+                                    mimeType: isVideo ? getVideoMimeType(ext) : null,
+                                    relativePath: path.relative(searchPath, fullPath)
+                                });
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                // Skip directories we can't read
+            }
+        }
+
+        searchDirectory(searchPath);
+
+        res.json({
+            results: results,
+            totalResults: results.length,
+            searchTerm: searchTerm
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Search failed' });
+    }
 });
 
 // API endpoint to manage playlists
 app.get('/player/api/playlists', (req, res) => {
-  try {
-    const playlistsFile = path.join(__dirname, 'playlists.json');
-    if (fs.existsSync(playlistsFile)) {
-      const data = fs.readFileSync(playlistsFile, 'utf8');
-      res.json(JSON.parse(data));
-    } else {
-      res.json({ playlists: [] });
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            res.json(JSON.parse(data));
+        } else {
+            res.json({ playlists: [] });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to load playlists' });
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to load playlists' });
-  }
 });
 
 app.post('/player/api/playlists', (req, res) => {
-  try {
-    const playlistsFile = path.join(__dirname, 'playlists.json');
-    const { name, videos } = req.body;
-    
-    let playlists = { playlists: [] };
-    if (fs.existsSync(playlistsFile)) {
-      const data = fs.readFileSync(playlistsFile, 'utf8');
-      playlists = JSON.parse(data);
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { name, videos } = req.body;
+
+        let playlists = { playlists: [] };
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            playlists = JSON.parse(data);
+        }
+
+        const newPlaylist = {
+            id: Date.now().toString(),
+            name: name,
+            videos: videos || [],
+            created: new Date().toISOString()
+        };
+
+        playlists.playlists.push(newPlaylist);
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+
+        res.json(newPlaylist);
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to save playlist' });
     }
-    
-    const newPlaylist = {
-      id: Date.now().toString(),
-      name: name,
-      videos: videos || [],
-      created: new Date().toISOString()
-    };
-    
-    playlists.playlists.push(newPlaylist);
-    fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
-    
-    res.json(newPlaylist);
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to save playlist' });
-  }
 });
 
 // API endpoint to manage favorites
 app.get('/player/api/favorites', (req, res) => {
-  try {
-    const favoritesFile = path.join(__dirname, 'favorites.json');
-    if (fs.existsSync(favoritesFile)) {
-      const data = fs.readFileSync(favoritesFile, 'utf8');
-      res.json(JSON.parse(data));
-    } else {
-      res.json({ favorites: [] });
+    try {
+        const favoritesFile = path.join(__dirname, 'favorites.json');
+        if (fs.existsSync(favoritesFile)) {
+            const data = fs.readFileSync(favoritesFile, 'utf8');
+            res.json(JSON.parse(data));
+        } else {
+            res.json({ favorites: [] });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to load favorites' });
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to load favorites' });
-  }
 });
 
 app.post('/player/api/favorites', (req, res) => {
-  try {
-    const favoritesFile = path.join(__dirname, 'favorites.json');
-    const { path: filePath, name } = req.body;
-    
-    let favorites = { favorites: [] };
-    if (fs.existsSync(favoritesFile)) {
-      const data = fs.readFileSync(favoritesFile, 'utf8');
-      favorites = JSON.parse(data);
+    try {
+        const favoritesFile = path.join(__dirname, 'favorites.json');
+        const { path: filePath, name } = req.body;
+
+        let favorites = { favorites: [] };
+        if (fs.existsSync(favoritesFile)) {
+            const data = fs.readFileSync(favoritesFile, 'utf8');
+            favorites = JSON.parse(data);
+        }
+
+        // Check if already favorited
+        const exists = favorites.favorites.find(fav => fav.path === filePath);
+        if (exists) {
+            return res.status(400).json({ error: 'Already in favorites' });
+        }
+
+        const newFavorite = {
+            id: Date.now().toString(),
+            name: name,
+            path: filePath,
+            added: new Date().toISOString()
+        };
+
+        favorites.favorites.push(newFavorite);
+        fs.writeFileSync(favoritesFile, JSON.stringify(favorites, null, 2));
+
+        res.json(newFavorite);
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to save favorite' });
     }
-    
-    // Check if already favorited
-    const exists = favorites.favorites.find(fav => fav.path === filePath);
-    if (exists) {
-      return res.status(400).json({ error: 'Already in favorites' });
-    }
-    
-    const newFavorite = {
-      id: Date.now().toString(),
-      name: name,
-      path: filePath,
-      added: new Date().toISOString()
-    };
-    
-    favorites.favorites.push(newFavorite);
-    fs.writeFileSync(favoritesFile, JSON.stringify(favorites, null, 2));
-    
-    res.json(newFavorite);
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to save favorite' });
-  }
 });
 
 app.delete('/player/api/favorites/:id', (req, res) => {
-  try {
-    const favoritesFile = path.join(__dirname, 'favorites.json');
-    const { id } = req.params;
-    
-    let favorites = { favorites: [] };
-    if (fs.existsSync(favoritesFile)) {
-      const data = fs.readFileSync(favoritesFile, 'utf8');
-      favorites = JSON.parse(data);
+    try {
+        const favoritesFile = path.join(__dirname, 'favorites.json');
+        const { id } = req.params;
+
+        let favorites = { favorites: [] };
+        if (fs.existsSync(favoritesFile)) {
+            const data = fs.readFileSync(favoritesFile, 'utf8');
+            favorites = JSON.parse(data);
+        }
+
+        favorites.favorites = favorites.favorites.filter(fav => fav.id !== id);
+        fs.writeFileSync(favoritesFile, JSON.stringify(favorites, null, 2));
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to remove favorite' });
     }
-    
-    favorites.favorites = favorites.favorites.filter(fav => fav.id !== id);
-    fs.writeFileSync(favoritesFile, JSON.stringify(favorites, null, 2));
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Unable to remove favorite' });
-  }
 });
 
 // Serve the main HTML file under /player/ path
 app.get('/player/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Redirect root to /player/
 app.get('/', (req, res) => {
-  res.redirect('/player/');
+    res.redirect('/player/');
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Browse files and watch MP4 videos!`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Browse files and watch MP4 videos!`);
 });
