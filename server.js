@@ -17,6 +17,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+express.static('public', { setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.set('Content-Type', 'application/javascript');
+    }
+  }});
+  
 // Serve static files from the public directory under /player/ path
 app.use('/player/videos', express.static(path.join(__dirname, 'videos')));
 app.use('/player/thumbnails', express.static(path.join(__dirname, 'thumbnails')));
