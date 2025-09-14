@@ -136,6 +136,7 @@ app.get('/player/api/browse', (req, res) => {
             totalItems: result.length
         });
     } catch (error) {
+        console.log(error)
         res.status(500).json({ error: 'Unable to read directory' });
     }
 });
