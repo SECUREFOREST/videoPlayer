@@ -318,6 +318,7 @@ class AdvancedVideoPlayerBrowser {
             const videoData = await response.json();
             
             if (response.ok) {
+                console.log(videoData)
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
                 const filePath = item.path.split('/').map(encodeURIComponent).join('/');
