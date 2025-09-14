@@ -20,6 +20,7 @@ function resolveSafePath(requestedPath) {
     if (!fullPath.startsWith(VIDEOS_ROOT)) {
         throw new Error('Access denied');
     }
+    console.log(fullPath)
     return fullPath;
 }
 
@@ -80,7 +81,6 @@ app.get('/player/api/browse', (req, res) => {
             const fullPath = path.join(directoryPath, item.name);
             const stats = fs.statSync(fullPath);
             const extension = path.extname(item.name).toLowerCase();
-            console.log(item)
             return {
                 name: item.name,
                 path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
