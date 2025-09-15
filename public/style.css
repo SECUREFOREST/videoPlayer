@@ -302,6 +302,7 @@ header h1 {
     border-radius: 3px;
     cursor: pointer;
     position: relative;
+    z-index: 10;
 }
 
 .progress-fill {

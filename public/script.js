@@ -11,6 +11,7 @@ class AdvancedVideoPlayerBrowser {
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
         this.recentlyPlayed = [];
+        this.isDragging = false;
         
         // DOM elements
         this.initializeElements();
@@ -114,6 +115,9 @@ class AdvancedVideoPlayerBrowser {
         this.video.addEventListener('ended', () => this.onVideoEnded());
         this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
         this.progressBar.addEventListener('click', (e) => this.seekTo(e));
+        this.progressBar.addEventListener('mousedown', (e) => this.handleProgressMouseDown(e));
+        this.progressBar.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
+        this.progressBar.addEventListener('mouseup', (e) => this.handleProgressMouseUp(e));
         this.muteBtn.addEventListener('click', () => this.toggleMute());
         this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
         this.speedSelect.addEventListener('change', (e) => this.setPlaybackSpeed(e.target.value));
@@ -144,6 +148,10 @@ class AdvancedVideoPlayerBrowser {
         
         // Fullscreen events
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+        
+        // Global mouse events for progress bar dragging
+        document.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
+        document.addEventListener('mouseup', (e) => this.handleProgressMouseUp(e));
     }
     
     async loadDirectory(path = '') {
@@ -419,9 +427,32 @@ class AdvancedVideoPlayerBrowser {
     }
     
     seekTo(event) {
+        if (!this.progressBar || !this.video.duration) {
+            console.log('Progress bar or video duration not available');
+            return;
+        }
+        
         const rect = this.progressBar.getBoundingClientRect();
         const pos = (event.clientX - rect.left) / rect.width;
-        this.video.currentTime = pos * this.video.duration;
+        const newTime = pos * this.video.duration;
+        
+        console.log('Seeking to:', newTime, 'seconds');
+        this.video.currentTime = newTime;
+    }
+    
+    handleProgressMouseDown(event) {
+        this.isDragging = true;
+        this.seekTo(event);
+    }
+    
+    handleProgressMouseMove(event) {
+        if (this.isDragging) {
+            this.seekTo(event);
+        }
+    }
+    
+    handleProgressMouseUp(event) {
+        this.isDragging = false;
     }
     
     toggleMute() {
@@ -865,6 +896,14 @@ class AdvancedVideoPlayerBrowser {
                 this.video.currentTime = Math.max(0, this.video.currentTime - 10);
                 break;
             case 'ArrowRight':
+                e.preventDefault();
+                this.video.currentTime = Math.min(this.video.duration, this.video.currentTime + 10);
+                break;
+            case 'j':
+                e.preventDefault();
+                this.video.currentTime = Math.max(0, this.video.currentTime - 10);
+                break;
+            case 'l':
                 e.preventDefault();
                 this.video.currentTime = Math.min(this.video.duration, this.video.currentTime + 10);
                 break;
