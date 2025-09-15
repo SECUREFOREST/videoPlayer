@@ -45,11 +45,8 @@ class AdvancedVideoPlayerBrowser {
         // Main elements
         this.videoPlayer = document.getElementById('video-player');
         this.fileList = document.getElementById('file-list');
-        this.currentPathDisplay = document.getElementById('current-path');
-        if (!this.currentPathDisplay) {
-            console.warn('current-path element not found - path display disabled');
-            this.currentPathDisplay = null;
-        }
+        // Path display removed - element no longer exists
+        this.currentPathDisplay = null;
         this.video = document.getElementById('video');
         this.videoSource = document.getElementById('video-source');
         this.videoTitle = document.getElementById('video-title');
@@ -637,8 +634,12 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updatePathDisplay() {
-        if (this.currentPathDisplay) {
-            this.currentPathDisplay.textContent = this.currentPath;
+        try {
+            if (this.currentPathDisplay && this.currentPathDisplay.textContent !== undefined) {
+                this.currentPathDisplay.textContent = this.currentPath;
+            }
+        } catch (error) {
+            console.warn('Error in updatePathDisplay:', error);
         }
     }
     
