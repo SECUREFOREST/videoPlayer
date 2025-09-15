@@ -17,6 +17,18 @@ class AdvancedVideoPlayerBrowser {
         this.loadingStates = new Map();
         this.currentTheme = 'dark';
         
+        // Video player state management
+        this.videoState = {
+            isInitialized: false,
+            isPlaying: false,
+            isMuted: false,
+            volume: 1.0,
+            playbackRate: 1.0,
+            currentTime: 0,
+            duration: 0,
+            isSeeking: false
+        };
+        
         // Performance optimization
         this.debounceTimeout = null;
         this.animationFrame = null;
@@ -95,6 +107,7 @@ class AdvancedVideoPlayerBrowser {
         this.bindEvents();
         this.loadTheme();
         this.setupThemeListener();
+        this.initializeVideoPlayer();
         this.loadDirectory();
         this.loadPlaylists();
         this.loadFavorites();
@@ -279,7 +292,7 @@ class AdvancedVideoPlayerBrowser {
             } else if (item.isVideo) {
                 this.playVideo(item);
             } else {
-                alert('This file type is not supported. Only video files can be played.');
+                this.showStatusMessage('This file type is not supported. Only video files can be played.', 'warning');
             }
         });
         
@@ -311,7 +324,7 @@ class AdvancedVideoPlayerBrowser {
             } else if (item.isVideo) {
                 this.playVideo(item);
             } else {
-                alert('This file type is not supported. Only video files can be played.');
+                this.showStatusMessage('This file type is not supported. Only video files can be played.', 'warning');
             }
         });
         
@@ -369,7 +382,7 @@ class AdvancedVideoPlayerBrowser {
                 // Debug: Check if videoSource exists
                 if (!this.videoSource) {
                     console.error('videoSource element not found!');
-                    alert('Video player not properly initialized');
+                    this.showStatusMessage('Video player not properly initialized', 'error');
                     return;
                 }
                 
@@ -396,10 +409,10 @@ class AdvancedVideoPlayerBrowser {
                 // Switch to video player tab
                 this.switchTab('browser');
             } else {
-                alert('Error loading video: ' + videoData.error);
+                this.showStatusMessage('Error loading video: ' + videoData.error, 'error');
             }
         } catch (error) {
-            alert('Error loading video: ' + error.message);
+            this.showStatusMessage('Error loading video: ' + error.message, 'error');
         }
     }
     
@@ -629,10 +642,10 @@ class AdvancedVideoPlayerBrowser {
                 this.searchCount.textContent = `${data.totalResults} results`;
                 this.switchTab('search-results');
             } else {
-                alert('Search failed: ' + data.error);
+                this.showStatusMessage('Search failed: ' + data.error, 'error');
             }
         } catch (error) {
-            alert('Search error: ' + error.message);
+            this.showStatusMessage('Search error: ' + error.message, 'error');
         }
     }
     
@@ -791,7 +804,7 @@ class AdvancedVideoPlayerBrowser {
     async savePlaylist() {
         const name = this.playlistName.value.trim();
         if (!name) {
-            alert('Please enter a playlist name');
+            this.showStatusMessage('Please enter a playlist name', 'warning');
             return;
         }
         
@@ -807,13 +820,13 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.hidePlaylistModal();
                 this.loadPlaylists();
-                alert('Playlist created successfully!');
+                this.showStatusMessage('Playlist created successfully!', 'success');
             } else {
                 const data = await response.json();
-                alert('Failed to create playlist: ' + data.error);
+                this.showStatusMessage('Failed to create playlist: ' + data.error, 'error');
             }
         } catch (error) {
-            alert('Error creating playlist: ' + error.message);
+            this.showStatusMessage('Error creating playlist: ' + error.message, 'error');
         }
     }
     
@@ -833,17 +846,17 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.favoriteBtn.innerHTML = '<i class="fas fa-heart" style="color: red;"></i>';
                 this.loadFavorites();
-                alert('Added to favorites!');
+                this.showStatusMessage('Added to favorites!', 'success');
             } else {
                 const data = await response.json();
                 if (data.error === 'Already in favorites') {
-                    alert('Already in favorites');
+                    this.showStatusMessage('Already in favorites', 'info');
                 } else {
-                    alert('Failed to add to favorites: ' + data.error);
+                    this.showStatusMessage('Failed to add to favorites: ' + data.error, 'error');
                 }
             }
         } catch (error) {
-            alert('Error adding to favorites: ' + error.message);
+            this.showStatusMessage('Error adding to favorites: ' + error.message, 'error');
         }
     }
     
@@ -854,10 +867,10 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.loadFavorites();
             } else {
-                alert('Failed to remove from favorites');
+                this.showStatusMessage('Failed to remove from favorites', 'error');
             }
         } catch (error) {
-            alert('Error removing from favorites: ' + error.message);
+            this.showStatusMessage('Error removing from favorites: ' + error.message, 'error');
         }
     }
     
@@ -865,7 +878,7 @@ class AdvancedVideoPlayerBrowser {
         try {
             const playlist = this.playlists.find(p => p.id === playlistId);
             if (!playlist || playlist.videos.length === 0) {
-                alert('Playlist is empty');
+                this.showStatusMessage('Playlist is empty', 'warning');
                 return;
             }
             
@@ -877,12 +890,12 @@ class AdvancedVideoPlayerBrowser {
             this.currentPlaylist = playlist;
             this.currentPlaylistIndex = 0;
         } catch (error) {
-            alert('Error playing playlist: ' + error.message);
+            this.showStatusMessage('Error playing playlist: ' + error.message, 'error');
         }
     }
     
     async deletePlaylist(playlistId) {
-        if (!confirm('Are you sure you want to delete this playlist?')) {
+        if (!await this.showConfirmDialog('Are you sure you want to delete this playlist?')) {
             return;
         }
         
@@ -891,13 +904,13 @@ class AdvancedVideoPlayerBrowser {
             
             if (response.ok) {
                 this.loadPlaylists();
-                alert('Playlist deleted successfully');
+                this.showStatusMessage('Playlist deleted successfully', 'success');
             } else {
                 const data = await response.json();
-                alert('Failed to delete playlist: ' + data.error);
+                this.showStatusMessage('Failed to delete playlist: ' + data.error, 'error');
             }
         } catch (error) {
-            alert('Error deleting playlist: ' + error.message);
+            this.showStatusMessage('Error deleting playlist: ' + error.message, 'error');
         }
     }
     
@@ -996,7 +1009,7 @@ class AdvancedVideoPlayerBrowser {
         });
         
         if (videoFiles.length > 0) {
-            alert(`Dropped ${videoFiles.length} video file(s). Note: File upload is not implemented in this demo.`);
+            this.showStatusMessage(`Dropped ${videoFiles.length} video file(s). Note: File upload is not implemented in this demo.`, 'info');
         }
     }
     
@@ -1097,11 +1110,12 @@ class AdvancedVideoPlayerBrowser {
         this.renderRecentlyPlayed();
     }
     
-    clearRecentlyPlayed() {
-        if (confirm('Are you sure you want to clear your recently played history?')) {
+    async clearRecentlyPlayed() {
+        if (await this.showConfirmDialog('Are you sure you want to clear your recently played history?')) {
             this.recentlyPlayed = [];
             this.saveRecentlyPlayed();
             this.renderRecentlyPlayed();
+            this.showStatusMessage('Recently played history cleared', 'success');
         }
     }
     
@@ -1335,6 +1349,54 @@ class AdvancedVideoPlayerBrowser {
         console.error(`Error in ${context}:`, error);
         this.showStatusMessage(`Error: ${error.message || 'Something went wrong'}`, 'error');
         this.announceToScreenReader(`Error: ${error.message || 'Something went wrong'}`);
+    }
+    
+    // Confirmation dialog
+    showConfirmDialog(message) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3>Confirm Action</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="confirm-yes" class="btn btn-primary">Yes</button>
+                        <button id="confirm-no" class="btn btn-secondary">No</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const yesBtn = modal.querySelector('#confirm-yes');
+            const noBtn = modal.querySelector('#confirm-no');
+            
+            yesBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+                resolve(true);
+            });
+            
+            noBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+                resolve(false);
+            });
+            
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                    resolve(false);
+                }
+            });
+            
+            // Focus management
+            yesBtn.focus();
+        });
     }
     
     // ========================================
