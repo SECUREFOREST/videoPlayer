@@ -322,6 +322,14 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
+                
+                // Debug: Check if videoSource exists
+                if (!this.videoSource) {
+                    console.error('videoSource element not found!');
+                    alert('Video player not properly initialized');
+                    return;
+                }
+                
                 this.videoSource.src = `/videos/${encodeURIComponent(item.path)}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
