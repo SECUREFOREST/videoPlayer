@@ -379,9 +379,13 @@ class AdvancedVideoPlayerBrowser {
     }
     
     async playVideo(item) {
+        console.log('playVideo called with item:', item);
         try {
+            console.log('Fetching video info for path:', item.path);
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
+            
+            console.log('Video info response:', response.status, videoData);
             
             if (response.ok) {
                 this.currentVideo = item;
@@ -394,9 +398,16 @@ class AdvancedVideoPlayerBrowser {
                     return;
                 }
                 
-                this.videoSource.src = `/videos/${encodeURIComponent(item.path)}`;
+                const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
+                console.log('Setting video source to:', videoUrl);
+                console.log('Video MIME type:', videoData.mimeType);
+                
+                this.videoSource.src = videoUrl;
                 this.videoSource.type = videoData.mimeType;
+                
+                console.log('Calling video.load()');
                 this.video.load();
+                
                 this.videoPlayer.style.display = 'block';
                 this.updateVideoInfo(videoData);
                 
@@ -1551,21 +1562,25 @@ class AdvancedVideoPlayerBrowser {
     }
     
     handleVideoLoadStart() {
+        console.log('Video load started');
         this.videoState.isSeeking = false;
         this.showStatusMessage('Loading video...', 'info');
     }
     
     handleVideoLoadedMetadata() {
+        console.log('Video metadata loaded, duration:', this.video.duration);
         this.videoState.duration = this.video.duration;
         this.updateVideoInfo();
         this.updateVideoControls();
     }
     
     handleVideoLoadedData() {
+        console.log('Video data loaded');
         this.showStatusMessage('Video loaded', 'success');
     }
     
     handleVideoCanPlay() {
+        console.log('Video can play');
         this.videoState.isInitialized = true;
     }
     
@@ -1605,6 +1620,12 @@ class AdvancedVideoPlayerBrowser {
     
     handleVideoError(e) {
         console.error('Video error:', e);
+        console.error('Video error details:', {
+            error: e.target.error,
+            networkState: e.target.networkState,
+            readyState: e.target.readyState,
+            src: e.target.src
+        });
         this.showStatusMessage('Video playback error occurred', 'error');
         this.videoState.isPlaying = false;
         this.updateVideoControls();
