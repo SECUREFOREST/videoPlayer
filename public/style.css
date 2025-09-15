@@ -976,40 +976,24 @@ header h1 {
     flex: 1;
 }
 
-.recent-item .recent-name {
-    font-weight: var(--font-semibold);
-    margin-bottom: var(--space-1);
-    color: var(--color-white);
-}
-
-.recent-item .recent-path {
-    font-size: var(--text-xs);
-    color: var(--color-gray-500);
-}
-
 .recent-item .recent-time {
     font-size: var(--text-xs);
     color: var(--color-gray-500);
     font-style: italic;
 }
 
-.recent-item .recent-actions {
-    display: flex;
-    gap: var(--space-3);
-}
-
-.playlist-item .playlist-name, .favorite-item .favorite-name, .search-item .search-name {
+.playlist-item .playlist-name, .favorite-item .favorite-name, .recent-item .recent-name, .search-item .search-name {
     font-weight: var(--font-semibold);
     margin-bottom: var(--space-1);
     color: var(--color-white);
 }
 
-.playlist-item .playlist-count, .favorite-item .favorite-path, .search-item .search-path {
+.playlist-item .playlist-count, .favorite-item .favorite-path, .recent-item .recent-path, .search-item .search-path {
     font-size: var(--text-xs);
     color: var(--color-gray-500);
 }
 
-.playlist-actions, .favorite-actions {
+.playlist-actions, .favorite-actions, .recent-actions {
     display: flex;
     gap: var(--space-3);
 }
