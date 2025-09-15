@@ -944,7 +944,7 @@ header h1 {
     border-radius: var(--radius);
 }
 
-.playlist-item:hover, .favorite-item:hover, .:hover, .search-item:hover {
+.playlist-item:hover, .favorite-item:hover, .search-item:hover {
     background: linear-gradient(135deg, var(--color-gray-800), var(--color-gray-700));
     transform: translateX(5px);
     border-left: 3px solid var(--color-primary);
@@ -1330,23 +1330,23 @@ video {
     }
     
     .file-item, .playlist-item, .favorite-item, 
-    ., .search-item {
+    .search-item {
         padding: var(--space-4);
         margin-bottom: var(--space-2);
     }
     
     .file-info, .playlist-info, .favorite-info, 
-    .recent-info, .search-info {
+    .search-info {
         gap: var(--space-2);
     }
     
     .file-name, .playlist-name, .favorite-name, 
-    .recent-name, .search-name {
+    .search-name {
         font-size: var(--text-sm);
     }
     
     .file-details, .playlist-details, .favorite-details, 
-    .recent-details, .search-details {
+    .search-details {
         font-size: var(--text-xs);
         flex-direction: column;
         align-items: flex-start;
@@ -1430,7 +1430,7 @@ video {
     }
     
     .file-item, .playlist-item, .favorite-item, 
-    ., .search-item {
+    .search-item {
         padding: var(--space-4);
     }
 }
@@ -1447,7 +1447,7 @@ video {
     }
     
     .file-item:hover, .playlist-item:hover, .favorite-item:hover, 
-    .:hover, .search-item:hover {
+    .search-item:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-xl);
     }
@@ -1657,7 +1657,6 @@ video {
 .file-item:focus,
 .playlist-item:focus,
 .favorite-item:focus,
-.:focus,
 .search-item:focus,
 .file-grid-item:focus {
     outline: 3px solid var(--color-primary);
@@ -1762,7 +1761,6 @@ video {
 .file-item:focus,
 .playlist-item:focus,
 .favorite-item:focus,
-.:focus,
 .search-item:focus {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -1787,7 +1785,6 @@ video {
     .file-item:hover,
     .playlist-item:hover,
     .favorite-item:hover,
-    .:hover,
     .search-item:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-xl);
@@ -1800,7 +1797,6 @@ video {
     .file-item:active,
     .playlist-item:active,
     .favorite-item:active,
-    .:active,
     .search-item:active {
         transform: scale(0.98);
         background: var(--color-gray-800);
