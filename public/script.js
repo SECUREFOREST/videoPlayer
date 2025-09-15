@@ -582,60 +582,104 @@ class AdvancedVideoPlayerBrowser {
     }
     
     toggleFullscreen() {
-        console.log('Toggle fullscreen called, current state:', this.isFullscreen);
+        console.log('=== FULLSCREEN DEBUG ===');
+        console.log('Current fullscreen state:', this.isFullscreen);
+        console.log('Document fullscreen element:', document.fullscreenElement);
+        console.log('Video element:', this.video);
+        console.log('Video container:', this.video.closest('.video-container'));
         
         if (!this.isFullscreen) {
             // Enter fullscreen
             const videoContainer = this.video.closest('.video-container');
-            const elementToFullscreen = videoContainer || this.video;
+            const videoPlayer = this.video.closest('.video-player');
+            const elementToFullscreen = videoContainer || videoPlayer || this.video;
             
-            console.log('Attempting to enter fullscreen with element:', elementToFullscreen);
+            console.log('Element to fullscreen:', elementToFullscreen);
+            console.log('Element tag name:', elementToFullscreen.tagName);
+            console.log('Element classes:', elementToFullscreen.className);
+            
+            // Check which fullscreen methods are available
+            console.log('Available fullscreen methods:');
+            console.log('- requestFullscreen:', !!elementToFullscreen.requestFullscreen);
+            console.log('- webkitRequestFullscreen:', !!elementToFullscreen.webkitRequestFullscreen);
+            console.log('- mozRequestFullScreen:', !!elementToFullscreen.mozRequestFullScreen);
+            console.log('- msRequestFullscreen:', !!elementToFullscreen.msRequestFullscreen);
             
             if (elementToFullscreen.requestFullscreen) {
-                elementToFullscreen.requestFullscreen().catch(err => {
+                console.log('Using standard requestFullscreen');
+                elementToFullscreen.requestFullscreen().then(() => {
+                    console.log('Fullscreen request successful');
+                }).catch(err => {
                     console.error('Fullscreen request failed:', err);
-                    this.showStatusMessage('Failed to enter fullscreen mode', 'error');
+                    this.showStatusMessage('Failed to enter fullscreen mode: ' + err.message, 'error');
                 });
             } else if (elementToFullscreen.webkitRequestFullscreen) {
+                console.log('Using webkit requestFullscreen');
                 elementToFullscreen.webkitRequestFullscreen();
             } else if (elementToFullscreen.mozRequestFullScreen) {
+                console.log('Using moz requestFullScreen');
                 elementToFullscreen.mozRequestFullScreen();
             } else if (elementToFullscreen.msRequestFullscreen) {
+                console.log('Using ms requestFullscreen');
                 elementToFullscreen.msRequestFullscreen();
             } else {
-                console.error('Fullscreen not supported');
+                console.error('No fullscreen method available');
                 this.showStatusMessage('Fullscreen not supported by this browser', 'error');
             }
         } else {
             // Exit fullscreen
             console.log('Attempting to exit fullscreen');
+            console.log('Available exit methods:');
+            console.log('- exitFullscreen:', !!document.exitFullscreen);
+            console.log('- webkitExitFullscreen:', !!document.webkitExitFullscreen);
+            console.log('- mozCancelFullScreen:', !!document.mozCancelFullScreen);
+            console.log('- msExitFullscreen:', !!document.msExitFullscreen);
             
             if (document.exitFullscreen) {
-                document.exitFullscreen().catch(err => {
+                console.log('Using standard exitFullscreen');
+                document.exitFullscreen().then(() => {
+                    console.log('Exit fullscreen successful');
+                }).catch(err => {
                     console.error('Exit fullscreen failed:', err);
                 });
             } else if (document.webkitExitFullscreen) {
+                console.log('Using webkit exitFullscreen');
                 document.webkitExitFullscreen();
             } else if (document.mozCancelFullScreen) {
+                console.log('Using moz cancelFullScreen');
                 document.mozCancelFullScreen();
             } else if (document.msExitFullscreen) {
+                console.log('Using ms exitFullscreen');
                 document.msExitFullscreen();
             }
         }
+        console.log('=== END FULLSCREEN DEBUG ===');
     }
     
     handleFullscreenChange() {
+        console.log('=== FULLSCREEN CHANGE EVENT ===');
+        console.log('Document fullscreen element:', document.fullscreenElement);
+        console.log('Document fullscreenElement type:', typeof document.fullscreenElement);
+        console.log('Previous fullscreen state:', this.isFullscreen);
+        
         this.isFullscreen = !!document.fullscreenElement;
+        
+        console.log('New fullscreen state:', this.isFullscreen);
+        console.log('Fullscreen button exists:', !!this.fullscreenBtn);
+        console.log('Fullscreen controls button exists:', !!this.fullscreenBtnControls);
+        
         const icon = this.isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
         
         if (this.fullscreenBtn) {
             this.fullscreenBtn.innerHTML = icon;
+            console.log('Updated fullscreen button icon');
         }
         if (this.fullscreenBtnControls) {
             this.fullscreenBtnControls.innerHTML = icon;
+            console.log('Updated fullscreen controls button icon');
         }
         
-        console.log('Fullscreen state changed:', this.isFullscreen);
+        console.log('=== END FULLSCREEN CHANGE EVENT ===');
     }
     
     closeVideo() {
