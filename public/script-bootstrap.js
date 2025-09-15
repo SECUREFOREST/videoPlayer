@@ -13,7 +13,6 @@ class ModernVideoPlayerBrowser {
         this.currentPlaylistIndex = 0;
         this.focusedElement = null;
         this.keyboardNavigation = true;
-        this.loadingStates = new Map();
         
         // Video player state management
         this.videoState = {
@@ -48,6 +47,16 @@ class ModernVideoPlayerBrowser {
         this.videoSource = document.getElementById('video-source');
         this.videoTitle = document.getElementById('videoPlayerModalLabel');
         this.videoInfo = document.getElementById('video-info');
+        
+        // Validate critical elements
+        if (!this.fileList) {
+            console.error('Critical element file-list not found');
+            return;
+        }
+        if (!this.video) {
+            console.error('Critical element video not found');
+            return;
+        }
         
         // Navigation
         this.backBtn = document.getElementById('back-btn');
@@ -118,7 +127,7 @@ class ModernVideoPlayerBrowser {
         document.querySelectorAll('[data-filter]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.filterType = e.target.dataset.filter;
+                this.filterType.value = e.target.dataset.filter;
                 this.loadDirectory();
             });
         });
@@ -127,7 +136,7 @@ class ModernVideoPlayerBrowser {
         document.querySelectorAll('[data-sort]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.sortBy = e.target.dataset.sort;
+                this.sortBy.value = e.target.dataset.sort;
                 this.loadDirectory();
             });
         });
@@ -1200,6 +1209,99 @@ class ModernVideoPlayerBrowser {
         this.loadDirectory();
     }
     
+    // Utility methods
+    validateInput(value, type, options = {}) {
+        if (type === 'string') {
+            if (typeof value !== 'string') return null;
+            if (options.minLength && value.length < options.minLength) return null;
+            if (options.maxLength && value.length > options.maxLength) return null;
+            return value.trim();
+        }
+        return value;
+    }
+    
+    showLoading() {
+        // Simple loading indicator
+        const loadingEl = document.querySelector('.loading');
+        if (loadingEl) loadingEl.style.display = 'block';
+    }
+    
+    hideLoading() {
+        const loadingEl = document.querySelector('.loading');
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+    
+    showError(message) {
+        console.error(message);
+        // You could implement a toast notification here
+    }
+    
+    showStatusMessage(message, type = 'info') {
+        console.log(`${type.toUpperCase()}: ${message}`);
+        // You could implement a toast notification here
+    }
+    
+    handleKeyboard(e) {
+        // Basic keyboard navigation
+        if (e.key === 'Escape') {
+            if (this.videoPlayerModal && this.videoPlayerModal._isShown) {
+                this.videoPlayerModal.hide();
+            }
+        }
+    }
+    
+    handleKeyboardUp(e) {
+        // Handle key up events if needed
+    }
+    
+    handleFocusIn(e) {
+        this.focusedElement = e.target;
+    }
+    
+    handleFocusOut(e) {
+        // Handle focus out if needed
+    }
+    
+    setupAriaLiveRegion() {
+        // Create ARIA live region for screen readers
+        if (!document.getElementById('aria-live-region')) {
+            const liveRegion = document.createElement('div');
+            liveRegion.id = 'aria-live-region';
+            liveRegion.setAttribute('aria-live', 'polite');
+            liveRegion.setAttribute('aria-atomic', 'true');
+            liveRegion.className = 'sr-only';
+            document.body.appendChild(liveRegion);
+        }
+    }
+    
+    handleFullscreenChange() {
+        this.isFullscreen = !!(document.fullscreenElement || 
+                              document.webkitFullscreenElement || 
+                              document.mozFullScreenElement || 
+                              document.msFullscreenElement);
+    }
+    
+    saveProgress() {
+        // Save current progress to localStorage
+        try {
+            localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
+        } catch (error) {
+            console.warn('Failed to save progress:', error);
+        }
+    }
+    
+    loadProgress() {
+        // Load progress from localStorage
+        try {
+            const saved = localStorage.getItem('videoPlayerProgress');
+            if (saved) {
+                this.playbackProgress = JSON.parse(saved);
+            }
+        } catch (error) {
+            console.warn('Failed to load progress:', error);
+        }
+    }
+    
     cleanup() {
         this.cancelActiveRequests();
         
@@ -1223,7 +1325,14 @@ class ModernVideoPlayerBrowser {
     }
 }
 
-// Initialize the application when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new ModernVideoPlayerBrowser();
-});
+// Initialize the application immediately
+window.app = new ModernVideoPlayerBrowser();
+
+// Also initialize when DOM is loaded (in case script loads before DOM)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window.app) {
+            window.app = new ModernVideoPlayerBrowser();
+        }
+    });
+}
