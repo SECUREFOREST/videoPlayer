@@ -362,14 +362,23 @@
     box-sizing: border-box;
 }
 
+html {
+    background: #000000 !important;
+}
+
 body {
     font-family: var(--font-family-sans);
-    background: var(--color-black);
+    background: #000000 !important;
     min-height: 100vh;
     color: var(--color-white);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure all main containers have black background */
+.container, .main-content, .tab-content {
+    background: #000000 !important;
 }
 
 .container {
