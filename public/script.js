@@ -379,13 +379,9 @@ class AdvancedVideoPlayerBrowser {
     }
     
     async playVideo(item) {
-        console.log('playVideo called with item:', item);
         try {
-            console.log('Fetching video info for path:', item.path);
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
-            
-            console.log('Video info response:', response.status, videoData);
             
             if (response.ok) {
                 this.currentVideo = item;
@@ -399,9 +395,6 @@ class AdvancedVideoPlayerBrowser {
                 }
                 
                 const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
-                console.log('Setting video source to:', videoUrl);
-                console.log('Video MIME type:', videoData.mimeType);
-                
                 // Clear any existing source
                 this.videoSource.src = '';
                 this.videoSource.type = '';
@@ -410,65 +403,30 @@ class AdvancedVideoPlayerBrowser {
                 this.videoSource.src = videoUrl;
                 this.videoSource.type = videoData.mimeType;
                 
-                console.log('Video source set - src:', this.videoSource.src);
-                console.log('Video source set - type:', this.videoSource.type);
-                console.log('Video element src after setting source:', this.video.src);
-                
-                // Also try setting the video src directly as a fallback
+                // Also set video src directly for better compatibility
                 this.video.src = videoUrl;
-                console.log('Video src set directly:', this.video.src);
                 
-                console.log('Calling video.load()');
                 this.video.load();
                 
                 this.videoPlayer.style.display = 'block';
                 
                 // Wait for metadata to load before updating video info
                 this.video.addEventListener('loadedmetadata', () => {
-                    console.log('Metadata loaded, updating video info');
                     this.updateVideoInfo();
                 }, { once: true });
                 
-                // Add more event listeners for debugging
-                this.video.addEventListener('loadstart', () => {
-                    console.log('Video loadstart event fired');
-                });
-                
-                this.video.addEventListener('loadeddata', () => {
-                    console.log('Video loadeddata event fired');
-                });
-                
-                this.video.addEventListener('canplay', () => {
-                    console.log('Video canplay event fired');
-                });
-                
+                // Add error handling
                 this.video.addEventListener('error', (e) => {
-                    console.error('Video error event fired:', e);
-                    console.error('Error details:', {
-                        error: e.target.error,
-                        networkState: e.target.networkState,
-                        readyState: e.target.readyState,
-                        src: e.target.src
-                    });
+                    console.error('Video error:', e);
+                    this.showStatusMessage('Video playback error occurred', 'error');
                 });
                 
                 // Fallback: Update video info after a short delay
                 setTimeout(() => {
-                    console.log('Fallback check - Video state:', {
-                        duration: this.video.duration,
-                        readyState: this.video.readyState,
-                        networkState: this.video.networkState,
-                        src: this.video.src,
-                        currentSrc: this.video.currentSrc
-                    });
-                    
                     if (this.video.duration) {
-                        console.log('Fallback: Video duration available, updating info');
                         this.updateVideoInfo();
-                    } else {
-                        console.log('Fallback: Video duration still not available');
                     }
-                }, 2000);
+                }, 1000);
                 
                 // Ensure click listener is attached when video is loaded
                 this.attachVideoClickListener();
