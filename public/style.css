@@ -1,25 +1,32 @@
 /* Design System Variables */
 :root {
-    /* Color Palette */
-    --color-primary: #3b82f6;
-    --color-primary-hover: #2563eb;
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-error: #ef4444;
-    --color-info: #06b6d4;
+    /* Color Palette - Enhanced for Adult Content */
+    --color-primary: #8B1538;
+    --color-primary-hover: #A01E42;
+    --color-success: #2D5A27;
+    --color-warning: #B8860B;
+    --color-error: #DC143C;
+    --color-info: #4B0082;
     
-    /* Neutral Colors */
-    --color-black: #000000;
-    --color-gray-900: #111111;
-    --color-gray-800: #1f1f1f;
-    --color-gray-700: #333333;
-    --color-gray-600: #4b5563;
-    --color-gray-500: #6b7280;
-    --color-gray-400: #9ca3af;
-    --color-gray-300: #d1d5db;
-    --color-gray-200: #e5e7eb;
-    --color-gray-100: #f3f4f6;
-    --color-white: #ffffff;
+    /* Neutral Colors - Rich Dark Theme */
+    --color-black: #0A0A0A;
+    --color-gray-900: #1A1A1A;
+    --color-gray-800: #2D2D2D;
+    --color-gray-700: #404040;
+    --color-gray-600: #5C5C5C;
+    --color-gray-500: #808080;
+    --color-gray-400: #A0A0A0;
+    --color-gray-300: #C0C0C0;
+    --color-gray-200: #E0E0E0;
+    --color-gray-100: #F0F0F0;
+    --color-white: #F5F5F5;
+    
+    /* Glassmorphism & Neumorphism */
+    --glass-bg: rgba(26, 26, 26, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(10px);
+    --neumorphism-shadow: 8px 8px 16px rgba(0, 0, 0, 0.3), -8px -8px 16px rgba(255, 255, 255, 0.05);
+    --neumorphism-inset: inset 8px 8px 16px rgba(0, 0, 0, 0.3), inset -8px -8px 16px rgba(255, 255, 255, 0.05);
     
     /* Typography */
     --font-family-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -168,10 +175,12 @@
 
 /* Base Container Component */
 .base-container {
-    background: var(--color-black);
-    box-shadow: var(--shadow-2xl);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--neumorphism-shadow);
     overflow: hidden;
-    border: 1px solid var(--color-gray-700);
+    border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
 }
 
@@ -542,6 +551,14 @@ header h1 {
     gap: var(--space-2);
     border-radius: var(--radius);
     font-family: var(--font-family-sans);
+    box-shadow: var(--neumorphism-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:active {
+    box-shadow: var(--neumorphism-inset);
+    transform: translateY(1px);
 }
 
 .btn:hover {
@@ -597,9 +614,13 @@ header h1 {
 /* Video Player Enhancements */
 .video-container {
     position: relative;
-    background: var(--color-black);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     overflow: hidden;
     border-radius: var(--radius-lg);
+    box-shadow: var(--neumorphism-shadow);
+    border: 1px solid var(--glass-border);
 }
 
 .video-container video {
@@ -1002,14 +1023,19 @@ header h1 {
 
 .file-item {
     padding: var(--space-4) var(--space-5);
-    border-bottom: 1px solid var(--color-gray-700);
+    border-bottom: 1px solid var(--glass-border);
     cursor: pointer;
     transition: var(--transition-normal);
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    background: var(--color-gray-900);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     color: var(--color-white);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-2);
+    box-shadow: var(--neumorphism-shadow);
 }
 
 .file-item:hover {
@@ -1492,6 +1518,27 @@ video {
         outline: 4px solid var(--color-primary);
         outline-offset: 3px;
         box-shadow: 0 0 0 2px var(--color-primary);
+    }
+}
+
+/* Reduced Motion Support - WCAG 2.1 AA */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .btn:hover {
+        transform: none;
+    }
+    
+    .file-item:hover {
+        transform: none;
+    }
+    
+    .tab-btn:hover {
+        transform: none;
     }
 }
 
