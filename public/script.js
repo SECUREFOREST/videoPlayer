@@ -409,7 +409,22 @@ class AdvancedVideoPlayerBrowser {
                 this.video.load();
                 
                 this.videoPlayer.style.display = 'block';
-                this.updateVideoInfo(videoData);
+                
+                // Wait for metadata to load before updating video info
+                this.video.addEventListener('loadedmetadata', () => {
+                    console.log('Metadata loaded, updating video info');
+                    this.updateVideoInfo();
+                }, { once: true });
+                
+                // Fallback: Update video info after a short delay
+                setTimeout(() => {
+                    if (this.video.duration) {
+                        console.log('Fallback: Video duration available, updating info');
+                        this.updateVideoInfo();
+                    } else {
+                        console.log('Fallback: Video duration still not available');
+                    }
+                }, 1000);
                 
                 // Ensure click listener is attached when video is loaded
                 this.attachVideoClickListener();
