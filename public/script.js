@@ -113,6 +113,7 @@ class AdvancedVideoPlayerBrowser {
         this.video.addEventListener('loadedmetadata', () => this.updateVideoInfo());
         this.video.addEventListener('timeupdate', () => this.updateProgress());
         this.video.addEventListener('ended', () => this.onVideoEnded());
+        this.video.addEventListener('click', () => this.togglePlayPause());
         this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
         this.progressBar.addEventListener('click', (e) => this.seekTo(e));
         this.progressBar.addEventListener('mousedown', (e) => this.handleProgressMouseDown(e));
