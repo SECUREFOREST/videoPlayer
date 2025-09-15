@@ -1153,10 +1153,11 @@ video {
 }
 
 /* ========================================
-   MOBILE-FIRST RESPONSIVE DESIGN
+   RESPONSIVE DESIGN SYSTEM
    ======================================== */
 
-/* Mobile Styles (default) */
+/* Mobile First Approach - Base styles are mobile */
+/* Mobile Styles (default) - 320px and up */
 @media (max-width: 768px) {
     .container {
         padding: var(--space-4);
@@ -1306,9 +1307,16 @@ video {
         font-size: var(--text-sm);
         min-height: 44px;
     }
+    
+    .theme-toggle {
+        top: var(--space-4);
+        right: var(--space-4);
+        width: 44px;
+        height: 44px;
+    }
 }
 
-/* Tablet Styles */
+/* Tablet Styles - 769px to 1024px */
 @media (min-width: 769px) and (max-width: 1024px) {
     .container {
         padding: var(--space-6);
@@ -1334,7 +1342,7 @@ video {
     }
 }
 
-/* Desktop Styles */
+/* Desktop Styles - 1025px and up */
 @media (min-width: 1025px) {
     .main-content {
         grid-template-columns: 1fr 1fr;
@@ -1353,6 +1361,22 @@ video {
     
     .tab-btn:hover {
         transform: translateY(-2px);
+    }
+}
+
+/* Large Desktop Styles - 1440px and up */
+@media (min-width: 1440px) {
+    .container {
+        max-width: 1600px;
+        padding: var(--space-8);
+    }
+    
+    .main-content {
+        gap: var(--space-10);
+    }
+    
+    .search-bar {
+        padding: var(--space-8);
     }
 }
 
