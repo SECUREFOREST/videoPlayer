@@ -12,6 +12,13 @@ class AdvancedVideoPlayerBrowser {
         this.currentPlaylistIndex = 0;
         this.recentlyPlayed = [];
         this.isDragging = false;
+        this.focusedElement = null;
+        this.keyboardNavigation = true;
+        this.loadingStates = new Map();
+        
+        // Performance optimization
+        this.debounceTimeout = null;
+        this.animationFrame = null;
         
         // DOM elements
         this.initializeElements();
@@ -95,7 +102,10 @@ class AdvancedVideoPlayerBrowser {
         this.gridViewBtn.addEventListener('click', () => this.toggleView(true));
         this.listViewBtn.addEventListener('click', () => this.toggleView(false));
         
-        // Search and filters
+        // Search and filters with debouncing
+        this.searchInput.addEventListener('input', (e) => {
+            this.debounceSearch(e.target.value);
+        });
         this.searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.performSearch();
         });
@@ -144,8 +154,16 @@ class AdvancedVideoPlayerBrowser {
         document.addEventListener('dragleave', (e) => this.handleDragLeave(e));
         document.addEventListener('drop', (e) => this.handleDrop(e));
         
-        // Keyboard shortcuts
+        // Enhanced keyboard navigation and accessibility
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        document.addEventListener('keyup', (e) => this.handleKeyboardUp(e));
+        
+        // Focus management
+        document.addEventListener('focusin', (e) => this.handleFocusIn(e));
+        document.addEventListener('focusout', (e) => this.handleFocusOut(e));
+        
+        // ARIA live region for announcements
+        this.setupAriaLiveRegion();
         
         // Fullscreen events
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
@@ -1058,6 +1076,271 @@ class AdvancedVideoPlayerBrowser {
         } else {
             const days = Math.floor(diffInSeconds / 86400);
             return `${days} day${days > 1 ? 's' : ''} ago`;
+        }
+    }
+    
+    // ========================================
+    // ENHANCED ACCESSIBILITY & UX METHODS
+    // ========================================
+    
+    setupAriaLiveRegion() {
+        // Create ARIA live region for announcements
+        const liveRegion = document.createElement('div');
+        liveRegion.id = 'aria-live-region';
+        liveRegion.setAttribute('aria-live', 'polite');
+        liveRegion.setAttribute('aria-atomic', 'true');
+        liveRegion.className = 'sr-only';
+        document.body.appendChild(liveRegion);
+        this.liveRegion = liveRegion;
+    }
+    
+    announceToScreenReader(message) {
+        if (this.liveRegion) {
+            this.liveRegion.textContent = message;
+        }
+    }
+    
+    handleFocusIn(e) {
+        this.focusedElement = e.target;
+        e.target.classList.add('focus-visible');
+    }
+    
+    handleFocusOut(e) {
+        e.target.classList.remove('focus-visible');
+    }
+    
+    handleKeyboardUp(e) {
+        // Handle key up events for better accessibility
+        if (e.key === 'Tab') {
+            this.keyboardNavigation = true;
+            document.body.classList.add('keyboard-navigation');
+        }
+    }
+    
+    // Enhanced keyboard navigation
+    handleKeyboard(e) {
+        // Skip if user is typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
+            return;
+        }
+        
+        switch(e.key) {
+            case 'Tab':
+                this.keyboardNavigation = true;
+                document.body.classList.add('keyboard-navigation');
+                break;
+            case 'Escape':
+                this.handleEscapeKey();
+                break;
+            case 'ArrowUp':
+            case 'ArrowDown':
+                e.preventDefault();
+                this.navigateFileList(e.key === 'ArrowUp' ? -1 : 1);
+                break;
+            case 'Enter':
+            case ' ':
+                e.preventDefault();
+                this.activateFocusedElement();
+                break;
+            case 'j':
+            case 'J':
+                e.preventDefault();
+                this.seekVideo(-10);
+                break;
+            case 'l':
+            case 'L':
+                e.preventDefault();
+                this.seekVideo(10);
+                break;
+            case 'k':
+            case 'K':
+                e.preventDefault();
+                this.togglePlayPause();
+                break;
+            case 'f':
+            case 'F':
+                e.preventDefault();
+                this.toggleFullscreen();
+                break;
+            case 'm':
+            case 'M':
+                e.preventDefault();
+                this.toggleMute();
+                break;
+        }
+    }
+    
+    handleEscapeKey() {
+        // Close modals, exit fullscreen, etc.
+        if (this.playlistModal.classList.contains('active')) {
+            this.hidePlaylistModal();
+        } else if (this.isFullscreen) {
+            this.toggleFullscreen();
+        }
+    }
+    
+    navigateFileList(direction) {
+        const fileItems = this.fileList.querySelectorAll('.file-item, .playlist-item, .favorite-item, .recent-item, .search-item');
+        if (fileItems.length === 0) return;
+        
+        const currentIndex = Array.from(fileItems).findIndex(item => item.classList.contains('focus-visible'));
+        let nextIndex = currentIndex + direction;
+        
+        if (nextIndex < 0) nextIndex = fileItems.length - 1;
+        if (nextIndex >= fileItems.length) nextIndex = 0;
+        
+        // Remove focus from current item
+        if (currentIndex >= 0) {
+            fileItems[currentIndex].classList.remove('focus-visible');
+        }
+        
+        // Add focus to next item
+        fileItems[nextIndex].classList.add('focus-visible');
+        fileItems[nextIndex].focus();
+        fileItems[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    activateFocusedElement() {
+        const focusedElement = document.querySelector('.file-item.focus-visible, .playlist-item.focus-visible, .favorite-item.focus-visible, .recent-item.focus-visible, .search-item.focus-visible');
+        if (focusedElement) {
+            focusedElement.click();
+        }
+    }
+    
+    seekVideo(seconds) {
+        if (this.video && !this.video.paused) {
+            const newTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
+            this.video.currentTime = newTime;
+            this.announceToScreenReader(`Seeked to ${Math.floor(newTime / 60)}:${Math.floor(newTime % 60).toString().padStart(2, '0')}`);
+        }
+    }
+    
+    // ========================================
+    // PERFORMANCE OPTIMIZATION METHODS
+    // ========================================
+    
+    debounceSearch(query) {
+        clearTimeout(this.debounceTimeout);
+        this.debounceTimeout = setTimeout(() => {
+            if (query.length >= 2) {
+                this.performSearch();
+            } else if (query.length === 0) {
+                this.clearSearch();
+            }
+        }, 300);
+    }
+    
+    clearSearch() {
+        this.searchResults = [];
+        this.switchTab('browser');
+        this.loadDirectory();
+    }
+    
+    // Optimized rendering with requestAnimationFrame
+    renderWithAnimation(callback) {
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+        }
+        this.animationFrame = requestAnimationFrame(callback);
+    }
+    
+    // Loading state management
+    setLoadingState(element, isLoading) {
+        if (isLoading) {
+            this.loadingStates.set(element, true);
+            element.classList.add('loading-skeleton');
+            element.setAttribute('aria-busy', 'true');
+        } else {
+            this.loadingStates.set(element, false);
+            element.classList.remove('loading-skeleton');
+            element.setAttribute('aria-busy', 'false');
+        }
+    }
+    
+    // ========================================
+    // ENHANCED UI FEEDBACK METHODS
+    // ========================================
+    
+    showStatusMessage(message, type = 'info', duration = 3000) {
+        const statusMessage = document.createElement('div');
+        statusMessage.className = `status-message status-message--${type}`;
+        statusMessage.textContent = message;
+        statusMessage.setAttribute('role', 'status');
+        statusMessage.setAttribute('aria-live', 'polite');
+        
+        document.body.appendChild(statusMessage);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            statusMessage.classList.add('status-message--show');
+        });
+        
+        // Remove after duration
+        setTimeout(() => {
+            statusMessage.classList.remove('status-message--show');
+            setTimeout(() => {
+                if (statusMessage.parentNode) {
+                    statusMessage.parentNode.removeChild(statusMessage);
+                }
+            }, 300);
+        }, duration);
+    }
+    
+    // Enhanced error handling
+    handleError(error, context = '') {
+        console.error(`Error in ${context}:`, error);
+        this.showStatusMessage(`Error: ${error.message || 'Something went wrong'}`, 'error');
+        this.announceToScreenReader(`Error: ${error.message || 'Something went wrong'}`);
+    }
+    
+    // ========================================
+    // ENHANCED METADATA DISPLAY
+    // ========================================
+    
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    formatDuration(seconds) {
+        if (!seconds || isNaN(seconds)) return '0:00';
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    getFileTypeIcon(fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+        const videoExtensions = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
+        const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'ogg'];
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'];
+        
+        if (videoExtensions.includes(extension)) {
+            return 'fas fa-video';
+        } else if (audioExtensions.includes(extension)) {
+            return 'fas fa-music';
+        } else if (imageExtensions.includes(extension)) {
+            return 'fas fa-image';
+        } else if (extension === 'pdf') {
+            return 'fas fa-file-pdf';
+        } else if (['doc', 'docx'].includes(extension)) {
+            return 'fas fa-file-word';
+        } else if (['xls', 'xlsx'].includes(extension)) {
+            return 'fas fa-file-excel';
+        } else if (['ppt', 'pptx'].includes(extension)) {
+            return 'fas fa-file-powerpoint';
+        } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+            return 'fas fa-file-archive';
+        } else {
+            return 'fas fa-file';
         }
     }
 }

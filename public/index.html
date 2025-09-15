@@ -3,10 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Advanced Video Player Browser with playlist management, favorites, and search capabilities">
+    <meta name="theme-color" content="#000000">
     <title>Advanced Video Player Browser</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="dark-theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -18,26 +36,46 @@
         </header>
         
         <!-- Search and Filter Bar -->
-        <div class="search-bar">
+        <div class="search-bar" role="search">
             <div class="search-input-group">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-input" placeholder="Search files and videos...">
-                <button id="search-btn" class="btn btn-primary">Search</button>
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input type="text" 
+                       id="search-input" 
+                       placeholder="Search files and videos..." 
+                       aria-label="Search files and videos"
+                       autocomplete="off"
+                       spellcheck="false">
+                <button id="search-btn" 
+                        class="btn btn-primary" 
+                        aria-label="Search"
+                        type="button">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <span>Search</span>
+                </button>
             </div>
-            <div class="filter-group">
-                <select id="filter-type" class="filter-select">
+            <div class="filter-group" role="group" aria-label="Filter and sort options">
+                <label for="filter-type" class="sr-only">Filter by type</label>
+                <select id="filter-type" 
+                        class="filter-select" 
+                        aria-label="Filter by file type">
                     <option value="all">All Files</option>
                     <option value="videos">Videos Only</option>
                     <option value="directories">Directories Only</option>
                     <option value="files">Files Only</option>
                 </select>
-                <select id="sort-by" class="filter-select">
+                <label for="sort-by" class="sr-only">Sort by</label>
+                <select id="sort-by" 
+                        class="filter-select" 
+                        aria-label="Sort by">
                     <option value="name">Sort by Name</option>
                     <option value="size">Sort by Size</option>
                     <option value="modified">Sort by Date</option>
                     <option value="type">Sort by Type</option>
                 </select>
-                <select id="sort-order" class="filter-select">
+                <label for="sort-order" class="sr-only">Sort order</label>
+                <select id="sort-order" 
+                        class="filter-select" 
+                        aria-label="Sort order">
                     <option value="asc">Ascending</option>
                     <option value="desc">Descending</option>
                 </select>
@@ -45,21 +83,51 @@
         </div>
 
         <!-- Navigation Tabs -->
-        <div class="nav-tabs">
-            <button class="tab-btn active" data-tab="browser">
-                <i class="fas fa-folder"></i> Browser
+        <div class="nav-tabs" role="tablist" aria-label="Main navigation">
+            <button class="tab-btn active" 
+                    data-tab="browser" 
+                    role="tab" 
+                    aria-selected="true" 
+                    aria-controls="browser-tab"
+                    id="browser-tab-btn">
+                <i class="fas fa-folder" aria-hidden="true"></i> 
+                <span>Browser</span>
             </button>
-            <button class="tab-btn" data-tab="playlists">
-                <i class="fas fa-list"></i> Playlists
+            <button class="tab-btn" 
+                    data-tab="playlists" 
+                    role="tab" 
+                    aria-selected="false" 
+                    aria-controls="playlists-tab"
+                    id="playlists-tab-btn">
+                <i class="fas fa-list" aria-hidden="true"></i> 
+                <span>Playlists</span>
             </button>
-            <button class="tab-btn" data-tab="favorites">
-                <i class="fas fa-heart"></i> Favorites
+            <button class="tab-btn" 
+                    data-tab="favorites" 
+                    role="tab" 
+                    aria-selected="false" 
+                    aria-controls="favorites-tab"
+                    id="favorites-tab-btn">
+                <i class="fas fa-heart" aria-hidden="true"></i> 
+                <span>Favorites</span>
             </button>
-            <button class="tab-btn" data-tab="recent">
-                <i class="fas fa-clock"></i> Recently Played
+            <button class="tab-btn" 
+                    data-tab="recent" 
+                    role="tab" 
+                    aria-selected="false" 
+                    aria-controls="recent-tab"
+                    id="recent-tab-btn">
+                <i class="fas fa-clock" aria-hidden="true"></i> 
+                <span>Recently Played</span>
             </button>
-            <button class="tab-btn" data-tab="search-results">
-                <i class="fas fa-search"></i> Search Results
+            <button class="tab-btn" 
+                    data-tab="search-results" 
+                    role="tab" 
+                    aria-selected="false" 
+                    aria-controls="search-results-tab"
+                    id="search-results-tab-btn">
+                <i class="fas fa-search" aria-hidden="true"></i> 
+                <span>Search Results</span>
             </button>
         </div>
         
@@ -239,6 +307,6 @@
         </div>
     </div>
     
-    <script src="script.js?v=12"></script>
+    <script src="script.js?v=13"></script>
 </body>
 </html>
