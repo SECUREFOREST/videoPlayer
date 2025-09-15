@@ -537,13 +537,21 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updateBackButton(parentPath) {
-        // Calculate if we can go back based on current path
-        const canGoBack = this.currentPath && this.currentPath !== '' && this.currentPath.split('/').length > 1;
+        // Use the parentPath from server to determine if we can go back
+        const canGoBack = parentPath && parentPath !== '' && parentPath !== this.currentPath;
+        
+        console.log('Back button debug:', {
+            parentPath: parentPath,
+            currentPath: this.currentPath,
+            canGoBack: canGoBack
+        });
         
         if (canGoBack) {
             this.backBtn.style.display = 'block';
             this.backBtn.disabled = false;
             this.backBtn.removeAttribute('disabled');
+            this.backBtn.style.opacity = '1';
+            this.backBtn.style.cursor = 'pointer';
         } else {
             this.backBtn.style.display = 'none';
             this.backBtn.disabled = true;
