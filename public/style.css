@@ -131,7 +131,7 @@ header h1 {
 /* Tab Content */
 .tab-content {
     display: none;
-    background: white;
+    background: #000000;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     min-height: 500px;
 }
@@ -330,7 +330,7 @@ header h1 {
 }
 
 .file-grid-item {
-    background: #f8f9fa;
+    background: #111111;
     padding: 15px;
     text-align: center;
     cursor: pointer;
@@ -405,7 +405,7 @@ header h1 {
 
 .recent-header h3 {
     margin: 0;
-    color: #333;
+    color: #ffffff;
 }
 
 .recent-item .recent-info {
@@ -414,7 +414,7 @@ header h1 {
 
 .recent-item .recent-name {
     font-weight: 600;
-    color: #333;
+    color: #ffffff;
     margin-bottom: 5px;
 }
 
@@ -468,7 +468,7 @@ header h1 {
 }
 
 .modal-content {
-    background: white;
+    background: #000000;
     width: 90%;
     max-width: 600px;
     max-height: 80vh;
@@ -478,8 +478,8 @@ header h1 {
 
 .modal-header {
     padding: 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+    background: #111111;
+    border-bottom: 1px solid #333333;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -505,8 +505,8 @@ header h1 {
 
 .modal-footer {
     padding: 20px;
-    background: #f8f9fa;
-    border-top: 1px solid #e9ecef;
+    background: #111111;
+    border-top: 1px solid #333333;
     display: flex;
     gap: 10px;
     justify-content: flex-end;
@@ -602,7 +602,7 @@ header h1 {
 .file-name {
     font-weight: 600;
     margin-bottom: 5px;
-    color: #333;
+    color: #ffffff;
 }
 
 .file-details {
@@ -629,15 +629,15 @@ header h1 {
 
 .video-header {
     padding: 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+    background: #111111;
+    border-bottom: 1px solid #333333;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .video-header h3 {
-    color: #333;
+    color: #ffffff;
     margin: 0;
 }
 
@@ -650,9 +650,9 @@ video {
 
 .video-info {
     padding: 15px 20px;
-    background: #f8f9fa;
+    background: #111111;
     font-size: 14px;
-    color: #666;
+    color: #aaaaaa;
 }
 
 .error {
