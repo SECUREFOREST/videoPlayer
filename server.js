@@ -58,7 +58,16 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from the public directory on root path
-app.use('/', express.static(path.join(__dirname, 'public')));
+app.use('/', express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+        if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        }
+    }
+}));
 
 // Serve static files on root path
 app.use('/videos', express.static(path.join(__dirname, 'videos')));
