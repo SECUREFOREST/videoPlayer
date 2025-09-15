@@ -402,8 +402,21 @@ class AdvancedVideoPlayerBrowser {
                 console.log('Setting video source to:', videoUrl);
                 console.log('Video MIME type:', videoData.mimeType);
                 
+                // Clear any existing source
+                this.videoSource.src = '';
+                this.videoSource.type = '';
+                
+                // Set new source
                 this.videoSource.src = videoUrl;
                 this.videoSource.type = videoData.mimeType;
+                
+                console.log('Video source set - src:', this.videoSource.src);
+                console.log('Video source set - type:', this.videoSource.type);
+                console.log('Video element src after setting source:', this.video.src);
+                
+                // Also try setting the video src directly as a fallback
+                this.video.src = videoUrl;
+                console.log('Video src set directly:', this.video.src);
                 
                 console.log('Calling video.load()');
                 this.video.load();
@@ -416,15 +429,46 @@ class AdvancedVideoPlayerBrowser {
                     this.updateVideoInfo();
                 }, { once: true });
                 
+                // Add more event listeners for debugging
+                this.video.addEventListener('loadstart', () => {
+                    console.log('Video loadstart event fired');
+                });
+                
+                this.video.addEventListener('loadeddata', () => {
+                    console.log('Video loadeddata event fired');
+                });
+                
+                this.video.addEventListener('canplay', () => {
+                    console.log('Video canplay event fired');
+                });
+                
+                this.video.addEventListener('error', (e) => {
+                    console.error('Video error event fired:', e);
+                    console.error('Error details:', {
+                        error: e.target.error,
+                        networkState: e.target.networkState,
+                        readyState: e.target.readyState,
+                        src: e.target.src
+                    });
+                });
+                
                 // Fallback: Update video info after a short delay
                 setTimeout(() => {
+                    console.log('Fallback check - Video state:', {
+                        duration: this.video.duration,
+                        readyState: this.video.readyState,
+                        networkState: this.video.networkState,
+                        src: this.video.src,
+                        currentSrc: this.video.currentSrc
+                    });
+                    
                     if (this.video.duration) {
                         console.log('Fallback: Video duration available, updating info');
                         this.updateVideoInfo();
                     } else {
                         console.log('Fallback: Video duration still not available');
                     }
-                }, 1000);
+                }, 2000);
                 
                 // Ensure click listener is attached when video is loaded
                 this.attachVideoClickListener();
