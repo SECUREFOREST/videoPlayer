@@ -102,7 +102,7 @@ class ModernVideoPlayerBrowser {
         this.loadDirectory();
         this.loadPlaylists();
         this.loadFavorites();
-        this.loadProgress();
+        this.loadProgressFromStorage();
     }
     
     bindEvents() {
@@ -318,11 +318,20 @@ class ModernVideoPlayerBrowser {
     }
     
     async loadThumbnail(item, container) {
+        if (!item || !container || !item.path) {
+            console.warn('Invalid parameters for thumbnail loading');
+            return;
+        }
+        
         try {
             console.log('Loading thumbnail for:', item.name, 'Path:', item.path);
             const response = await fetch(`/api/thumbnail?path=${encodeURIComponent(item.path)}`);
-            const data = await response.json();
             
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
             console.log('Thumbnail API response:', data);
             
             if (data.thumbnailUrl) {
@@ -331,13 +340,19 @@ class ModernVideoPlayerBrowser {
                 img.className = 'thumbnail';
                 img.alt = item.name;
                 img.onload = () => console.log('Thumbnail loaded successfully:', data.thumbnailUrl);
-                img.onerror = (e) => console.log('Thumbnail failed to load:', data.thumbnailUrl, e);
+                img.onerror = (e) => {
+                    console.warn('Thumbnail failed to load:', data.thumbnailUrl, e);
+                    // Remove the broken image
+                    if (img.parentNode) {
+                        img.parentNode.removeChild(img);
+                    }
+                };
                 container.insertBefore(img, container.firstChild);
             } else {
                 console.log('No thumbnail URL returned for:', item.name);
             }
         } catch (error) {
-            console.log('Thumbnail generation failed:', error);
+            console.warn('Thumbnail generation failed for', item.name, ':', error.message);
         }
     }
     
@@ -867,7 +882,7 @@ class ModernVideoPlayerBrowser {
         localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
     }
     
-    loadProgress() {
+    loadProgressFromStorage() {
         const saved = localStorage.getItem('videoPlayerProgress');
         if (saved) {
             this.playbackProgress = JSON.parse(saved);
@@ -1234,16 +1249,7 @@ class ModernVideoPlayerBrowser {
         this.loadDirectory();
     }
     
-    // Utility methods
-    validateInput(value, type, options = {}) {
-        if (type === 'string') {
-            if (typeof value !== 'string') return null;
-            if (options.minLength && value.length < options.minLength) return null;
-            if (options.maxLength && value.length > options.maxLength) return null;
-            return value.trim();
-        }
-        return value;
-    }
+    // Utility methods - validateInput is defined above in the Input validation section
     
     showLoading() {
         // Simple loading indicator
