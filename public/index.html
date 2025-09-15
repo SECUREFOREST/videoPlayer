@@ -11,7 +11,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         .sr-only {
             position: absolute;
@@ -37,18 +36,14 @@
         
         <!-- Search and Filter Bar -->
         <div class="search-bar" role="search">
-            <div class="search-controls">
-                <div class="search-input-group" style="flex: 1; min-width: 300px; position: relative;">
-                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);" aria-hidden="true"></i>
-                    <input type="text" 
-                           id="search-input" 
-                           class="search-input"
-                           placeholder="Search files and videos..." 
-                           aria-label="Search files and videos"
-                           autocomplete="off"
-                           spellcheck="false"
-                           style="padding-left: 40px;">
-                </div>
+            <div class="search-input-group">
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input type="text" 
+                       id="search-input" 
+                       placeholder="Search files and videos..." 
+                       aria-label="Search files and videos"
+                       autocomplete="off"
+                       spellcheck="false">
                 <button id="search-btn" 
                         class="btn btn-primary" 
                         aria-label="Search"
@@ -56,6 +51,9 @@
                     <i class="fas fa-search" aria-hidden="true"></i>
                     <span>Search</span>
                 </button>
+            </div>
+            <div class="filter-group" role="group" aria-label="Filter and sort options">
+                <label for="filter-type" class="sr-only">Filter by type</label>
                 <select id="filter-type" 
                         class="filter-select" 
                         aria-label="Filter by file type">
@@ -64,6 +62,7 @@
                     <option value="directories">Directories Only</option>
                     <option value="files">Files Only</option>
                 </select>
+                <label for="sort-by" class="sr-only">Sort by</label>
                 <select id="sort-by" 
                         class="filter-select" 
                         aria-label="Sort by">
@@ -72,6 +71,7 @@
                     <option value="modified">Sort by Date</option>
                     <option value="type">Sort by Type</option>
                 </select>
+                <label for="sort-order" class="sr-only">Sort order</label>
                 <select id="sort-order" 
                         class="filter-select" 
                         aria-label="Sort order">
@@ -82,7 +82,7 @@
         </div>
 
         <!-- Navigation Tabs -->
-        <div class="tabs" role="tablist" aria-label="Main navigation">
+        <div class="nav-tabs" role="tablist" aria-label="Main navigation">
             <button class="tab-btn active" 
                     data-tab="browser" 
                     role="tab" 
@@ -150,10 +150,7 @@
                     </div>
                     
                     <div class="file-list" id="file-list">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            Loading files...
-                        </div>
+                        <div class="loading">Loading files...</div>
                     </div>
                 </div>
             </div>
@@ -161,19 +158,14 @@
             <!-- Playlists Tab -->
             <div class="tab-content" id="playlists-tab">
                 <div class="playlist-manager">
-                    <div class="playlist-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
-                        <h3 style="color: var(--text-primary); font-size: var(--text-xl); font-weight: var(--font-semibold);">
-                            <i class="fas fa-list" style="color: var(--color-primary); margin-right: var(--space-2);"></i> Playlists
-                        </h3>
+                    <div class="playlist-header">
+                        <h3><i class="fas fa-list"></i> Playlists</h3>
                         <button id="create-playlist-btn" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Create Playlist
                         </button>
                     </div>
                     <div class="playlist-list" id="playlist-list">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            Loading playlists...
-                        </div>
+                        <div class="loading">Loading playlists...</div>
                     </div>
                 </div>
             </div>
@@ -181,16 +173,11 @@
             <!-- Favorites Tab -->
             <div class="tab-content" id="favorites-tab">
                 <div class="favorites-manager">
-                    <div class="favorites-header" style="margin-bottom: var(--space-6);">
-                        <h3 style="color: var(--text-primary); font-size: var(--text-xl); font-weight: var(--font-semibold);">
-                            <i class="fas fa-heart" style="color: var(--color-error); margin-right: var(--space-2);"></i> Favorites
-                        </h3>
+                    <div class="favorites-header">
+                        <h3><i class="fas fa-heart"></i> Favorites</h3>
                     </div>
                     <div class="favorites-list" id="favorites-list">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            Loading favorites...
-                        </div>
+                        <div class="loading">Loading favorites...</div>
                     </div>
                 </div>
             </div>
@@ -198,19 +185,14 @@
             <!-- Recently Played Tab -->
             <div class="tab-content" id="recent-tab">
                 <div class="recent-manager">
-                    <div class="recent-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
-                        <h3 style="color: var(--text-primary); font-size: var(--text-xl); font-weight: var(--font-semibold);">
-                            <i class="fas fa-clock" style="color: var(--color-warning); margin-right: var(--space-2);"></i> Recently Played
-                        </h3>
-                        <button class="btn btn-secondary" id="clear-recent-btn">
+                    <div class="recent-header">
+                        <h3><i class="fas fa-clock"></i> Recently Played</h3>
+                        <button class="btn btn-sm" id="clear-recent-btn">
                             <i class="fas fa-trash"></i> Clear History
                         </button>
                     </div>
                     <div class="recent-list" id="recent-list">
-                        <div class="loading">
-                            <div class="loading-spinner"></div>
-                            Loading recent videos...
-                        </div>
+                        <div class="loading">Loading recent videos...</div>
                     </div>
                 </div>
             </div>
@@ -218,61 +200,61 @@
             <!-- Search Results Tab -->
             <div class="tab-content" id="search-results-tab">
                 <div class="search-results">
-                    <div class="search-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
-                        <h3 style="color: var(--text-primary); font-size: var(--text-xl); font-weight: var(--font-semibold);">
-                            <i class="fas fa-search" style="color: var(--color-info); margin-right: var(--space-2);"></i> Search Results
-                        </h3>
-                        <span id="search-count" style="color: var(--text-muted); font-size: var(--text-sm);">0 results</span>
+                    <div class="search-header">
+                        <h3><i class="fas fa-search"></i> Search Results</h3>
+                        <span id="search-count">0 results</span>
                     </div>
                     <div class="search-list" id="search-list">
-                        <div style="text-align: center; color: var(--text-muted); padding: var(--space-8);">
-                            <i class="fas fa-search" style="font-size: var(--text-3xl); margin-bottom: var(--space-4); display: block;"></i>
-                            No search performed yet
-                        </div>
+                        <div class="no-results">No search performed yet</div>
                     </div>
                 </div>
             </div>
             
             <!-- Video Player -->
-            <div class="video-player" id="video-player">
-                <button class="close-video" id="close-video">
-                    <i class="fas fa-times"></i>
-                </button>
+            <div class="video-player" id="video-player" style="display: none;">
+                <div class="video-header">
+                    <h3 id="video-title">Video Player</h3>
+                    <div class="video-controls">
+                        <button id="playlist-add-btn" class="btn btn-sm" title="Add to Playlist">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button id="favorite-btn" class="btn btn-sm" title="Add to Favorites">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <button id="fullscreen-btn" class="btn btn-sm" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button id="close-video" class="btn btn-close">✕</button>
+                    </div>
+                </div>
                 <div class="video-container">
                     <video id="video">
                         <source id="video-source" src="" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>
-                <div class="video-controls">
-                    <div class="video-title" id="video-title">Video Player</div>
-                    <div class="video-info" id="video-info"></div>
-                    <div class="control-row">
-                        <div class="control-buttons">
-                            <button id="play-pause-btn" class="control-btn">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button id="playlist-add-btn" class="control-btn" title="Add to Playlist">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button id="favorite-btn" class="control-btn" title="Add to Favorites">
-                                <i class="fas fa-heart"></i>
-                            </button>
-                        </div>
+                <div class="video-controls-panel">
+                    <div class="video-controls-overlay">
+                        <button id="play-pause-btn" class="control-btn">
+                            <i class="fas fa-play"></i>
+                        </button>
                         <div class="progress-container">
-                            <div class="progress-bar" id="progress-bar"></div>
+                            <div class="progress-bar" id="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <div class="time-display">
+                                <span id="current-time">0:00</span>
+                                <span id="duration">0:00</span>
+                            </div>
                         </div>
-                        <div class="time-display">
-                            <span id="current-time">0:00</span> / <span id="duration">0:00</span>
-                        </div>
-                        <div class="control-buttons">
+                        <div class="volume-container">
                             <button id="mute-btn" class="control-btn">
                                 <i class="fas fa-volume-up"></i>
                             </button>
-                            <div class="volume-container">
-                                <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="100">
-                            </div>
-                            <select id="speed-select" class="speed-select">
+                            <input type="range" id="volume-slider" min="0" max="100" value="100">
+                        </div>
+                        <div class="speed-container">
+                            <select id="speed-select">
                                 <option value="0.25">0.25x</option>
                                 <option value="0.5">0.5x</option>
                                 <option value="0.75">0.75x</option>
@@ -284,12 +266,13 @@
                                 <option value="2.5">2.5x</option>
                                 <option value="3">3x</option>
                             </select>
-                            <button id="fullscreen-btn" class="control-btn" title="Fullscreen">
-                                <i class="fas fa-expand"></i>
-                            </button>
                         </div>
+                        <button id="fullscreen-btn" class="control-btn">
+                            <i class="fas fa-expand"></i>
+                        </button>
                     </div>
                 </div>
+                <div class="video-info" id="video-info"></div>
             </div>
         </div>
     </div>
@@ -298,34 +281,31 @@
     <div class="modal" id="playlist-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">Create Playlist</h3>
-                <button class="modal-close" id="cancel-playlist-btn">&times;</button>
+                <h3>Create Playlist</h3>
+                <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="playlist-name" class="form-label">Playlist Name</label>
-                    <input type="text" id="playlist-name" placeholder="Enter playlist name..." class="form-input">
-                </div>
+                <input type="text" id="playlist-name" placeholder="Playlist name..." class="form-input">
                 <div class="playlist-videos" id="playlist-videos">
                     <!-- Selected videos will appear here -->
                 </div>
             </div>
-            <div class="modal-footer" style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
+            <div class="modal-footer">
                 <button id="save-playlist-btn" class="btn btn-primary">Save Playlist</button>
-                <button id="cancel-playlist-btn-2" class="btn btn-secondary">Cancel</button>
+                <button id="cancel-playlist-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
     </div>
 
     <!-- Drag and Drop Overlay -->
     <div class="drag-overlay" id="drag-overlay">
-        <div class="drag-text">
-            <i class="fas fa-cloud-upload-alt" style="font-size: var(--text-4xl); margin-bottom: var(--space-4); display: block;"></i>
+        <div class="drag-content">
+            <i class="fas fa-cloud-upload-alt"></i>
             <h3>Drop files here to upload</h3>
-            <p style="color: var(--text-muted); margin-top: var(--space-2);">Supported formats: MP4, AVI, MOV, MKV, WebM</p>
+            <p>Supported formats: MP4, AVI, MOV, MKV, WebM</p>
         </div>
     </div>
     
-    <script src="script.js?v=14"></script>
+    <script src="script.js?v=13"></script>
 </body>
 </html>
