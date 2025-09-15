@@ -436,12 +436,6 @@ class AdvancedVideoPlayerBrowser {
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
             `;
-        } else if (this.video.duration) {
-            const duration = this.formatTime(this.video.duration);
-            this.videoInfo.innerHTML = `
-                <strong>Duration:</strong> ${duration}<br>
-                <strong>Resolution:</strong> ${this.video.videoWidth}x${this.video.videoHeight}
-            `;
         }
     }
     
