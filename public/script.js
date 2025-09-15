@@ -629,15 +629,6 @@ class AdvancedVideoPlayerBrowser {
         }
     }
     
-    updatePathDisplay() {
-        try {
-            if (this.currentPathDisplay && this.currentPathDisplay.textContent !== undefined) {
-                this.currentPathDisplay.textContent = this.currentPath;
-            }
-        } catch (error) {
-            console.warn('Error in updatePathDisplay:', error);
-        }
-    }
     
     toggleView(isGrid) {
         this.isGridView = isGrid;
