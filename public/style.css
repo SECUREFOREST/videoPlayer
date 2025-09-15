@@ -244,48 +244,50 @@ header h1 {
 .video-container {
     position: relative;
     background: #000;
+    border-radius: 15px 15px 0 0;
+    overflow: hidden;
 }
 
-.video-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.3);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
+.video-container video {
+    width: 100%;
+    height: auto;
+    display: block;
 }
 
-.video-container:hover .video-overlay {
-    display: flex;
+.video-controls-panel {
+    background: #2d2d2d;
+    padding: 15px 20px;
+    border-radius: 0 0 15px 15px;
+    border-top: 1px solid #404040;
 }
 
 .video-controls-overlay {
-    background: rgba(0,0,0,0.8);
-    padding: 20px;
-    border-radius: 10px;
     display: flex;
     align-items: center;
     gap: 15px;
+    flex-wrap: wrap;
     color: white;
 }
 
 .control-btn {
-    background: none;
-    border: none;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
     color: white;
-    font-size: 20px;
+    font-size: 16px;
     cursor: pointer;
-    padding: 10px;
-    border-radius: 50%;
-    transition: background 0.3s ease;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 36px;
 }
 
 .control-btn:hover {
     background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.3);
 }
 
 .progress-container {
@@ -318,12 +320,15 @@ header h1 {
     font-weight: 600;
     min-width: 100px;
     text-align: center;
+    color: #ccc;
+    margin-left: 10px;
 }
 
 .volume-container, .speed-container {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: 10px;
 }
 
 .volume-slider, .speed-container select {
