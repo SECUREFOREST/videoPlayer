@@ -26,7 +26,17 @@
     </style>
 </head>
 <body>
+    <!-- Skip Links for Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a href="#search-input" class="skip-link">Skip to search</a>
+    <a href="#video-player" class="skip-link">Skip to video player</a>
+    
     <div class="container">
+        <!-- Theme Toggle Button -->
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle dark/light mode">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
+        
         <header>
             <h1><i class="fas fa-play-circle"></i> Advanced Video Player Browser</h1>
             <div class="path-display">
@@ -42,8 +52,10 @@
                        id="search-input" 
                        placeholder="Search files and videos..." 
                        aria-label="Search files and videos"
+                       aria-describedby="search-help"
                        autocomplete="off"
-                       spellcheck="false">
+                       spellcheck="false"
+                       role="searchbox">
                 <button id="search-btn" 
                         class="btn btn-primary" 
                         aria-label="Search"
@@ -79,6 +91,7 @@
                     <option value="desc">Descending</option>
                 </select>
             </div>
+            <div id="search-help" class="sr-only">Use the search box to find files and videos by name. Use the filters to narrow down results by type and sort order.</div>
         </div>
 
         <!-- Navigation Tabs -->
@@ -130,7 +143,7 @@
             </button>
         </div>
         
-        <div class="main-content">
+        <div class="main-content" id="main-content">
             <!-- File Browser Tab -->
             <div class="tab-content active" id="browser-tab">
                 <div class="file-browser">
@@ -211,50 +224,51 @@
             </div>
             
             <!-- Video Player -->
-            <div class="video-player" id="video-player" style="display: none;">
+            <div class="video-player" id="video-player" style="display: none;" role="region" aria-label="Video Player">
                 <div class="video-header">
                     <h3 id="video-title">Video Player</h3>
-                    <div class="video-controls">
-                        <button id="playlist-add-btn" class="btn btn-sm" title="Add to Playlist">
-                            <i class="fas fa-plus"></i>
+                    <div class="video-controls" role="group" aria-label="Video actions">
+                        <button id="playlist-add-btn" class="btn btn-sm" title="Add to Playlist" aria-label="Add current video to playlist">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
                         </button>
-                        <button id="favorite-btn" class="btn btn-sm" title="Add to Favorites">
-                            <i class="fas fa-heart"></i>
+                        <button id="favorite-btn" class="btn btn-sm" title="Add to Favorites" aria-label="Add current video to favorites">
+                            <i class="fas fa-heart" aria-hidden="true"></i>
                         </button>
-                        <button id="fullscreen-btn" class="btn btn-sm" title="Fullscreen">
-                            <i class="fas fa-expand"></i>
+                        <button id="fullscreen-btn" class="btn btn-sm" title="Fullscreen" aria-label="Toggle fullscreen mode">
+                            <i class="fas fa-expand" aria-hidden="true"></i>
                         </button>
-                        <button id="close-video" class="btn btn-close">✕</button>
+                        <button id="close-video" class="btn btn-close" aria-label="Close video player">✕</button>
                     </div>
                 </div>
                 <div class="video-container">
-                    <video id="video">
+                    <video id="video" aria-label="Video player" controls>
                         <source id="video-source" src="" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>
-                <div class="video-controls-panel">
+                <div class="video-controls-panel" role="group" aria-label="Video playback controls">
                     <div class="video-controls-overlay">
-                        <button id="play-pause-btn" class="control-btn">
-                            <i class="fas fa-play"></i>
+                        <button id="play-pause-btn" class="control-btn" aria-label="Play or pause video">
+                            <i class="fas fa-play" aria-hidden="true"></i>
                         </button>
                         <div class="progress-container">
-                            <div class="progress-bar" id="progress-bar">
+                            <div class="progress-bar" id="progress-bar" role="slider" aria-label="Video progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
                                 <div class="progress-fill" id="progress-fill"></div>
                             </div>
-                            <div class="time-display">
+                            <div class="time-display" aria-live="polite">
                                 <span id="current-time">0:00</span>
                                 <span id="duration">0:00</span>
                             </div>
                         </div>
                         <div class="volume-container">
-                            <button id="mute-btn" class="control-btn">
-                                <i class="fas fa-volume-up"></i>
+                            <button id="mute-btn" class="control-btn" aria-label="Mute or unmute audio">
+                                <i class="fas fa-volume-up" aria-hidden="true"></i>
                             </button>
-                            <input type="range" id="volume-slider" min="0" max="100" value="100">
+                            <input type="range" id="volume-slider" min="0" max="100" value="100" aria-label="Volume control">
                         </div>
                         <div class="speed-container">
-                            <select id="speed-select">
+                            <label for="speed-select" class="sr-only">Playback speed</label>
+                            <select id="speed-select" aria-label="Playback speed">
                                 <option value="0.25">0.25x</option>
                                 <option value="0.5">0.5x</option>
                                 <option value="0.75">0.75x</option>
@@ -267,8 +281,8 @@
                                 <option value="3">3x</option>
                             </select>
                         </div>
-                        <button id="fullscreen-btn" class="control-btn">
-                            <i class="fas fa-expand"></i>
+                        <button id="fullscreen-btn" class="control-btn" aria-label="Toggle fullscreen mode">
+                            <i class="fas fa-expand" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>

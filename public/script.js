@@ -15,6 +15,7 @@ class AdvancedVideoPlayerBrowser {
         this.focusedElement = null;
         this.keyboardNavigation = true;
         this.loadingStates = new Map();
+        this.currentTheme = 'dark';
         
         // Performance optimization
         this.debounceTimeout = null;
@@ -84,10 +85,16 @@ class AdvancedVideoPlayerBrowser {
         
         // Drag and drop
         this.dragOverlay = document.getElementById('drag-overlay');
+        
+        // Theme toggle
+        this.themeToggle = document.getElementById('theme-toggle');
+        this.themeIcon = document.getElementById('theme-icon');
     }
     
     init() {
         this.bindEvents();
+        this.loadTheme();
+        this.setupThemeListener();
         this.loadDirectory();
         this.loadPlaylists();
         this.loadFavorites();
@@ -171,6 +178,9 @@ class AdvancedVideoPlayerBrowser {
         // Global mouse events for progress bar dragging
         document.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
         document.addEventListener('mouseup', (e) => this.handleProgressMouseUp(e));
+        
+        // Theme toggle
+        this.themeToggle.addEventListener('click', () => this.toggleTheme());
     }
     
     async loadDirectory(path = '') {
@@ -1376,6 +1386,61 @@ class AdvancedVideoPlayerBrowser {
         } else {
             return 'fas fa-file';
         }
+    }
+    
+    // ========================================
+    // THEME MANAGEMENT METHODS
+    // ========================================
+    
+    loadTheme() {
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+        
+        if (savedTheme) {
+            this.currentTheme = savedTheme;
+        } else if (prefersLight) {
+            this.currentTheme = 'light';
+        } else {
+            this.currentTheme = 'dark';
+        }
+        
+        this.applyTheme();
+    }
+    
+    toggleTheme() {
+        this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+        this.applyTheme();
+        this.saveTheme();
+        this.announceToScreenReader(`Switched to ${this.currentTheme} theme`);
+    }
+    
+    applyTheme() {
+        document.documentElement.setAttribute('data-theme', this.currentTheme);
+        
+        // Update theme icon
+        if (this.themeIcon) {
+            this.themeIcon.className = this.currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+        
+        // Update theme toggle button title
+        if (this.themeToggle) {
+            this.themeToggle.title = `Switch to ${this.currentTheme === 'dark' ? 'light' : 'dark'} mode`;
+        }
+    }
+    
+    saveTheme() {
+        localStorage.setItem('theme', this.currentTheme);
+    }
+    
+    // Listen for system theme changes
+    setupThemeListener() {
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                this.currentTheme = e.matches ? 'light' : 'dark';
+                this.applyTheme();
+            }
+        });
     }
 }
 
