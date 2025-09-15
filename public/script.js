@@ -71,16 +71,6 @@ class AdvancedVideoPlayerBrowser {
         this.tabContents = document.querySelectorAll('.tab-content');
         
         // Video controls
-        this.playPauseBtn = document.getElementById('play-pause-btn');
-        this.progressBar = document.getElementById('progress-bar');
-        this.progressFill = document.getElementById('progress-fill');
-        this.currentTime = document.getElementById('current-time');
-        this.duration = document.getElementById('duration');
-        this.muteBtn = document.getElementById('mute-btn');
-        this.volumeSlider = document.getElementById('volume-slider');
-        this.speedSelect = document.getElementById('speed-select');
-        this.fullscreenBtn = document.getElementById('fullscreen-btn');
-        this.fullscreenBtnControls = document.getElementById('fullscreen-btn-controls');
         this.closeVideoBtn = document.getElementById('close-video');
         
         // Playlist and favorites

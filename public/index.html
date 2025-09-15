@@ -222,9 +222,6 @@
                         <button id="favorite-btn" class="btn btn-sm" title="Add to Favorites" aria-label="Add current video to favorites">
                             <i class="fas fa-heart" aria-hidden="true"></i>
                         </button>
-                        <button id="fullscreen-btn" class="btn btn-sm" title="Fullscreen" aria-label="Toggle fullscreen mode">
-                            <i class="fas fa-expand" aria-hidden="true"></i>
-                        </button>
                         <button id="close-video" class="btn btn-close" aria-label="Close video player">✕</button>
                     </div>
                 </div>
@@ -233,46 +230,6 @@
                         <source id="video-source" src="" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                </div>
-                <div class="video-controls-panel" role="group" aria-label="Video playback controls">
-                    <div class="video-controls-overlay">
-                        <button id="play-pause-btn" class="control-btn" aria-label="Play or pause video">
-                            <i class="fas fa-play" aria-hidden="true"></i>
-                        </button>
-                        <div class="progress-container">
-                            <div class="progress-bar" id="progress-bar" role="slider" aria-label="Video progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
-                                <div class="progress-fill" id="progress-fill"></div>
-                            </div>
-                            <div class="time-display" aria-live="polite">
-                                <span id="current-time">0:00</span>
-                                <span id="duration">0:00</span>
-                            </div>
-                        </div>
-                        <div class="volume-container">
-                            <button id="mute-btn" class="control-btn" aria-label="Mute or unmute audio">
-                                <i class="fas fa-volume-up" aria-hidden="true"></i>
-                            </button>
-                            <input type="range" id="volume-slider" min="0" max="100" value="100" aria-label="Volume control">
-                        </div>
-                        <div class="speed-container">
-                            <label for="speed-select" class="sr-only">Playback speed</label>
-                            <select id="speed-select" aria-label="Playback speed">
-                                <option value="0.25">0.25x</option>
-                                <option value="0.5">0.5x</option>
-                                <option value="0.75">0.75x</option>
-                                <option value="1" selected>1x</option>
-                                <option value="1.25">1.25x</option>
-                                <option value="1.5">1.5x</option>
-                                <option value="1.75">1.75x</option>
-                                <option value="2">2x</option>
-                                <option value="2.5">2.5x</option>
-                                <option value="3">3x</option>
-                            </select>
-                        </div>
-                        <button id="fullscreen-btn-controls" class="control-btn" aria-label="Toggle fullscreen mode">
-                            <i class="fas fa-expand" aria-hidden="true"></i>
-                        </button>
-                    </div>
                 </div>
                 <div class="video-info" id="video-info"></div>
             </div>
