@@ -221,11 +221,7 @@ class AdvancedVideoPlayerBrowser {
             
             if (response.ok) {
                 this.currentPath = data.currentPath;
-                try {
-                    this.updatePathDisplay();
-                } catch (error) {
-                    console.warn('Error updating path display:', error);
-                }
+                // Path display removed
                 this.renderFileList(data.items, data.parentPath);
                 this.updateBackButton(data.parentPath);
             } else {
