@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Video Player Dashboard - Choose your preferred interface">
+    <meta name="theme-color" content="#000000">
+    <title>Video Player Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #e50914;
+            --secondary-color: #141414;
+            --accent-color: #00d4ff;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --background: #000000;
+            --card-background: #1a1a1a;
+            --border-color: #333333;
+            
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
+            --space-20: 5rem;
+            
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+            --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+            
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-8);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-16);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: var(--space-4);
+            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--space-8);
+            margin-bottom: var(--space-16);
+        }
+
+        .card {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: var(--space-8);
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary-color);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: var(--space-4);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--space-3);
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-6);
+            line-height: 1.5;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: var(--space-6);
+        }
+
+        .card-features li {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-2);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .card-features li i {
+            color: var(--accent-color);
+            font-size: 0.9rem;
+        }
+
+        .card-button {
+            background: var(--primary-color);
+            color: var(--text-primary);
+            border: none;
+            padding: var(--space-3) var(--space-6);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            width: 100%;
+            justify-content: center;
+        }
+
+        .card-button:hover {
+            background: #f40612;
+            transform: translateY(-2px);
+        }
+
+        .card-button.secondary {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .card-button.secondary:hover {
+            background: var(--primary-color);
+            color: var(--text-primary);
+        }
+
+        .features-section {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: var(--space-12);
+            margin-bottom: var(--space-16);
+            border: 1px solid var(--border-color);
+        }
+
+        .features-title {
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-6);
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: var(--space-4);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            margin-bottom: var(--space-4);
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: var(--space-2);
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: var(--space-8) 0;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .cards-grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-6);
+            }
+            
+            .card {
+                padding: var(--space-6);
+            }
+            
+            .features-section {
+                padding: var(--space-8);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: var(--space-4);
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: var(--space-4);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Video Player Dashboard</h1>
+            <p>Choose your preferred video player interface. Both options offer powerful features with different design approaches.</p>
+        </header>
+
+        <div class="cards-grid">
+            <!-- Original Advanced Video Player -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-video"></i>
+                </div>
+                <h3 class="card-title">Advanced Video Player</h3>
+                <p class="card-description">
+                    Professional video player with comprehensive features, accessibility support, and mobile-first responsive design.
+                </p>
+                <ul class="card-features">
+                    <li><i class="fas fa-check"></i> File browser with search and filters</li>
+                    <li><i class="fas fa-check"></i> Playlist and favorites management</li>
+                    <li><i class="fas fa-check"></i> Recently played tracking</li>
+                    <li><i class="fas fa-check"></i> Full accessibility support</li>
+                    <li><i class="fas fa-check"></i> Mobile-first responsive design</li>
+                    <li><i class="fas fa-check"></i> Keyboard navigation</li>
+                    <li><i class="fas fa-check"></i> Dark theme with flat design</li>
+                </ul>
+                <a href="index.html" class="card-button">
+                    <i class="fas fa-play"></i>
+                    Open Advanced Player
+                </a>
+            </div>
+
+            <!-- Netflix Style Player -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fab fa-netflix"></i>
+                </div>
+                <h3 class="card-title">Netflix-Style Player</h3>
+                <p class="card-description">
+                    Modern Netflix-inspired interface with sleek design, smooth animations, and intuitive user experience.
+                </p>
+                <ul class="card-features">
+                    <li><i class="fas fa-check"></i> Netflix-inspired design language</li>
+                    <li><i class="fas fa-check"></i> Smooth hover animations</li>
+                    <li><i class="fas fa-check"></i> Content carousel navigation</li>
+                    <li><i class="fas fa-check"></i> Interactive video controls</li>
+                    <li><i class="fas fa-check"></i> My List and favorites</li>
+                    <li><i class="fas fa-check"></i> Toast notifications</li>
+                    <li><i class="fas fa-check"></i> Responsive design</li>
+                </ul>
+                <a href="netflix-advanced.html" class="card-button">
+                    <i class="fas fa-play"></i>
+                    Open Netflix Style
+                </a>
+            </div>
+
+            <!-- Simple Netflix Player -->
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-tv"></i>
+                </div>
+                <h3 class="card-title">Simple Netflix Player</h3>
+                <p class="card-description">
+                    Clean and minimal Netflix-style interface focused on essential features with elegant design.
+                </p>
+                <ul class="card-features">
+                    <li><i class="fas fa-check"></i> Clean minimal design</li>
+                    <li><i class="fas fa-check"></i> Essential video controls</li>
+                    <li><i class="fas fa-check"></i> Content browsing</li>
+                    <li><i class="fas fa-check"></i> Fast loading</li>
+                    <li><i class="fas fa-check"></i> Mobile optimized</li>
+                    <li><i class="fas fa-check"></i> Easy navigation</li>
+                    <li><i class="fas fa-check"></i> Netflix color scheme</li>
+                </ul>
+                <a href="netflix.html" class="card-button secondary">
+                    <i class="fas fa-play"></i>
+                    Open Simple Style
+                </a>
+            </div>
+        </div>
+
+        <section class="features-section">
+            <h2 class="features-title">Key Features</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3 class="feature-title">Mobile First</h3>
+                    <p class="feature-description">Responsive design that works perfectly on all devices</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-universal-access"></i>
+                    </div>
+                    <h3 class="feature-title">Accessible</h3>
+                    <p class="feature-description">Full accessibility support with keyboard navigation</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <h3 class="feature-title">Dark Theme</h3>
+                    <p class="feature-description">Modern dark theme with professional color schemes</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3 class="feature-title">Performance</h3>
+                    <p class="feature-description">Optimized for speed and smooth user experience</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-keyboard"></i>
+                    </div>
+                    <h3 class="feature-title">Keyboard Shortcuts</h3>
+                    <p class="feature-description">Powerful keyboard shortcuts for efficient navigation</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3 class="feature-title">Smart Search</h3>
+                    <p class="feature-description">Intelligent search with filters and sorting options</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>&copy; 2024 Video Player Dashboard. Built with modern web technologies.</p>
+            <p>Choose your preferred interface and enjoy seamless video playback experience.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Add click animation
+            const buttons = document.querySelectorAll('.card-button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Add ripple effect
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    ripple.classList.add('ripple');
+                    
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+            });
+        });
+
+        // Add ripple effect styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .card-button {
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .ripple {
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.3);
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+            }
+            
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
