@@ -46,6 +46,9 @@ class AdvancedVideoPlayerBrowser {
         this.videoPlayer = document.getElementById('video-player');
         this.fileList = document.getElementById('file-list');
         this.currentPathDisplay = document.getElementById('current-path');
+        if (!this.currentPathDisplay) {
+            console.error('current-path element not found!');
+        }
         this.video = document.getElementById('video');
         this.videoSource = document.getElementById('video-source');
         this.videoTitle = document.getElementById('video-title');
@@ -629,7 +632,9 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updatePathDisplay() {
-        this.currentPathDisplay.textContent = this.currentPath;
+        if (this.currentPathDisplay) {
+            this.currentPathDisplay.textContent = this.currentPath;
+        }
     }
     
     toggleView(isGrid) {
