@@ -271,6 +271,13 @@
 
 html {
     background: #000000 !important;
+    background-color: #000000 !important;
+}
+
+/* Override any potential purple backgrounds */
+body, html, #root, .app, .main, .container {
+    background: #000000 !important;
+    background-color: #000000 !important;
 }
 
 body {
