@@ -931,7 +931,7 @@ header h1 {
     padding: var(--space-10);
 }
 
-.playlist-item, .favorite-item, .recent-item, .search-item {
+.playlist-item, .favorite-item, .search-item {
     display: flex;
     align-items: center;
     padding: var(--space-4);
@@ -972,28 +972,19 @@ header h1 {
     font-weight: var(--font-semibold);
 }
 
-.recent-item .recent-info {
-    flex: 1;
-}
 
-.recent-item .recent-time {
-    font-size: var(--text-xs);
-    color: var(--color-gray-500);
-    font-style: italic;
-}
-
-.playlist-item .playlist-name, .favorite-item .favorite-name, .recent-item .recent-name, .search-item .search-name {
+.playlist-item .playlist-name, .favorite-item .favorite-name, .search-item .search-name {
     font-weight: var(--font-semibold);
     margin-bottom: var(--space-1);
     color: var(--color-white);
 }
 
-.playlist-item .playlist-count, .favorite-item .favorite-path, .recent-item .recent-path, .search-item .search-path {
+.playlist-item .playlist-count, .favorite-item .favorite-path, .search-item .search-path {
     font-size: var(--text-xs);
     color: var(--color-gray-500);
 }
 
-.playlist-actions, .favorite-actions, .recent-actions {
+.playlist-actions, .favorite-actions {
     display: flex;
     gap: var(--space-3);
 }
