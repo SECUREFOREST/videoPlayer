@@ -1877,8 +1877,9 @@ class AdvancedVideoPlayerBrowser {
         // Remove existing click listener to avoid duplicates
         this.video.removeEventListener('click', this.handleVideoClick);
         
-        // Add new click listener
+        // Add click listener to video element
         this.video.addEventListener('click', this.handleVideoClick);
+        
         console.log('Video click listener attached');
     }
     
@@ -1887,6 +1888,13 @@ class AdvancedVideoPlayerBrowser {
         event.preventDefault();
         event.stopPropagation();
         this.togglePlayPause();
+    }
+    
+    // Alternative approach: detect user interaction with video
+    handleVideoUserInteraction = () => {
+        console.log('User interacted with video');
+        // This will be called when user clicks play/pause on native controls
+        // We can use this to sync our custom controls
     }
     
     // ========================================
