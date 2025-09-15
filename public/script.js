@@ -547,17 +547,20 @@ class AdvancedVideoPlayerBrowser {
         });
         
         if (canGoBack) {
+            // Create a new button element to avoid disabled state issues
+            const newBackBtn = document.createElement('button');
+            newBackBtn.id = 'back-btn';
+            newBackBtn.className = 'btn btn-secondary';
+            newBackBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+            newBackBtn.addEventListener('click', () => this.goBack());
+            
+            // Replace the old button
+            this.backBtn.parentNode.replaceChild(newBackBtn, this.backBtn);
+            this.backBtn = newBackBtn;
+            
             this.backBtn.style.display = 'block';
-            this.backBtn.disabled = false;
-            this.backBtn.removeAttribute('disabled');
-            // Force override CSS disabled styles
-            this.backBtn.style.opacity = '1 !important';
-            this.backBtn.style.cursor = 'pointer !important';
-            this.backBtn.style.pointerEvents = 'auto';
         } else {
             this.backBtn.style.display = 'none';
-            this.backBtn.disabled = true;
-            this.backBtn.setAttribute('disabled', '');
         }
     }
     
