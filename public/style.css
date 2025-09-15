@@ -233,25 +233,32 @@
    ======================================== */
 
 
-/* Force dark theme by default */
+/* Onesubmissive Act Color Theme */
 :root {
-    --color-primary: #3b82f6;
-    --color-primary-hover: #2563eb;
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-error: #ef4444;
-    --color-info: #06b6d4;
+    /* Primary Colors - Deep burgundy and crimson */
+    --color-primary: #8B1538;
+    --color-primary-hover: #A01E42;
+    --color-success: #2D5A27;
+    --color-warning: #B8860B;
+    --color-error: #DC143C;
+    --color-info: #4B0082;
     
-    /* Dark Theme Colors (default) */
-    --color-black: #000000;
-    --color-white: #ffffff;
-    --color-gray-900: #111111;
-    --color-gray-800: #1f1f1f;
-    --color-gray-700: #374151;
-    --color-gray-600: #4b5563;
-    --color-gray-500: #6b7280;
-    --color-gray-400: #9ca3af;
-    --color-gray-300: #d1d5db;
+    /* Dark Theme Colors - Rich blacks and deep grays */
+    --color-black: #0A0A0A;
+    --color-white: #F5F5F5;
+    --color-gray-900: #1A1A1A;
+    --color-gray-800: #2D2D2D;
+    --color-gray-700: #404040;
+    --color-gray-600: #5C5C5C;
+    --color-gray-500: #808080;
+    --color-gray-400: #A0A0A0;
+    --color-gray-300: #C0C0C0;
+    
+    /* Accent Colors - Deep purples and dark reds */
+    --color-accent-1: #4B0082;  /* Indigo */
+    --color-accent-2: #8B0000;  /* Dark red */
+    --color-accent-3: #2F1B69;  /* Deep purple */
+    --color-accent-4: #8B1538;  /* Burgundy */
 }
 
 
@@ -270,19 +277,19 @@
 }
 
 html {
-    background: #000000 !important;
-    background-color: #000000 !important;
+    background: var(--color-black) !important;
+    background-color: var(--color-black) !important;
 }
 
 /* Override any potential purple backgrounds */
 body, html, #root, .app, .main, .container {
-    background: #000000 !important;
-    background-color: #000000 !important;
+    background: var(--color-black) !important;
+    background-color: var(--color-black) !important;
 }
 
 body {
     font-family: var(--font-family-sans);
-    background: #000000 !important;
+    background: var(--color-black) !important;
     min-height: 100vh;
     color: var(--color-white);
     line-height: 1.6;
@@ -290,9 +297,9 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure all main containers have black background */
+/* Ensure all main containers have dark background */
 .container, .main-content, .tab-content {
-    background: #000000 !important;
+    background: var(--color-black) !important;
 }
 
 .container {
@@ -453,10 +460,10 @@ header h1 {
 }
 
 .tab-btn.active {
-    background: var(--color-black);
+    background: linear-gradient(135deg, var(--color-gray-900), var(--color-gray-800));
     color: var(--color-white);
     border-bottom: 3px solid var(--color-primary);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 2px 10px rgba(139, 21, 56, 0.2);
 }
 
 .tab-btn i {
@@ -558,12 +565,16 @@ header h1 {
 }
 
 .btn-primary {
-    background: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent-1));
     color: var(--color-white);
+    border: 1px solid var(--color-accent-2);
+    box-shadow: 0 4px 15px rgba(139, 21, 56, 0.3);
 }
 
 .btn-primary:hover {
-    background: var(--color-primary-hover);
+    background: linear-gradient(135deg, var(--color-primary-hover), var(--color-accent-3));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 21, 56, 0.4);
 }
 
 .btn-close {
@@ -650,9 +661,10 @@ header h1 {
 
 .progress-fill {
     height: 100%;
-    background: var(--color-primary);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent-1));
     width: 0%;
     transition: width var(--transition-fast);
+    box-shadow: 0 0 10px rgba(139, 21, 56, 0.5);
 }
 
 .time-display {
@@ -968,8 +980,10 @@ header h1 {
 }
 
 .file-item:hover {
-    background: var(--color-gray-800);
+    background: linear-gradient(135deg, var(--color-gray-800), var(--color-gray-700));
     transform: translateX(5px);
+    border-left: 3px solid var(--color-primary);
+    box-shadow: 0 4px 15px rgba(139, 21, 56, 0.1);
 }
 
 .file-item:last-child {
