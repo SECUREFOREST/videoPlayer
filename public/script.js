@@ -1,3 +1,4 @@
+// Version: 2.0 - Path display completely removed
 class AdvancedVideoPlayerBrowser {
     constructor() {
         this.currentPath = '';
