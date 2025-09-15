@@ -131,24 +131,6 @@ class AdvancedVideoPlayerBrowser {
         });
         
         // Video controls
-        this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
-        
-        // Add video click listener as backup (in case video element is available)
-        if (this.video) {
-            this.video.addEventListener('click', () => {
-                console.log('Video clicked!');
-                this.togglePlayPause();
-            });
-        }
-        this.progressBar.addEventListener('click', (e) => this.seekTo(e));
-        this.progressBar.addEventListener('mousedown', (e) => this.handleProgressMouseDown(e));
-        this.progressBar.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
-        this.progressBar.addEventListener('mouseup', (e) => this.handleProgressMouseUp(e));
-        this.muteBtn.addEventListener('click', () => this.toggleMute());
-        this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
-        this.speedSelect.addEventListener('change', (e) => this.setPlaybackSpeed(e.target.value));
-        this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-        this.fullscreenBtnControls.addEventListener('click', () => this.toggleFullscreen());
         this.closeVideoBtn.addEventListener('click', () => this.closeVideo());
         
         // Playlist and favorites
@@ -1017,20 +999,6 @@ class AdvancedVideoPlayerBrowser {
         if (this.videoPlayer.style.display === 'none') return;
         
         switch(e.key) {
-            case ' ':
-                e.preventDefault();
-                this.togglePlayPause();
-                break;
-            case 'f':
-            case 'F':
-                e.preventDefault();
-                this.toggleFullscreen();
-                break;
-            case 'm':
-            case 'M':
-                e.preventDefault();
-                this.toggleMute();
-                break;
             case 'Escape':
                 if (this.isFullscreen) {
                     this.toggleFullscreen();
@@ -1280,21 +1248,6 @@ class AdvancedVideoPlayerBrowser {
             case 'L':
                 e.preventDefault();
                 this.seekVideo(10);
-                break;
-            case 'k':
-            case 'K':
-                e.preventDefault();
-                this.togglePlayPause();
-                break;
-            case 'f':
-            case 'F':
-                e.preventDefault();
-                this.toggleFullscreen();
-                break;
-            case 'm':
-            case 'M':
-                e.preventDefault();
-                this.toggleMute();
                 break;
         }
     }
@@ -1576,10 +1529,6 @@ class AdvancedVideoPlayerBrowser {
         this.video.addEventListener('error', (e) => this.handleVideoError(e));
         this.video.addEventListener('seeking', () => this.handleVideoSeeking());
         this.video.addEventListener('seeked', () => this.handleVideoSeeked());
-        this.video.addEventListener('click', () => {
-            console.log('Video clicked from setupVideoEventListeners!');
-            this.togglePlayPause();
-        });
         
         console.log('Video event listeners set up successfully');
     }
@@ -1925,10 +1874,6 @@ class AdvancedVideoPlayerBrowser {
     }
     
     handleVideoClick = (event) => {
-        console.log('Video clicked!', event);
-        event.preventDefault();
-        event.stopPropagation();
-        this.togglePlayPause();
     }
     
     // Alternative approach: detect user interaction with video
