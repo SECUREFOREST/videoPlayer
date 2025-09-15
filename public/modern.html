@@ -977,11 +977,11 @@
             }
 
             playVideo(file) {
-                if (file.type === 'video') {
+                if (file.isFile && this.isVideoFile(file.name)) {
                     this.video.src = `/videos/${encodeURIComponent(file.path)}`;
                     this.currentVideo = file;
                     this.video.load();
-                } else if (file.type === 'folder') {
+                } else if (file.isDirectory) {
                     // Handle folder navigation
                     this.loadFilesInFolder(file.path);
                 }
@@ -989,12 +989,12 @@
 
             async loadFilesInFolder(folderPath) {
                 try {
-                    const response = await fetch(`/api/files?path=${encodeURIComponent(folderPath)}`);
+                    const response = await fetch(`/api/browse?path=${encodeURIComponent(folderPath)}`);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    const files = await response.json();
-                    this.renderFiles(files);
+                    const data = await response.json();
+                    this.renderFiles(data);
                 } catch (error) {
                     console.error('Error loading folder:', error);
                     this.showError('Failed to load folder contents.');
