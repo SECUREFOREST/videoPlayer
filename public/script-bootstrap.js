@@ -82,6 +82,13 @@ class ModernVideoPlayerBrowser {
         this.playlistAddBtn = document.getElementById('playlist-add-btn');
         this.favoriteBtn = document.getElementById('favorite-btn');
         
+        // Add event listener for modal close
+        if (this.videoPlayerModal) {
+            this.videoPlayerModal._element.addEventListener('hidden.bs.modal', () => {
+                this.pauseVideo();
+            });
+        }
+        
         // Playlist and favorites
         this.createPlaylistBtn = document.getElementById('create-playlist-btn');
         this.playlistList = document.getElementById('playlist-list');
@@ -503,6 +510,12 @@ class ModernVideoPlayerBrowser {
         this.isFullscreen = !!document.fullscreenElement;
     }
     
+    pauseVideo() {
+        if (this.video && !this.video.paused) {
+            this.video.pause();
+        }
+    }
+    
     closeVideo() {
         this.videoPlayerModal.hide();
         this.video.pause();
@@ -564,9 +577,20 @@ class ModernVideoPlayerBrowser {
     }
     
     switchTab(tabName) {
+        console.log('Switching to tab:', tabName);
+        
         // Update tab buttons
         this.tabBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.id === tabName + '-tab');
+            const isActive = btn.id === tabName + '-tab';
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive);
+        });
+        
+        // Show/hide tab content
+        this.tabPanes.forEach(pane => {
+            const isTargetPane = pane.id === tabName + '-pane';
+            pane.classList.toggle('show', isTargetPane);
+            pane.classList.toggle('active', isTargetPane);
         });
         
         // Load content for specific tabs
@@ -607,6 +631,7 @@ class ModernVideoPlayerBrowser {
     }
     
     renderSearchResults() {
+        console.log('Rendering search results:', this.searchResults.length, 'items');
         this.searchList.innerHTML = '';
         
         if (this.searchResults.length === 0) {
@@ -614,7 +639,21 @@ class ModernVideoPlayerBrowser {
             return;
         }
         
-        this.searchResults.forEach(item => {
+        // Filter out system/metadata files
+        const filteredResults = this.searchResults.filter(item => {
+            return !item.name.startsWith('._') && 
+                   !item.name.startsWith('.DS_Store') && 
+                   !item.name.startsWith('Thumbs.db');
+        });
+        
+        console.log('Filtered results:', filteredResults.length, 'items');
+        
+        if (filteredResults.length === 0) {
+            this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found (filtered out system files)</p></div></div>';
+            return;
+        }
+        
+        filteredResults.forEach(item => {
             const col = document.createElement('div');
             col.className = 'col-12';
             
@@ -647,7 +686,10 @@ class ModernVideoPlayerBrowser {
             
             col.appendChild(div);
             this.searchList.appendChild(col);
+            console.log('Added search result item:', item.name);
         });
+        
+        console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
     }
     
     async loadPlaylists() {
@@ -1309,7 +1351,7 @@ class ModernVideoPlayerBrowser {
         // Basic keyboard navigation
         if (e.key === 'Escape') {
             if (this.videoPlayerModal && this.videoPlayerModal._isShown) {
-                this.videoPlayerModal.hide();
+                this.closeVideo();
             }
         }
     }
