@@ -1,4 +1,4 @@
-// Version: 2.0 - Path display completely removed
+// Version: 2.1 - Back button functionality fixed
 class AdvancedVideoPlayerBrowser {
     constructor() {
         this.currentPath = '';
@@ -587,9 +587,26 @@ class AdvancedVideoPlayerBrowser {
     }
     
     goBack() {
-        const parentPath = this.currentPath.split('/').slice(0, -1).join('/');
-        if (parentPath && parentPath !== this.currentPath) {
-            this.loadDirectory(parentPath);
+        console.log('Back button clicked!');
+        console.log('Current path:', this.currentPath);
+        
+        const pathParts = this.currentPath.split('/').filter(part => part !== '');
+        console.log('Path parts:', pathParts);
+        
+        if (pathParts.length > 0) {
+            // Remove the last part to go up one level
+            pathParts.pop();
+            const parentPath = pathParts.join('/');
+            console.log('Going back to:', parentPath);
+            
+            if (parentPath !== this.currentPath) {
+                this.loadDirectory(parentPath);
+            } else {
+                // If we're at root, go to empty path
+                this.loadDirectory('');
+            }
+        } else {
+            console.log('Already at root, cannot go back');
         }
     }
     
@@ -597,36 +614,16 @@ class AdvancedVideoPlayerBrowser {
         // Can go back if we're not at the root level (currentPath is not empty)
         const canGoBack = this.currentPath && this.currentPath !== '';
         
-        console.log('Back button debug:', {
-            parentPath: parentPath,
-            currentPath: this.currentPath,
-            canGoBack: canGoBack,
-            buttonExists: !!this.backBtn,
-            buttonDisabled: this.backBtn ? this.backBtn.disabled : 'N/A'
-        });
-        
-        if (canGoBack) {
-            console.log('Creating new back button...');
-            // Create a new button element to avoid disabled state issues
-            const newBackBtn = document.createElement('button');
-            newBackBtn.id = 'back-btn';
-            newBackBtn.className = 'btn btn-secondary';
-            newBackBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
-            newBackBtn.addEventListener('click', () => this.goBack());
-            
-            // Replace the old button
-            if (this.backBtn && this.backBtn.parentNode) {
-                this.backBtn.parentNode.replaceChild(newBackBtn, this.backBtn);
-                this.backBtn = newBackBtn;
-                console.log('Back button replaced successfully');
+        if (this.backBtn) {
+            if (canGoBack) {
+                this.backBtn.disabled = false;
+                this.backBtn.style.display = 'block';
+                this.backBtn.style.opacity = '1';
             } else {
-                console.log('Could not replace back button - parent node not found');
+                this.backBtn.disabled = true;
+                this.backBtn.style.display = 'none';
+                this.backBtn.style.opacity = '0.5';
             }
-            
-            this.backBtn.style.display = 'block';
-        } else {
-            console.log('Hiding back button');
-            this.backBtn.style.display = 'none';
         }
     }
     
