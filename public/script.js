@@ -145,6 +145,14 @@ class AdvancedVideoPlayerBrowser {
         
         // Video controls
         this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+        
+        // Add video click listener as backup (in case video element is available)
+        if (this.video) {
+            this.video.addEventListener('click', () => {
+                console.log('Video clicked!');
+                this.togglePlayPause();
+            });
+        }
         this.progressBar.addEventListener('click', (e) => this.seekTo(e));
         this.progressBar.addEventListener('mousedown', (e) => this.handleProgressMouseDown(e));
         this.progressBar.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
@@ -397,6 +405,9 @@ class AdvancedVideoPlayerBrowser {
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
                 this.updateVideoInfo(videoData);
+                
+                // Ensure click listener is attached when video is loaded
+                this.attachVideoClickListener();
                 
                 // Restore progress if available
                 this.restoreProgress(item.path);
@@ -1489,6 +1500,8 @@ class AdvancedVideoPlayerBrowser {
             return;
         }
         
+        console.log('Initializing video player...');
+        
         // Set initial video state
         this.videoState.isInitialized = true;
         this.videoState.volume = this.video.volume || 1.0;
@@ -1500,10 +1513,20 @@ class AdvancedVideoPlayerBrowser {
         
         // Add video event listeners
         this.setupVideoEventListeners();
+        
+        // Attach click listener
+        this.attachVideoClickListener();
+        
+        console.log('Video player initialized successfully');
     }
     
     setupVideoEventListeners() {
-        if (!this.video) return;
+        if (!this.video) {
+            console.log('Video element not available for event listeners');
+            return;
+        }
+        
+        console.log('Setting up video event listeners...');
         
         // Remove existing listeners to prevent duplicates
         this.removeVideoEventListeners();
@@ -1522,7 +1545,12 @@ class AdvancedVideoPlayerBrowser {
         this.video.addEventListener('error', (e) => this.handleVideoError(e));
         this.video.addEventListener('seeking', () => this.handleVideoSeeking());
         this.video.addEventListener('seeked', () => this.handleVideoSeeked());
-        this.video.addEventListener('click', () => this.togglePlayPause());
+        this.video.addEventListener('click', () => {
+            console.log('Video clicked from setupVideoEventListeners!');
+            this.togglePlayPause();
+        });
+        
+        console.log('Video event listeners set up successfully');
     }
     
     removeVideoEventListeners() {
@@ -1834,6 +1862,31 @@ class AdvancedVideoPlayerBrowser {
                 setTimeout(() => inThrottle = false, limit);
             }
         };
+    }
+    
+    // ========================================
+    // VIDEO CLICK HANDLING
+    // ========================================
+    
+    attachVideoClickListener() {
+        if (!this.video) {
+            console.log('Video element not available for click listener');
+            return;
+        }
+        
+        // Remove existing click listener to avoid duplicates
+        this.video.removeEventListener('click', this.handleVideoClick);
+        
+        // Add new click listener
+        this.video.addEventListener('click', this.handleVideoClick);
+        console.log('Video click listener attached');
+    }
+    
+    handleVideoClick = (event) => {
+        console.log('Video clicked!', event);
+        event.preventDefault();
+        event.stopPropagation();
+        this.togglePlayPause();
     }
     
     // ========================================
