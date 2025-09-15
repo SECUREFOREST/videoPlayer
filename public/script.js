@@ -1308,7 +1308,6 @@ class AdvancedVideoPlayerBrowser {
     handleVideoLoadStart() {
         console.log('Video load started');
         this.videoState.isSeeking = false;
-        this.showStatusMessage('Loading video...', 'info');
     }
     
     handleVideoLoadedMetadata() {
@@ -1320,7 +1319,6 @@ class AdvancedVideoPlayerBrowser {
     
     handleVideoLoadedData() {
         console.log('Video data loaded');
-        this.showStatusMessage('Video loaded', 'success');
     }
     
     handleVideoCanPlay() {
