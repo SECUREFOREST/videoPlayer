@@ -163,7 +163,15 @@ app.get('/api/browse', (req, res) => {
         });
 
         // Calculate parent path - only if we're not at the root level
-        const parentPath = directoryPath === VIDEOS_ROOT ? '' : path.relative(VIDEOS_ROOT, path.dirname(directoryPath));
+        let parentPath = '';
+        if (directoryPath !== VIDEOS_ROOT) {
+            const parentDir = path.dirname(directoryPath);
+            if (parentDir !== VIDEOS_ROOT) {
+                parentPath = path.relative(VIDEOS_ROOT, parentDir);
+            } else {
+                parentPath = ''; // We're one level down from root, parent is root
+            }
+        }
         
         res.json({
             currentPath: path.relative(VIDEOS_ROOT, directoryPath),

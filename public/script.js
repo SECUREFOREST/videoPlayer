@@ -537,8 +537,8 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updateBackButton(parentPath) {
-        // Use the parentPath from server to determine if we can go back
-        const canGoBack = parentPath && parentPath !== '' && parentPath !== this.currentPath;
+        // Can go back if we're not at the root level (currentPath is not empty)
+        const canGoBack = this.currentPath && this.currentPath !== '';
         
         console.log('Back button debug:', {
             parentPath: parentPath,
