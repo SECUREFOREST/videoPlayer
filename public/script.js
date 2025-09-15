@@ -543,8 +543,10 @@ class AdvancedVideoPlayerBrowser {
         if (canGoBack) {
             this.backBtn.style.display = 'block';
             this.backBtn.disabled = false;
+            this.backBtn.removeAttribute('disabled');
         } else {
             this.backBtn.style.display = 'none';
+            this.backBtn.disabled = true;
         }
     }
     
