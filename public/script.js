@@ -33,6 +33,10 @@ class AdvancedVideoPlayerBrowser {
         this.debounceTimeout = null;
         this.animationFrame = null;
         
+        // Async operation tracking
+        this.activeRequests = new Set();
+        this.loadingStates = new Map();
+        
         // DOM elements
         this.initializeElements();
         this.init();
@@ -194,10 +198,18 @@ class AdvancedVideoPlayerBrowser {
         
         // Theme toggle
         this.themeToggle.addEventListener('click', () => this.toggleTheme());
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => this.cleanup());
     }
     
     async loadDirectory(path = '') {
-        try {
+        if (this.isLoading('loadDirectory')) {
+            console.log('Directory load already in progress, skipping...');
+            return;
+        }
+        
+        return this.safeAsyncOperation(async () => {
             this.showLoading();
             const params = new URLSearchParams({
                 path: path,
@@ -218,9 +230,7 @@ class AdvancedVideoPlayerBrowser {
             } else {
                 this.showError(data.error || 'Failed to load directory');
             }
-        } catch (error) {
-            this.showError('Network error: ' + error.message);
-        }
+        }, 'loadDirectory');
     }
     
     renderFileList(items, parentPath) {
@@ -448,12 +458,18 @@ class AdvancedVideoPlayerBrowser {
     }
     
     togglePlayPause() {
-        if (this.video.paused) {
-            this.video.play();
-            this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        } else {
+        if (!this.video || !this.videoState.isInitialized) {
+            this.showStatusMessage('Video not ready', 'warning');
+            return;
+        }
+        
+        if (this.videoState.isPlaying) {
             this.video.pause();
-            this.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        } else {
+            this.video.play().catch(error => {
+                console.error('Play failed:', error);
+                this.showStatusMessage('Failed to play video', 'error');
+            });
         }
     }
     
@@ -499,19 +515,36 @@ class AdvancedVideoPlayerBrowser {
     }
     
     toggleMute() {
-        this.video.muted = !this.video.muted;
-        this.muteBtn.innerHTML = this.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-        this.volumeSlider.value = this.video.muted ? 0 : this.video.volume * 100;
+        if (!this.video || !this.videoState.isInitialized) return;
+        
+        this.video.muted = !this.videoState.isMuted;
+        this.videoState.isMuted = this.video.muted;
+        this.updateVideoControls();
     }
     
     setVolume(value) {
-        this.video.volume = value / 100;
-        this.video.muted = value == 0;
-        this.muteBtn.innerHTML = this.video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        if (!this.video || !this.videoState.isInitialized) return;
+        
+        const validatedVolume = this.validateVolume(value);
+        if (validatedVolume === null) return;
+        
+        const volume = validatedVolume / 100;
+        this.video.volume = volume;
+        this.video.muted = volume === 0;
+        this.videoState.volume = volume;
+        this.videoState.isMuted = this.video.muted;
+        this.updateVideoControls();
     }
     
     setPlaybackSpeed(speed) {
-        this.video.playbackRate = parseFloat(speed);
+        if (!this.video || !this.videoState.isInitialized) return;
+        
+        const validatedSpeed = this.validatePlaybackSpeed(speed);
+        if (validatedSpeed === null) return;
+        
+        this.video.playbackRate = validatedSpeed;
+        this.videoState.playbackRate = validatedSpeed;
+        this.updateVideoControls();
     }
     
     toggleFullscreen() {
@@ -629,10 +662,15 @@ class AdvancedVideoPlayerBrowser {
     }
     
     async performSearch() {
-        const searchTerm = this.searchInput.value.trim();
+        if (this.isLoading('search')) {
+            console.log('Search already in progress, skipping...');
+            return;
+        }
+        
+        const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
         
-        try {
+        return this.safeAsyncOperation(async () => {
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value}`);
             const data = await response.json();
             
@@ -644,9 +682,7 @@ class AdvancedVideoPlayerBrowser {
             } else {
                 this.showStatusMessage('Search failed: ' + data.error, 'error');
             }
-        } catch (error) {
-            this.showStatusMessage('Search error: ' + error.message, 'error');
-        }
+        }, 'search');
     }
     
     renderSearchResults() {
@@ -802,11 +838,8 @@ class AdvancedVideoPlayerBrowser {
     }
     
     async savePlaylist() {
-        const name = this.playlistName.value.trim();
-        if (!name) {
-            this.showStatusMessage('Please enter a playlist name', 'warning');
-            return;
-        }
+        const name = this.validatePlaylistName(this.playlistName.value);
+        if (!name) return;
         
         const videos = this.currentVideo ? [this.currentVideo] : [];
         
@@ -1448,6 +1481,392 @@ class AdvancedVideoPlayerBrowser {
         } else {
             return 'fas fa-file';
         }
+    }
+    
+    // ========================================
+    // VIDEO PLAYER INITIALIZATION & STATE MANAGEMENT
+    // ========================================
+    
+    initializeVideoPlayer() {
+        if (!this.video || !this.videoSource) {
+            console.error('Video elements not found during initialization');
+            return;
+        }
+        
+        // Set initial video state
+        this.videoState.isInitialized = true;
+        this.videoState.volume = this.video.volume || 1.0;
+        this.videoState.isMuted = this.video.muted || false;
+        this.videoState.playbackRate = this.video.playbackRate || 1.0;
+        
+        // Update UI to reflect initial state
+        this.updateVideoControls();
+        
+        // Add video event listeners
+        this.setupVideoEventListeners();
+    }
+    
+    setupVideoEventListeners() {
+        if (!this.video) return;
+        
+        // Remove existing listeners to prevent duplicates
+        this.removeVideoEventListeners();
+        
+        // Add new listeners
+        this.video.addEventListener('loadstart', () => this.handleVideoLoadStart());
+        this.video.addEventListener('loadedmetadata', () => this.handleVideoLoadedMetadata());
+        this.video.addEventListener('loadeddata', () => this.handleVideoLoadedData());
+        this.video.addEventListener('canplay', () => this.handleVideoCanPlay());
+        this.video.addEventListener('play', () => this.handleVideoPlay());
+        this.video.addEventListener('pause', () => this.handleVideoPause());
+        this.video.addEventListener('ended', () => this.handleVideoEnded());
+        this.video.addEventListener('timeupdate', () => this.handleVideoTimeUpdate());
+        this.video.addEventListener('volumechange', () => this.handleVideoVolumeChange());
+        this.video.addEventListener('ratechange', () => this.handleVideoRateChange());
+        this.video.addEventListener('error', (e) => this.handleVideoError(e));
+        this.video.addEventListener('seeking', () => this.handleVideoSeeking());
+        this.video.addEventListener('seeked', () => this.handleVideoSeeked());
+    }
+    
+    removeVideoEventListeners() {
+        if (!this.video) return;
+        
+        // Clone the video element to remove all event listeners
+        const newVideo = this.video.cloneNode(true);
+        this.video.parentNode.replaceChild(newVideo, this.video);
+        this.video = newVideo;
+    }
+    
+    handleVideoLoadStart() {
+        this.videoState.isSeeking = false;
+        this.showStatusMessage('Loading video...', 'info');
+    }
+    
+    handleVideoLoadedMetadata() {
+        this.videoState.duration = this.video.duration;
+        this.updateVideoInfo();
+        this.updateVideoControls();
+    }
+    
+    handleVideoLoadedData() {
+        this.showStatusMessage('Video loaded', 'success');
+    }
+    
+    handleVideoCanPlay() {
+        this.videoState.isInitialized = true;
+    }
+    
+    handleVideoPlay() {
+        this.videoState.isPlaying = true;
+        this.updateVideoControls();
+    }
+    
+    handleVideoPause() {
+        this.videoState.isPlaying = false;
+        this.updateVideoControls();
+    }
+    
+    handleVideoEnded() {
+        this.videoState.isPlaying = false;
+        this.updateVideoControls();
+        this.onVideoEnded();
+    }
+    
+    handleVideoTimeUpdate() {
+        if (!this.videoState.isSeeking) {
+            this.videoState.currentTime = this.video.currentTime;
+            this.updateProgress();
+        }
+    }
+    
+    handleVideoVolumeChange() {
+        this.videoState.volume = this.video.volume;
+        this.videoState.isMuted = this.video.muted;
+        this.updateVideoControls();
+    }
+    
+    handleVideoRateChange() {
+        this.videoState.playbackRate = this.video.playbackRate;
+        this.updateVideoControls();
+    }
+    
+    handleVideoError(e) {
+        console.error('Video error:', e);
+        this.showStatusMessage('Video playback error occurred', 'error');
+        this.videoState.isPlaying = false;
+        this.updateVideoControls();
+    }
+    
+    handleVideoSeeking() {
+        this.videoState.isSeeking = true;
+    }
+    
+    handleVideoSeeked() {
+        this.videoState.isSeeking = false;
+        this.videoState.currentTime = this.video.currentTime;
+    }
+    
+    updateVideoControls() {
+        if (!this.videoState.isInitialized) return;
+        
+        // Update play/pause button
+        if (this.playPauseBtn) {
+            this.playPauseBtn.innerHTML = this.videoState.isPlaying ? 
+                '<i class="fas fa-pause" aria-hidden="true"></i>' : 
+                '<i class="fas fa-play" aria-hidden="true"></i>';
+        }
+        
+        // Update mute button
+        if (this.muteBtn) {
+            this.muteBtn.innerHTML = this.videoState.isMuted ? 
+                '<i class="fas fa-volume-mute" aria-hidden="true"></i>' : 
+                '<i class="fas fa-volume-up" aria-hidden="true"></i>';
+        }
+        
+        // Update volume slider
+        if (this.volumeSlider) {
+            this.volumeSlider.value = this.videoState.isMuted ? 0 : this.videoState.volume * 100;
+        }
+        
+        // Update speed select
+        if (this.speedSelect) {
+            this.speedSelect.value = this.videoState.playbackRate;
+        }
+    }
+    
+    // ========================================
+    // INPUT VALIDATION & SANITIZATION
+    // ========================================
+    
+    validateInput(input, type = 'string', options = {}) {
+        if (input === null || input === undefined) {
+            return { isValid: false, error: 'Input is required' };
+        }
+        
+        const trimmedInput = typeof input === 'string' ? input.trim() : input;
+        
+        switch (type) {
+            case 'string':
+                if (typeof trimmedInput !== 'string') {
+                    return { isValid: false, error: 'Input must be a string' };
+                }
+                if (options.minLength && trimmedInput.length < options.minLength) {
+                    return { isValid: false, error: `Input must be at least ${options.minLength} characters` };
+                }
+                if (options.maxLength && trimmedInput.length > options.maxLength) {
+                    return { isValid: false, error: `Input must be no more than ${options.maxLength} characters` };
+                }
+                if (options.pattern && !options.pattern.test(trimmedInput)) {
+                    return { isValid: false, error: options.patternError || 'Input format is invalid' };
+                }
+                break;
+                
+            case 'number':
+                const num = parseFloat(trimmedInput);
+                if (isNaN(num)) {
+                    return { isValid: false, error: 'Input must be a valid number' };
+                }
+                if (options.min !== undefined && num < options.min) {
+                    return { isValid: false, error: `Value must be at least ${options.min}` };
+                }
+                if (options.max !== undefined && num > options.max) {
+                    return { isValid: false, error: `Value must be no more than ${options.max}` };
+                }
+                break;
+                
+            case 'path':
+                if (typeof trimmedInput !== 'string') {
+                    return { isValid: false, error: 'Path must be a string' };
+                }
+                // Check for dangerous path patterns
+                if (trimmedInput.includes('..') || trimmedInput.includes('//') || trimmedInput.startsWith('/')) {
+                    return { isValid: false, error: 'Invalid path format' };
+                }
+                break;
+                
+            case 'email':
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(trimmedInput)) {
+                    return { isValid: false, error: 'Invalid email format' };
+                }
+                break;
+        }
+        
+        return { isValid: true, value: trimmedInput };
+    }
+    
+    sanitizeInput(input) {
+        if (typeof input !== 'string') return input;
+        
+        return input
+            .replace(/[<>]/g, '') // Remove potential HTML tags
+            .replace(/['"]/g, '') // Remove quotes that could break JSON
+            .replace(/[\\]/g, '') // Remove backslashes
+            .trim();
+    }
+    
+    validateSearchQuery(query) {
+        const validation = this.validateInput(query, 'string', {
+            minLength: 1,
+            maxLength: 100,
+            pattern: /^[a-zA-Z0-9\s\-_.,!?]+$/,
+            patternError: 'Search query contains invalid characters'
+        });
+        
+        if (!validation.isValid) {
+            this.showStatusMessage(validation.error, 'warning');
+            return null;
+        }
+        
+        return this.sanitizeInput(validation.value);
+    }
+    
+    validatePlaylistName(name) {
+        const validation = this.validateInput(name, 'string', {
+            minLength: 1,
+            maxLength: 50,
+            pattern: /^[a-zA-Z0-9\s\-_]+$/,
+            patternError: 'Playlist name can only contain letters, numbers, spaces, hyphens, and underscores'
+        });
+        
+        if (!validation.isValid) {
+            this.showStatusMessage(validation.error, 'warning');
+            return null;
+        }
+        
+        return this.sanitizeInput(validation.value);
+    }
+    
+    validateVideoPath(path) {
+        const validation = this.validateInput(path, 'path');
+        
+        if (!validation.isValid) {
+            this.showStatusMessage(validation.error, 'error');
+            return null;
+        }
+        
+        return this.sanitizeInput(validation.value);
+    }
+    
+    validateVolume(volume) {
+        const validation = this.validateInput(volume, 'number', {
+            min: 0,
+            max: 100
+        });
+        
+        if (!validation.isValid) {
+            this.showStatusMessage(validation.error, 'warning');
+            return null;
+        }
+        
+        return validation.value;
+    }
+    
+    validatePlaybackSpeed(speed) {
+        const validation = this.validateInput(speed, 'number', {
+            min: 0.25,
+            max: 3.0
+        });
+        
+        if (!validation.isValid) {
+            this.showStatusMessage(validation.error, 'warning');
+            return null;
+        }
+        
+        return validation.value;
+    }
+    
+    // ========================================
+    // ASYNC OPERATION MANAGEMENT
+    // ========================================
+    
+    async safeAsyncOperation(operation, context = '') {
+        const operationId = `${context}_${Date.now()}_${Math.random()}`;
+        
+        try {
+            this.activeRequests.add(operationId);
+            this.setLoadingState(context, true);
+            
+            const result = await operation();
+            return result;
+        } catch (error) {
+            console.error(`Error in ${context}:`, error);
+            this.handleError(error, context);
+            throw error;
+        } finally {
+            this.activeRequests.delete(operationId);
+            this.setLoadingState(context, false);
+        }
+    }
+    
+    setLoadingState(context, isLoading) {
+        if (isLoading) {
+            this.loadingStates.set(context, true);
+        } else {
+            this.loadingStates.delete(context);
+        }
+    }
+    
+    isLoading(context) {
+        return this.loadingStates.has(context);
+    }
+    
+    cancelActiveRequests() {
+        this.activeRequests.clear();
+        this.loadingStates.clear();
+    }
+    
+    debounce(func, wait, context = '') {
+        return (...args) => {
+            if (this.debounceTimeout) {
+                clearTimeout(this.debounceTimeout);
+            }
+            
+            this.debounceTimeout = setTimeout(() => {
+                func.apply(this, args);
+            }, wait);
+        };
+    }
+    
+    throttle(func, limit, context = '') {
+        let inThrottle;
+        return (...args) => {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+    
+    // ========================================
+    // CLEANUP & MEMORY MANAGEMENT
+    // ========================================
+    
+    cleanup() {
+        // Cancel all active requests
+        this.cancelActiveRequests();
+        
+        // Clear timeouts and intervals
+        if (this.debounceTimeout) {
+            clearTimeout(this.debounceTimeout);
+            this.debounceTimeout = null;
+        }
+        
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
+        
+        // Remove video event listeners
+        this.removeVideoEventListeners();
+        
+        // Clear loading states
+        this.loadingStates.clear();
+        
+        // Save current state
+        this.saveProgress();
+        this.saveRecentlyPlayed();
     }
     
     // ========================================
