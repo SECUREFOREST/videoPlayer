@@ -583,28 +583,18 @@ class AdvancedVideoPlayerBrowser {
     
     toggleFullscreen() {
         if (!this.isFullscreen) {
-            // Enter fullscreen
-            const videoContainer = this.video.closest('.video-container');
-            const videoPlayer = this.video.closest('.video-player');
-            const elementToFullscreen = videoContainer || videoPlayer || this.video;
-            
-            if (elementToFullscreen.requestFullscreen) {
-                elementToFullscreen.requestFullscreen().then(() => {
-                    // Apply styling immediately after fullscreen starts
-                    setTimeout(() => this.applyFullscreenStyling(), 100);
-                }).catch(err => {
+            // Enter fullscreen - use the video element directly for native fullscreen
+            if (this.video.requestFullscreen) {
+                this.video.requestFullscreen().catch(err => {
                     console.error('Fullscreen request failed:', err);
                     this.showStatusMessage('Failed to enter fullscreen mode', 'error');
                 });
-            } else if (elementToFullscreen.webkitRequestFullscreen) {
-                elementToFullscreen.webkitRequestFullscreen();
-                setTimeout(() => this.applyFullscreenStyling(), 100);
-            } else if (elementToFullscreen.mozRequestFullScreen) {
-                elementToFullscreen.mozRequestFullScreen();
-                setTimeout(() => this.applyFullscreenStyling(), 100);
-            } else if (elementToFullscreen.msRequestFullscreen) {
-                elementToFullscreen.msRequestFullscreen();
-                setTimeout(() => this.applyFullscreenStyling(), 100);
+            } else if (this.video.webkitRequestFullscreen) {
+                this.video.webkitRequestFullscreen();
+            } else if (this.video.mozRequestFullScreen) {
+                this.video.mozRequestFullScreen();
+            } else if (this.video.msRequestFullscreen) {
+                this.video.msRequestFullscreen();
             } else {
                 this.showStatusMessage('Fullscreen not supported by this browser', 'error');
             }
@@ -633,71 +623,6 @@ class AdvancedVideoPlayerBrowser {
         }
         if (this.fullscreenBtnControls) {
             this.fullscreenBtnControls.innerHTML = icon;
-        }
-        
-        // Force fullscreen styling with JavaScript
-        if (this.isFullscreen) {
-            this.applyFullscreenStyling();
-        } else {
-            this.removeFullscreenStyling();
-        }
-    }
-    
-    applyFullscreenStyling() {
-        const videoContainer = this.video.closest('.video-container');
-        const videoPlayer = this.video.closest('.video-player');
-        const elementToStyle = videoContainer || videoPlayer;
-        
-        if (elementToStyle) {
-            // Force fullscreen dimensions
-            elementToStyle.style.width = '100vw';
-            elementToStyle.style.height = '100vh';
-            elementToStyle.style.position = 'fixed';
-            elementToStyle.style.top = '0';
-            elementToStyle.style.left = '0';
-            elementToStyle.style.zIndex = '9999';
-            elementToStyle.style.background = '#000000';
-            elementToStyle.style.display = 'flex';
-            elementToStyle.style.alignItems = 'center';
-            elementToStyle.style.justifyContent = 'center';
-            
-            // Style the video element
-            this.video.style.width = '100%';
-            this.video.style.height = '100%';
-            this.video.style.maxWidth = '100vw';
-            this.video.style.maxHeight = '100vh';
-            this.video.style.objectFit = 'contain';
-            
-            console.log('Applied fullscreen styling to:', elementToStyle);
-        }
-    }
-    
-    removeFullscreenStyling() {
-        const videoContainer = this.video.closest('.video-container');
-        const videoPlayer = this.video.closest('.video-player');
-        const elementToStyle = videoContainer || videoPlayer;
-        
-        if (elementToStyle) {
-            // Reset styles
-            elementToStyle.style.width = '';
-            elementToStyle.style.height = '';
-            elementToStyle.style.position = '';
-            elementToStyle.style.top = '';
-            elementToStyle.style.left = '';
-            elementToStyle.style.zIndex = '';
-            elementToStyle.style.background = '';
-            elementToStyle.style.display = '';
-            elementToStyle.style.alignItems = '';
-            elementToStyle.style.justifyContent = '';
-            
-            // Reset video styles
-            this.video.style.width = '';
-            this.video.style.height = '';
-            this.video.style.maxWidth = '';
-            this.video.style.maxHeight = '';
-            this.video.style.objectFit = '';
-            
-            console.log('Removed fullscreen styling from:', elementToStyle);
         }
     }
     
