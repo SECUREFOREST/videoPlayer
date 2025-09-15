@@ -6,9 +6,9 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     min-height: 100vh;
-    color: #333;
+    color: #e0e0e0;
 }
 
 .container {
@@ -20,7 +20,7 @@ body {
 header {
     text-align: center;
     margin-bottom: 20px;
-    color: white;
+    color: #ffffff;
 }
 
 header h1 {
@@ -30,39 +30,42 @@ header h1 {
 }
 
 .path-display {
-    background: rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3);
     padding: 10px 20px;
     border-radius: 25px;
     display: inline-block;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e0e0e0;
 }
 
 /* Search and Filter Bar */
 .search-bar {
-    background: white;
+    background: #2d2d2d;
     border-radius: 15px;
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     display: flex;
     gap: 20px;
     align-items: center;
     flex-wrap: wrap;
+    border: 1px solid #404040;
 }
 
 .search-input-group {
     display: flex;
     align-items: center;
-    background: #f8f9fa;
+    background: #1a1a1a;
     border-radius: 25px;
     padding: 8px 15px;
     flex: 1;
     min-width: 300px;
+    border: 2px solid #404040;
 }
 
 .search-input-group i {
-    color: #666;
+    color: #888;
     margin-right: 10px;
 }
 
@@ -72,6 +75,7 @@ header h1 {
     outline: none;
     flex: 1;
     font-size: 16px;
+    color: #e0e0e0;
 }
 
 .filter-group {
@@ -82,9 +86,10 @@ header h1 {
 
 .filter-select {
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #404040;
     border-radius: 8px;
-    background: white;
+    background: #1a1a1a;
+    color: #e0e0e0;
     font-size: 14px;
     cursor: pointer;
 }
@@ -92,19 +97,21 @@ header h1 {
 /* Navigation Tabs */
 .nav-tabs {
     display: flex;
-    background: white;
+    background: #2d2d2d;
     border-radius: 15px 15px 0 0;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     margin-bottom: 0;
+    border: 1px solid #404040;
+    border-bottom: none;
 }
 
 .tab-btn {
     flex: 1;
     padding: 15px 20px;
     border: none;
-    background: #f8f9fa;
-    color: #666;
+    background: #2d2d2d;
+    color: #888;
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 16px;
@@ -112,13 +119,13 @@ header h1 {
 }
 
 .tab-btn:hover {
-    background: #e9ecef;
-    color: #333;
+    background: #404040;
+    color: #e0e0e0;
 }
 
 .tab-btn.active {
-    background: white;
-    color: #007bff;
+    background: #1a1a1a;
+    color: #ffffff;
     border-bottom: 3px solid #007bff;
 }
 
@@ -146,26 +153,27 @@ header h1 {
     min-height: 600px;
 }
 
-.file-browser, .video-player, .playlist-manager, .favorites-manager, .search-results {
-    background: white;
+.file-browser, .video-player, .playlist-manager, .favorites-manager, .recent-manager, .search-results {
+    background: #1a1a1a;
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     overflow: hidden;
+    border: 1px solid #404040;
 }
 
-.browser-header, .playlist-header, .favorites-header, .search-header {
+.browser-header, .playlist-header, .favorites-header, .recent-header, .search-header {
     padding: 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+    background: #2d2d2d;
+    border-bottom: 1px solid #404040;
     display: flex;
     gap: 10px;
     align-items: center;
     justify-content: space-between;
 }
 
-.playlist-header h3, .favorites-header h3, .search-header h3 {
+.playlist-header h3, .favorites-header h3, .recent-header h3, .search-header h3 {
     margin: 0;
-    color: #333;
+    color: #e0e0e0;
 }
 
 .search-header {
@@ -370,13 +378,13 @@ header h1 {
 }
 
 /* Playlist and Favorites */
-.playlist-list, .favorites-list, .search-list {
+.playlist-list, .favorites-list, .recent-list, .search-list {
     padding: 20px;
     max-height: 500px;
     overflow-y: auto;
 }
 
-.playlist-item, .favorite-item, .search-item {
+.playlist-item, .favorite-item, .recent-item, .search-item {
     display: flex;
     align-items: center;
     padding: 15px;
@@ -387,13 +395,51 @@ header h1 {
     transition: all 0.3s ease;
 }
 
-.playlist-item:hover, .favorite-item:hover, .search-item:hover {
+.playlist-item:hover, .favorite-item:hover, .recent-item:hover, .search-item:hover {
     background: #f8f9fa;
     transform: translateX(5px);
 }
 
-.playlist-item .playlist-info, .favorite-item .favorite-info, .search-item .search-info {
+.playlist-item .playlist-info, .favorite-item .favorite-info, .recent-item .recent-info, .search-item .search-info {
     flex: 1;
+}
+
+/* Recently Played specific styles */
+.recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.recent-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.recent-item .recent-info {
+    flex: 1;
+}
+
+.recent-item .recent-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.recent-item .recent-path {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.recent-item .recent-time {
+    font-size: 0.8em;
+    color: #999;
+}
+
+.recent-item .recent-actions {
+    display: flex;
+    gap: 10px;
 }
 
 .playlist-item .playlist-name, .favorite-item .favorite-name, .search-item .search-name {
@@ -529,6 +575,7 @@ header h1 {
 .file-list {
     max-height: 500px;
     overflow-y: auto;
+    background: #1a1a1a;
 }
 
 .file-item {
@@ -647,14 +694,14 @@ video {
 }
 
 .file-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #2d2d2d;
 }
 
 .file-list::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: #555;
     border-radius: 4px;
 }
 
 .file-list::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: #666;
 }

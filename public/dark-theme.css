@@ -1,0 +1,221 @@
+/* Dark Theme Overrides - Additional styles for complete dark theme */
+
+/* Header text colors */
+.playlist-header h3, .favorites-header h3, .recent-header h3, .search-header h3 {
+    margin: 0;
+    color: #e0e0e0;
+}
+
+/* File list and items */
+.file-list {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.file-item, .file-grid-item {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+.file-item:hover, .file-grid-item:hover {
+    background: #404040;
+    transform: translateX(5px);
+}
+
+.file-name {
+    color: #e0e0e0;
+}
+
+.file-details {
+    color: #888;
+}
+
+/* Video player */
+.video-container {
+    background: #000000;
+}
+
+.video-controls {
+    background: rgba(0, 0, 0, 0.8);
+    color: #e0e0e0;
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    border: 1px solid #404040;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Progress bar */
+.progress-container {
+    background: #404040;
+}
+
+.progress-fill {
+    background: #007bff;
+}
+
+/* Volume slider */
+.volume-container input[type="range"] {
+    background: #404040;
+}
+
+.volume-container input[type="range"]::-webkit-slider-thumb {
+    background: #007bff;
+}
+
+/* Speed select */
+.speed-container select {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #404040;
+}
+
+/* Playlist and favorites items */
+.playlist-item, .favorite-item, .recent-item, .search-item {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+.playlist-item:hover, .favorite-item:hover, .recent-item:hover, .search-item:hover {
+    background: #404040;
+}
+
+.playlist-name, .favorite-name, .recent-name, .search-name {
+    color: #e0e0e0;
+}
+
+.playlist-count, .favorite-path, .recent-path, .search-path {
+    color: #888;
+}
+
+/* Buttons */
+.btn {
+    background: #007bff;
+    color: white;
+    border: 1px solid #007bff;
+}
+
+.btn:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-sm {
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #404040;
+}
+
+.btn-sm:hover {
+    background: #555;
+}
+
+/* Modal */
+.modal {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.modal-content {
+    background: #1a1a1a;
+    border: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+.modal-header h3 {
+    color: #e0e0e0;
+}
+
+.modal-close {
+    color: #e0e0e0;
+}
+
+.modal-close:hover {
+    color: #ffffff;
+}
+
+/* Form inputs */
+input[type="text"], input[type="email"], textarea {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #404040;
+}
+
+input[type="text"]:focus, input[type="email"]:focus, textarea:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* Loading and error states */
+.loading, .error, .no-results {
+    color: #e0e0e0;
+}
+
+/* Drag and drop overlay */
+.drag-overlay {
+    background: rgba(0, 0, 0, 0.8);
+    color: #e0e0e0;
+}
+
+/* File grid */
+.file-grid {
+    background: #1a1a1a;
+}
+
+.file-grid-item {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+.file-grid-item:hover {
+    background: #404040;
+}
+
+/* Thumbnails */
+.thumbnail {
+    border: 1px solid #404040;
+}
+
+/* Video info */
+.video-info {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #404040;
+}
+
+/* Search results */
+.search-results {
+    background: #1a1a1a;
+}
+
+.search-header h3 {
+    color: #e0e0e0;
+}
+
+.search-count {
+    color: #888;
+}
+
+/* Recently played specific */
+.recent-header h3 {
+    color: #e0e0e0;
+}
+
+.recent-item .recent-name {
+    color: #e0e0e0;
+}
+
+.recent-item .recent-path {
+    color: #888;
+}
+
+.recent-item .recent-time {
+    color: #999;
+}

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Video Player Browser</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="dark-theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -53,6 +54,9 @@
             </button>
             <button class="tab-btn" data-tab="favorites">
                 <i class="fas fa-heart"></i> Favorites
+            </button>
+            <button class="tab-btn" data-tab="recent">
+                <i class="fas fa-clock"></i> Recently Played
             </button>
             <button class="tab-btn" data-tab="search-results">
                 <i class="fas fa-search"></i> Search Results
@@ -107,6 +111,21 @@
                     </div>
                     <div class="favorites-list" id="favorites-list">
                         <div class="loading">Loading favorites...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recently Played Tab -->
+            <div class="tab-content" id="recent-tab">
+                <div class="recent-manager">
+                    <div class="recent-header">
+                        <h3><i class="fas fa-clock"></i> Recently Played</h3>
+                        <button class="btn btn-sm" id="clear-recent-btn">
+                            <i class="fas fa-trash"></i> Clear History
+                        </button>
+                    </div>
+                    <div class="recent-list" id="recent-list">
+                        <div class="loading">Loading recent videos...</div>
                     </div>
                 </div>
             </div>
@@ -168,12 +187,16 @@
                             </div>
                             <div class="speed-container">
                                 <select id="speed-select">
+                                    <option value="0.25">0.25x</option>
                                     <option value="0.5">0.5x</option>
                                     <option value="0.75">0.75x</option>
                                     <option value="1" selected>1x</option>
                                     <option value="1.25">1.25x</option>
                                     <option value="1.5">1.5x</option>
+                                    <option value="1.75">1.75x</option>
                                     <option value="2">2x</option>
+                                    <option value="2.5">2.5x</option>
+                                    <option value="3">3x</option>
                                 </select>
                             </div>
                         </div>
@@ -213,6 +236,6 @@
         </div>
     </div>
     
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=5"></script>
 </body>
 </html>

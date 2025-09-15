@@ -10,6 +10,7 @@ class AdvancedVideoPlayerBrowser {
         this.playbackProgress = {};
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
+        this.recentlyPlayed = [];
         
         // DOM elements
         this.initializeElements();
@@ -61,6 +62,8 @@ class AdvancedVideoPlayerBrowser {
         this.createPlaylistBtn = document.getElementById('create-playlist-btn');
         this.playlistList = document.getElementById('playlist-list');
         this.favoritesList = document.getElementById('favorites-list');
+        this.recentList = document.getElementById('recent-list');
+        this.clearRecentBtn = document.getElementById('clear-recent-btn');
         this.searchList = document.getElementById('search-list');
         this.searchCount = document.getElementById('search-count');
         
@@ -80,6 +83,7 @@ class AdvancedVideoPlayerBrowser {
         this.loadDirectory();
         this.loadPlaylists();
         this.loadFavorites();
+        this.loadRecentlyPlayed();
         this.loadProgress();
     }
     
@@ -122,6 +126,7 @@ class AdvancedVideoPlayerBrowser {
         this.createPlaylistBtn.addEventListener('click', () => this.showPlaylistModal());
         this.savePlaylistBtn.addEventListener('click', () => this.savePlaylist());
         this.cancelPlaylistBtn.addEventListener('click', () => this.hidePlaylistModal());
+        this.clearRecentBtn.addEventListener('click', () => this.clearRecentlyPlayed());
         
         // Modal
         document.querySelector('.modal-close').addEventListener('click', () => this.hidePlaylistModal());
@@ -339,6 +344,17 @@ class AdvancedVideoPlayerBrowser {
                 // Restore progress if available
                 this.restoreProgress(item.path);
                 
+                // Add to recently played
+                this.addToRecentlyPlayed(item);
+                
+                // Autoplay the video
+                this.video.play().then(() => {
+                    this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                }).catch(error => {
+                    console.log('Autoplay failed:', error);
+                    // Autoplay might be blocked by browser, this is normal
+                });
+                
                 // Switch to video player tab
                 this.switchTab('browser');
             } else {
@@ -500,6 +516,8 @@ class AdvancedVideoPlayerBrowser {
             this.loadPlaylists();
         } else if (tabName === 'favorites') {
             this.loadFavorites();
+        } else if (tabName === 'recent') {
+            this.loadRecentlyPlayed();
         }
     }
     
@@ -886,6 +904,121 @@ class AdvancedVideoPlayerBrowser {
     
     showError(message) {
         this.fileList.innerHTML = `<div class="error">${message}</div>`;
+    }
+    
+    // Recently Played functionality
+    addToRecentlyPlayed(item) {
+        const recentItem = {
+            id: Date.now().toString(),
+            name: item.name,
+            path: item.path,
+            playedAt: new Date().toISOString(),
+            size: item.size,
+            isVideo: item.isVideo
+        };
+        
+        // Remove if already exists
+        this.recentlyPlayed = this.recentlyPlayed.filter(r => r.path !== item.path);
+        
+        // Add to beginning
+        this.recentlyPlayed.unshift(recentItem);
+        
+        // Keep only last 50 items
+        if (this.recentlyPlayed.length > 50) {
+            this.recentlyPlayed = this.recentlyPlayed.slice(0, 50);
+        }
+        
+        // Save to localStorage
+        this.saveRecentlyPlayed();
+    }
+    
+    loadRecentlyPlayed() {
+        try {
+            const saved = localStorage.getItem('recentlyPlayed');
+            if (saved) {
+                this.recentlyPlayed = JSON.parse(saved);
+            }
+            this.renderRecentlyPlayed();
+        } catch (error) {
+            console.error('Failed to load recently played:', error);
+            this.recentlyPlayed = [];
+        }
+    }
+    
+    saveRecentlyPlayed() {
+        try {
+            localStorage.setItem('recentlyPlayed', JSON.stringify(this.recentlyPlayed));
+        } catch (error) {
+            console.error('Failed to save recently played:', error);
+        }
+    }
+    
+    renderRecentlyPlayed() {
+        this.recentList.innerHTML = '';
+        
+        if (this.recentlyPlayed.length === 0) {
+            this.recentList.innerHTML = '<div class="no-results">No recently played videos</div>';
+            return;
+        }
+        
+        this.recentlyPlayed.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'recent-item';
+            
+            const timeAgo = this.getTimeAgo(new Date(item.playedAt));
+            const size = this.formatFileSize(item.size);
+            
+            div.innerHTML = `
+                <div class="file-icon">🎬</div>
+                <div class="recent-info">
+                    <div class="recent-name">${item.name}</div>
+                    <div class="recent-path">${item.path}</div>
+                    <div class="recent-time">Played ${timeAgo} • ${size}</div>
+                </div>
+                <div class="recent-actions">
+                    <button class="btn btn-sm" onclick="app.playVideo({path: '${item.path}', name: '${item.name}', isVideo: true, size: ${item.size}})">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="btn btn-sm" onclick="app.removeFromRecentlyPlayed('${item.id}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            this.recentList.appendChild(div);
+        });
+    }
+    
+    removeFromRecentlyPlayed(id) {
+        this.recentlyPlayed = this.recentlyPlayed.filter(item => item.id !== id);
+        this.saveRecentlyPlayed();
+        this.renderRecentlyPlayed();
+    }
+    
+    clearRecentlyPlayed() {
+        if (confirm('Are you sure you want to clear your recently played history?')) {
+            this.recentlyPlayed = [];
+            this.saveRecentlyPlayed();
+            this.renderRecentlyPlayed();
+        }
+    }
+    
+    getTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) {
+            return 'just now';
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        } else {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        }
     }
 }
 
