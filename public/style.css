@@ -263,6 +263,27 @@
     --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
+/* Force dark theme by default */
+:root {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-info: #06b6d4;
+    
+    /* Dark Theme Colors (default) */
+    --color-black: #000000;
+    --color-white: #ffffff;
+    --color-gray-900: #111111;
+    --color-gray-800: #1f1f1f;
+    --color-gray-700: #374151;
+    --color-gray-600: #4b5563;
+    --color-gray-500: #6b7280;
+    --color-gray-400: #9ca3af;
+    --color-gray-300: #d1d5db;
+}
+
 /* Auto Theme Detection */
 @media (prefers-color-scheme: light) {
     :root:not([data-theme]) {
