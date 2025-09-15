@@ -169,10 +169,6 @@ class AdvancedVideoPlayerBrowser {
         document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
         document.addEventListener('MSFullscreenChange', () => this.handleFullscreenChange());
         
-        // Global mouse events for progress bar dragging
-        document.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
-        document.addEventListener('mouseup', (e) => this.handleProgressMouseUp(e));
-        
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => this.cleanup());
@@ -415,9 +411,7 @@ class AdvancedVideoPlayerBrowser {
                 this.addToRecentlyPlayed(item);
                 
                 // Autoplay the video
-                this.video.play().then(() => {
-                    this.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                }).catch(error => {
+                this.video.play().catch(error => {
                     console.log('Autoplay failed:', error);
                     // Autoplay might be blocked by browser, this is normal
                 });
@@ -523,14 +517,6 @@ class AdvancedVideoPlayerBrowser {
     
     handleFullscreenChange() {
         this.isFullscreen = !!document.fullscreenElement;
-        const icon = this.isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
-        
-        if (this.fullscreenBtn) {
-            this.fullscreenBtn.innerHTML = icon;
-        }
-        if (this.fullscreenBtnControls) {
-            this.fullscreenBtnControls.innerHTML = icon;
-        }
     }
     
     closeVideo() {
@@ -541,7 +527,6 @@ class AdvancedVideoPlayerBrowser {
     }
     
     onVideoEnded() {
-        this.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
         // Auto-play next video in playlist if available
         this.playNextInPlaylist();
     }
