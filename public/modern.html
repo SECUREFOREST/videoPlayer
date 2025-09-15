@@ -922,11 +922,15 @@
             async loadFiles() {
                 try {
                     const response = await fetch('/api/files');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     const files = await response.json();
                     this.renderFiles(files);
                 } catch (error) {
                     console.error('Error loading files:', error);
-                    this.showError('Failed to load files');
+                    this.showError('Failed to load files. Please check if the server is running.');
+                    this.renderErrorState();
                 }
             }
 
@@ -971,6 +975,23 @@
                     this.video.src = `/videos/${encodeURIComponent(file.path)}`;
                     this.currentVideo = file;
                     this.video.load();
+                } else if (file.type === 'folder') {
+                    // Handle folder navigation
+                    this.loadFilesInFolder(file.path);
+                }
+            }
+
+            async loadFilesInFolder(folderPath) {
+                try {
+                    const response = await fetch(`/api/files?path=${encodeURIComponent(folderPath)}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const files = await response.json();
+                    this.renderFiles(files);
+                } catch (error) {
+                    console.error('Error loading folder:', error);
+                    this.showError('Failed to load folder contents.');
                 }
             }
 
@@ -1055,23 +1076,142 @@
             }
 
             async loadPlaylists() {
-                // Implement playlist loading
-                console.log('Loading playlists...');
+                try {
+                    const response = await fetch('/api/playlists');
+                    if (!response.ok) throw new Error('Playlists not available');
+                    const playlists = await response.json();
+                    this.renderPlaylists(playlists);
+                } catch (error) {
+                    this.renderEmptyState('playlistList', 'No playlists available');
+                }
             }
 
             async loadFavorites() {
-                // Implement favorites loading
-                console.log('Loading favorites...');
+                try {
+                    const response = await fetch('/api/favorites');
+                    if (!response.ok) throw new Error('Favorites not available');
+                    const favorites = await response.json();
+                    this.renderFavorites(favorites);
+                } catch (error) {
+                    this.renderEmptyState('favoritesList', 'No favorites yet');
+                }
             }
 
             async loadRecent() {
-                // Implement recent loading
-                console.log('Loading recent...');
+                try {
+                    const response = await fetch('/api/recent');
+                    if (!response.ok) throw new Error('Recent not available');
+                    const recent = await response.json();
+                    this.renderRecent(recent);
+                } catch (error) {
+                    this.renderEmptyState('recentList', 'No recent videos');
+                }
+            }
+
+            renderEmptyState(containerId, message) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-inbox" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
+            renderPlaylists(playlists) {
+                const container = document.getElementById('playlistList');
+                container.innerHTML = '';
+                playlists.forEach(playlist => {
+                    const item = document.createElement('div');
+                    item.className = 'playlist-item';
+                    item.innerHTML = `
+                        <div class="playlist-icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <div class="playlist-info">
+                            <div class="playlist-name">${playlist.name}</div>
+                            <div class="playlist-count">${playlist.count} videos</div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            renderFavorites(favorites) {
+                const container = document.getElementById('favoritesList');
+                container.innerHTML = '';
+                favorites.forEach(favorite => {
+                    const item = document.createElement('div');
+                    item.className = 'playlist-item';
+                    item.innerHTML = `
+                        <div class="playlist-icon">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="playlist-info">
+                            <div class="playlist-name">${favorite.name}</div>
+                            <div class="playlist-count">${this.formatFileSize(favorite.size)}</div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            renderRecent(recent) {
+                const container = document.getElementById('recentList');
+                container.innerHTML = '';
+                recent.forEach(item => {
+                    const element = document.createElement('div');
+                    element.className = 'playlist-item';
+                    element.innerHTML = `
+                        <div class="playlist-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="playlist-info">
+                            <div class="playlist-name">${item.name}</div>
+                            <div class="playlist-count">${item.playedAt || this.formatFileSize(item.size)}</div>
+                        </div>
+                    `;
+                    container.appendChild(element);
+                });
+            }
+
+            renderErrorState() {
+                this.fileGrid.innerHTML = `
+                    <div class="loading" style="grid-column: 1 / -1;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--error); margin-bottom: 1rem;"></i>
+                        <p>Unable to connect to server</p>
+                        <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Make sure the server is running and try again
+                        </p>
+                        <button class="btn btn-primary" onclick="location.reload()" style="margin-top: 1rem;">
+                            <i class="fas fa-refresh"></i> Retry
+                        </button>
+                    </div>
+                `;
             }
 
             showError(message) {
                 console.error(message);
-                // Implement error display
+                // Create a temporary error notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: var(--error);
+                    color: white;
+                    padding: 1rem;
+                    border-radius: 10px;
+                    box-shadow: var(--shadow-lg);
+                    z-index: 3000;
+                    max-width: 300px;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 5000);
             }
         }
 
