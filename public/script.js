@@ -322,7 +322,7 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
-                videoSource.src = `/videos/${encodeURIComponent(item.path)}`;
+                this.videoSource.src = `/videos/${encodeURIComponent(item.path)}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
