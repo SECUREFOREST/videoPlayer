@@ -1,34 +1,34 @@
-/* Dark Theme Overrides - Additional styles for complete dark theme */
+/* Fully Black Theme Overrides - Complete black theme implementation */
 
 /* Header text colors */
 .playlist-header h3, .favorites-header h3, .recent-header h3, .search-header h3 {
     margin: 0;
-    color: #e0e0e0;
+    color: #ffffff;
 }
 
 /* File list and items */
 .file-list {
-    background: #1a1a1a;
-    color: #e0e0e0;
+    background: #000000;
+    color: #ffffff;
 }
 
 .file-item, .file-grid-item {
-    background: #2d2d2d;
-    border: 1px solid #404040;
-    color: #e0e0e0;
+    background: #111111;
+    border: 1px solid #333333;
+    color: #ffffff;
 }
 
 .file-item:hover, .file-grid-item:hover {
-    background: #404040;
+    background: #333333;
     transform: translateX(5px);
 }
 
 .file-name {
-    color: #e0e0e0;
+    color: #ffffff;
 }
 
 .file-details {
-    color: #888;
+    color: #aaaaaa;
 }
 
 /* Video player */
