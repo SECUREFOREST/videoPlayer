@@ -543,10 +543,13 @@ class AdvancedVideoPlayerBrowser {
         console.log('Back button debug:', {
             parentPath: parentPath,
             currentPath: this.currentPath,
-            canGoBack: canGoBack
+            canGoBack: canGoBack,
+            buttonExists: !!this.backBtn,
+            buttonDisabled: this.backBtn ? this.backBtn.disabled : 'N/A'
         });
         
         if (canGoBack) {
+            console.log('Creating new back button...');
             // Create a new button element to avoid disabled state issues
             const newBackBtn = document.createElement('button');
             newBackBtn.id = 'back-btn';
@@ -555,11 +558,17 @@ class AdvancedVideoPlayerBrowser {
             newBackBtn.addEventListener('click', () => this.goBack());
             
             // Replace the old button
-            this.backBtn.parentNode.replaceChild(newBackBtn, this.backBtn);
-            this.backBtn = newBackBtn;
+            if (this.backBtn && this.backBtn.parentNode) {
+                this.backBtn.parentNode.replaceChild(newBackBtn, this.backBtn);
+                this.backBtn = newBackBtn;
+                console.log('Back button replaced successfully');
+            } else {
+                console.log('Could not replace back button - parent node not found');
+            }
             
             this.backBtn.style.display = 'block';
         } else {
+            console.log('Hiding back button');
             this.backBtn.style.display = 'none';
         }
     }
