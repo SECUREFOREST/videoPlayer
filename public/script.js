@@ -550,11 +550,14 @@ class AdvancedVideoPlayerBrowser {
             this.backBtn.style.display = 'block';
             this.backBtn.disabled = false;
             this.backBtn.removeAttribute('disabled');
-            this.backBtn.style.opacity = '1';
-            this.backBtn.style.cursor = 'pointer';
+            // Force override CSS disabled styles
+            this.backBtn.style.opacity = '1 !important';
+            this.backBtn.style.cursor = 'pointer !important';
+            this.backBtn.style.pointerEvents = 'auto';
         } else {
             this.backBtn.style.display = 'none';
             this.backBtn.disabled = true;
+            this.backBtn.setAttribute('disabled', '');
         }
     }
     
