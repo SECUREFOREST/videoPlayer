@@ -15,10 +15,15 @@ const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv
 
 function resolveSafePath(requestedPath) {
     // Normalize the requested path to prevent directory traversal
-    const normalizedPath = path.normalize(requestedPath || '');
+    let normalizedPath = path.normalize(requestedPath || '');
+    
+    // Remove leading slash if present to make it relative
+    if (normalizedPath.startsWith('/')) {
+        normalizedPath = normalizedPath.substring(1);
+    }
     
     // Check for directory traversal attempts
-    if (normalizedPath.includes('..') || normalizedPath.startsWith('/')) {
+    if (normalizedPath.includes('..')) {
         throw new Error('Access denied: Invalid path');
     }
     
