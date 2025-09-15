@@ -934,8 +934,22 @@
                 }
             }
 
-            renderFiles(files) {
+            renderFiles(data) {
                 this.fileGrid.innerHTML = '';
+                
+                // Handle both array and object responses
+                const files = Array.isArray(data) ? data : (data.items || []);
+                
+                if (files.length === 0) {
+                    this.fileGrid.innerHTML = `
+                        <div class="loading" style="grid-column: 1 / -1;">
+                            <i class="fas fa-folder-open" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                            <p>This folder is empty</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
                 files.forEach(file => {
                     const fileCard = this.createFileCard(file);
                     this.fileGrid.appendChild(fileCard);
