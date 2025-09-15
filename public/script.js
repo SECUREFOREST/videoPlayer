@@ -203,7 +203,8 @@ class AdvancedVideoPlayerBrowser {
     renderFileList(items, parentPath) {
         this.fileList.innerHTML = '';
         
-        if (parentPath && parentPath !== this.currentPath) {
+        // Only show parent directory option if we're not at the root level
+        if (parentPath && parentPath !== this.currentPath && parentPath !== '') {
             const parentItem = this.createFileItem({
                 name: '..',
                 path: parentPath,
@@ -536,7 +537,13 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updateBackButton(parentPath) {
-        this.backBtn.disabled = !parentPath || parentPath === this.currentPath;
+        // Hide the back button completely when at root level or no parent path
+        if (!parentPath || parentPath === this.currentPath || parentPath === '') {
+            this.backBtn.style.display = 'none';
+        } else {
+            this.backBtn.style.display = 'block';
+            this.backBtn.disabled = false;
+        }
     }
     
     updatePathDisplay() {

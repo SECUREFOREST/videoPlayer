@@ -27,17 +27,27 @@ function resolveSafePath(requestedPath) {
         normalizedPath = normalizedPath.substring(1);
     }
     
-    // Check for directory traversal attempts
+    // Check for directory traversal attempts - reject any path with '..'
     if (normalizedPath.includes('..')) {
         throw new Error('Access denied: Invalid path');
+    }
+    
+    // Check if path tries to go above the videos directory
+    if (normalizedPath.startsWith('..') || normalizedPath.includes('/..') || normalizedPath.includes('\\..')) {
+        throw new Error('Access denied: Cannot browse above main folder');
     }
     
     // Resolve the absolute path
     const fullPath = path.resolve(VIDEOS_ROOT, normalizedPath);
     
-    // Ensure the resolved path is inside VIDEOS_ROOT
-    if (!fullPath.startsWith(VIDEOS_ROOT)) {
+    // Ensure the resolved path is inside VIDEOS_ROOT and not the same as VIDEOS_ROOT parent
+    if (!fullPath.startsWith(VIDEOS_ROOT) || fullPath === path.dirname(VIDEOS_ROOT)) {
         throw new Error('Access denied: Path outside video directory');
+    }
+    
+    // Additional check: ensure we're not at the exact VIDEOS_ROOT level trying to go up
+    if (path.dirname(fullPath) === path.dirname(VIDEOS_ROOT)) {
+        throw new Error('Access denied: Cannot browse above main folder');
     }
     
     return fullPath;
@@ -152,9 +162,12 @@ app.get('/api/browse', (req, res) => {
             return sortOrder === 'desc' ? -comparison : comparison;
         });
 
+        // Calculate parent path - only if we're not at the root level
+        const parentPath = directoryPath === VIDEOS_ROOT ? '' : path.relative(VIDEOS_ROOT, path.dirname(directoryPath));
+        
         res.json({
             currentPath: path.relative(VIDEOS_ROOT, directoryPath),
-            parentPath: path.relative(VIDEOS_ROOT, path.dirname(directoryPath)),
+            parentPath: parentPath,
             items: result,
             totalItems: result.length
         });
