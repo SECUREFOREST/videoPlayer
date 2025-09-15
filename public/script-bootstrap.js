@@ -58,6 +58,9 @@ class ModernVideoPlayerBrowser {
         // Search and filters
         this.searchInput = document.getElementById('search-input');
         this.searchBtn = document.getElementById('search-btn');
+        this.filterType = document.getElementById('filter-type');
+        this.sortBy = document.getElementById('sort-by');
+        this.sortOrder = document.getElementById('sort-order');
         this.filterDropdown = document.querySelector('[data-bs-toggle="dropdown"]');
         this.sortDropdown = document.querySelectorAll('[data-bs-toggle="dropdown"]')[1];
         
@@ -174,9 +177,9 @@ class ModernVideoPlayerBrowser {
             const params = new URLSearchParams({
                 path: path,
                 search: this.searchInput.value,
-                sortBy: this.sortBy || 'name',
-                sortOrder: this.sortOrder || 'asc',
-                filterType: this.filterType || 'all'
+                sortBy: this.sortBy.value || 'name',
+                sortOrder: this.sortOrder.value || 'asc',
+                filterType: this.filterType.value || 'all'
             });
             
             const response = await fetch(`/api/browse?${params}`);
@@ -305,15 +308,22 @@ class ModernVideoPlayerBrowser {
     
     async loadThumbnail(item, container) {
         try {
+            console.log('Loading thumbnail for:', item.name, 'Path:', item.path);
             const response = await fetch(`/api/thumbnail?path=${encodeURIComponent(item.path)}`);
             const data = await response.json();
+            
+            console.log('Thumbnail API response:', data);
             
             if (data.thumbnailUrl) {
                 const img = document.createElement('img');
                 img.src = data.thumbnailUrl;
                 img.className = 'thumbnail';
                 img.alt = item.name;
+                img.onload = () => console.log('Thumbnail loaded successfully:', data.thumbnailUrl);
+                img.onerror = (e) => console.log('Thumbnail failed to load:', data.thumbnailUrl, e);
                 container.insertBefore(img, container.firstChild);
+            } else {
+                console.log('No thumbnail URL returned for:', item.name);
             }
         } catch (error) {
             console.log('Thumbnail generation failed:', error);
@@ -515,9 +525,14 @@ class ModernVideoPlayerBrowser {
         const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
         
+        console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
+        
         return this.safeAsyncOperation(async () => {
-            const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType || 'all'}`);
+            const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
+            
             const data = await response.json();
+            
+            console.log('Search API response:', data);
             
             if (response.ok) {
                 this.searchResults = data.results;
