@@ -107,21 +107,23 @@ class ModernVideoPlayerBrowser {
     
     bindEvents() {
         // Navigation
-        this.backBtn.addEventListener('click', () => this.goBack());
-        this.refreshBtn.addEventListener('click', () => this.loadDirectory());
+        if (this.backBtn) this.backBtn.addEventListener('click', () => this.goBack());
+        if (this.refreshBtn) this.refreshBtn.addEventListener('click', () => this.loadDirectory());
         
         // View toggle
-        this.gridViewRadio.addEventListener('change', () => this.toggleView(true));
-        this.listViewRadio.addEventListener('change', () => this.toggleView(false));
+        if (this.gridViewRadio) this.gridViewRadio.addEventListener('change', () => this.toggleView(true));
+        if (this.listViewRadio) this.listViewRadio.addEventListener('change', () => this.toggleView(false));
         
         // Search and filters
-        this.searchInput.addEventListener('input', (e) => {
-            this.debounceSearch(e.target.value);
-        });
-        this.searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.performSearch();
-        });
-        this.searchBtn.addEventListener('click', () => this.performSearch());
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', (e) => {
+                this.debounceSearch(e.target.value);
+            });
+            this.searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.performSearch();
+            });
+        }
+        if (this.searchBtn) this.searchBtn.addEventListener('click', () => this.performSearch());
         
         // Filter dropdown
         document.querySelectorAll('[data-filter]').forEach(item => {
@@ -147,12 +149,12 @@ class ModernVideoPlayerBrowser {
         });
         
         // Video controls
-        this.playlistAddBtn.addEventListener('click', () => this.addToPlaylist());
-        this.favoriteBtn.addEventListener('click', () => this.toggleFavorite());
+        if (this.playlistAddBtn) this.playlistAddBtn.addEventListener('click', () => this.addToPlaylist());
+        if (this.favoriteBtn) this.favoriteBtn.addEventListener('click', () => this.toggleFavorite());
         
         // Playlist and favorites
-        this.createPlaylistBtn.addEventListener('click', () => this.showPlaylistModal());
-        this.savePlaylistBtn.addEventListener('click', () => this.savePlaylist());
+        if (this.createPlaylistBtn) this.createPlaylistBtn.addEventListener('click', () => this.showPlaylistModal());
+        if (this.savePlaylistBtn) this.savePlaylistBtn.addEventListener('click', () => this.savePlaylist());
         
         // Enhanced keyboard navigation and accessibility
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
@@ -398,7 +400,7 @@ class ModernVideoPlayerBrowser {
         }
     }
     
-    updateVideoInfo(videoData) {
+    updateVideoInfo(videoData = null) {
         if (videoData) {
             const size = this.formatFileSize(videoData.size);
             const date = this.formatDate(videoData.modified);
@@ -408,10 +410,18 @@ class ModernVideoPlayerBrowser {
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
             `;
+        } else if (this.currentVideo && this.video) {
+            // Fallback for when called without videoData
+            this.videoInfo.innerHTML = `
+                <strong>File:</strong> ${this.currentVideo.name}<br>
+                <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
+                <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
+            `;
         }
     }
     
     formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '0:00';
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = Math.floor(seconds % 60);
@@ -475,6 +485,21 @@ class ModernVideoPlayerBrowser {
     
     onVideoEnded() {
         this.playNextInPlaylist();
+    }
+    
+    playNextInPlaylist() {
+        if (this.currentPlaylist && this.currentPlaylist.videos.length > 0) {
+            this.currentPlaylistIndex++;
+            if (this.currentPlaylistIndex < this.currentPlaylist.videos.length) {
+                const nextVideo = this.currentPlaylist.videos[this.currentPlaylistIndex];
+                this.playVideo(nextVideo);
+            } else {
+                // End of playlist
+                this.currentPlaylist = null;
+                this.currentPlaylistIndex = 0;
+                this.showStatusMessage('Playlist ended', 'info');
+            }
+        }
     }
     
     goBack() {
@@ -839,11 +864,11 @@ class ModernVideoPlayerBrowser {
     // Progress tracking
     saveProgress(videoPath, currentTime) {
         this.playbackProgress[videoPath] = currentTime;
-        localStorage.setItem('videoProgress', JSON.stringify(this.playbackProgress));
+        localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
     }
     
     loadProgress() {
-        const saved = localStorage.getItem('videoProgress');
+        const saved = localStorage.getItem('videoPlayerProgress');
         if (saved) {
             this.playbackProgress = JSON.parse(saved);
         }
@@ -1281,7 +1306,7 @@ class ModernVideoPlayerBrowser {
                               document.msFullscreenElement);
     }
     
-    saveProgress() {
+    saveAllProgress() {
         // Save current progress to localStorage
         try {
             localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
@@ -1316,7 +1341,7 @@ class ModernVideoPlayerBrowser {
         }
         
         this.loadingStates.clear();
-        this.saveProgress();
+        this.saveAllProgress();
     }
     
     cancelActiveRequests() {
