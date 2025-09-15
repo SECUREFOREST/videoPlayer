@@ -537,12 +537,14 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updateBackButton(parentPath) {
-        // Hide the back button completely when at root level or no parent path
-        if (!parentPath || parentPath === this.currentPath || parentPath === '') {
-            this.backBtn.style.display = 'none';
-        } else {
+        // Calculate if we can go back based on current path
+        const canGoBack = this.currentPath && this.currentPath !== '' && this.currentPath.split('/').length > 1;
+        
+        if (canGoBack) {
             this.backBtn.style.display = 'block';
             this.backBtn.disabled = false;
+        } else {
+            this.backBtn.style.display = 'none';
         }
     }
     
