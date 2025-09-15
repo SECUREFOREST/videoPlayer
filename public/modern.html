@@ -921,12 +921,12 @@
 
             async loadFiles() {
                 try {
-                    const response = await fetch('/api/files');
+                    const response = await fetch('/api/browse');
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    const files = await response.json();
-                    this.renderFiles(files);
+                    const data = await response.json();
+                    this.renderFiles(data);
                 } catch (error) {
                     console.error('Error loading files:', error);
                     this.showError('Failed to load files. Please check if the server is running.');
@@ -947,7 +947,7 @@
                 card.className = 'file-card';
                 card.innerHTML = `
                     <div class="file-icon">
-                        <i class="fas ${this.getFileIcon(file.type)}"></i>
+                        <i class="fas ${this.getFileIcon(file)}"></i>
                     </div>
                     <div class="file-name">${file.name}</div>
                     <div class="file-size">${this.formatFileSize(file.size)}</div>
@@ -956,10 +956,16 @@
                 return card;
             }
 
-            getFileIcon(type) {
-                if (type === 'video') return 'fa-play-circle';
-                if (type === 'folder') return 'fa-folder';
+            getFileIcon(file) {
+                if (file.isDirectory) return 'fa-folder';
+                if (file.isFile && this.isVideoFile(file.name)) return 'fa-play-circle';
                 return 'fa-file';
+            }
+
+            isVideoFile(filename) {
+                const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
+                const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+                return videoExtensions.includes(extension);
             }
 
             formatFileSize(bytes) {
