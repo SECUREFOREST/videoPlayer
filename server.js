@@ -14,8 +14,13 @@ const VIDEOS_ROOT = path.join(__dirname, 'videos');
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
 
 function resolveSafePath(requestedPath) {
+    // Handle empty or undefined path
+    if (!requestedPath || requestedPath === '') {
+        return VIDEOS_ROOT;
+    }
+    
     // Normalize the requested path to prevent directory traversal
-    let normalizedPath = path.normalize(requestedPath || '');
+    let normalizedPath = path.normalize(requestedPath);
     
     // Remove leading slash if present to make it relative
     if (normalizedPath.startsWith('/')) {
@@ -148,8 +153,8 @@ app.get('/api/browse', (req, res) => {
         });
 
         res.json({
-            currentPath: directoryPath,
-            parentPath: path.dirname(directoryPath),
+            currentPath: path.relative(VIDEOS_ROOT, directoryPath),
+            parentPath: path.relative(VIDEOS_ROOT, path.dirname(directoryPath)),
             items: result,
             totalItems: result.length
         });
