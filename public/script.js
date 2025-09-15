@@ -8,6 +8,8 @@ class AdvancedVideoPlayerBrowser {
         this.isGridView = false;
         this.isFullscreen = false;
         this.playbackProgress = {};
+        this.currentPlaylist = null;
+        this.currentPlaylistIndex = 0;
         
         // DOM elements
         this.initializeElements();
@@ -320,10 +322,7 @@ class AdvancedVideoPlayerBrowser {
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.textContent = videoData.name;
-                const filePath = item.path.split('/').map(encodeURIComponent).join('/');
-                console.log(filePath)
-                videoSource.src = `/videos/${filePath}`;
-                console.log(videoSource.src)
+                videoSource.src = `/videos/${encodeURIComponent(item.path)}`;
                 this.videoSource.type = videoData.mimeType;
                 this.video.load();
                 this.videoPlayer.style.display = 'block';
@@ -739,6 +738,54 @@ class AdvancedVideoPlayerBrowser {
             }
         } catch (error) {
             alert('Error removing from favorites: ' + error.message);
+        }
+    }
+    
+    async playPlaylist(playlistId) {
+        try {
+            const playlist = this.playlists.find(p => p.id === playlistId);
+            if (!playlist || playlist.videos.length === 0) {
+                alert('Playlist is empty');
+                return;
+            }
+            
+            // Play the first video in the playlist
+            const firstVideo = playlist.videos[0];
+            this.playVideo(firstVideo);
+            
+            // Store the playlist for next/previous navigation
+            this.currentPlaylist = playlist;
+            this.currentPlaylistIndex = 0;
+        } catch (error) {
+            alert('Error playing playlist: ' + error.message);
+        }
+    }
+    
+    async deletePlaylist(playlistId) {
+        if (!confirm('Are you sure you want to delete this playlist?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/playlists/${playlistId}`, { method: 'DELETE' });
+            
+            if (response.ok) {
+                this.loadPlaylists();
+                alert('Playlist deleted successfully');
+            } else {
+                const data = await response.json();
+                alert('Failed to delete playlist: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error deleting playlist: ' + error.message);
+        }
+    }
+    
+    playNextInPlaylist() {
+        if (this.currentPlaylist && this.currentPlaylistIndex < this.currentPlaylist.videos.length - 1) {
+            this.currentPlaylistIndex++;
+            const nextVideo = this.currentPlaylist.videos[this.currentPlaylistIndex];
+            this.playVideo(nextVideo);
         }
     }
     

@@ -37,8 +37,8 @@ function resolveSafePath(requestedPath) {
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the public/player directory on root path
-app.use('/', express.static(path.join(__dirname, 'public', 'player')));
+// Serve static files from the public directory on root path
+app.use('/', express.static(path.join(__dirname, 'public')));
 
 // Serve static files on root path
 app.use('/videos', express.static(path.join(__dirname, 'videos')));
@@ -180,6 +180,7 @@ app.get('/api/video-info', (req, res) => {
             mimeType: getVideoMimeType(ext)
         });
     } catch (error) {
+        console.error('Video info error:', error);
         if (error.message.includes('Access denied')) {
             return res.status(403).json({ error: 'Access denied' });
         }
@@ -352,6 +353,31 @@ app.post('/api/playlists', (req, res) => {
     }
 });
 
+app.delete('/api/playlists/:id', (req, res) => {
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { id } = req.params;
+
+        let playlists = { playlists: [] };
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            playlists = JSON.parse(data);
+        }
+
+        const initialLength = playlists.playlists.length;
+        playlists.playlists = playlists.playlists.filter(playlist => playlist.id !== id);
+        
+        if (playlists.playlists.length === initialLength) {
+            return res.status(404).json({ error: 'Playlist not found' });
+        }
+
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to delete playlist' });
+    }
+});
+
 // API endpoint to manage favorites
 app.get('/api/favorites', (req, res) => {
     try {
@@ -422,7 +448,7 @@ app.delete('/api/favorites/:id', (req, res) => {
 
 // Serve the main HTML file on root path
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'player', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
