@@ -67,9 +67,9 @@ class ModernVideoPlayerBrowser {
         // Search and filters
         this.searchInput = document.getElementById('search-input');
         this.searchBtn = document.getElementById('search-btn');
-        this.filterType = document.getElementById('filter-type');
-        this.sortBy = document.getElementById('sort-by');
-        this.sortOrder = document.getElementById('sort-order');
+        this.filterType = { value: 'all' }; // Default filter type
+        this.sortBy = { value: 'name' }; // Default sort by
+        this.sortOrder = { value: 'asc' }; // Default sort order
         this.filterDropdown = document.querySelector('[data-bs-toggle="dropdown"]');
         this.sortDropdown = document.querySelectorAll('[data-bs-toggle="dropdown"]')[1];
         
@@ -130,6 +130,7 @@ class ModernVideoPlayerBrowser {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.filterType.value = e.target.dataset.filter;
+                this.updateFilterDropdownText(e.target.textContent.trim());
                 this.loadDirectory();
             });
         });
@@ -138,7 +139,18 @@ class ModernVideoPlayerBrowser {
         document.querySelectorAll('[data-sort]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.sortBy.value = e.target.dataset.sort;
+                const sortValue = e.target.dataset.sort;
+                
+                // Toggle sort order if clicking the same sort option
+                if (this.sortBy.value === sortValue) {
+                    this.sortOrder.value = this.sortOrder.value === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortBy.value = sortValue;
+                    this.sortOrder.value = 'asc'; // Reset to ascending for new sort
+                }
+                
+                const orderIcon = this.sortOrder.value === 'asc' ? '↑' : '↓';
+                this.updateSortDropdownText(`${e.target.textContent.trim()} ${orderIcon}`);
                 this.loadDirectory();
             });
         });
@@ -1247,6 +1259,27 @@ class ModernVideoPlayerBrowser {
         this.searchResults = [];
         this.switchTab('browser');
         this.loadDirectory();
+    }
+    
+    updateFilterDropdownText(text) {
+        const filterDropdown = document.querySelector('[data-bs-toggle="dropdown"]');
+        if (filterDropdown) {
+            const icon = filterDropdown.querySelector('i');
+            if (icon) {
+                filterDropdown.innerHTML = `<i class="fas fa-filter me-1"></i>${text}`;
+            }
+        }
+    }
+    
+    updateSortDropdownText(text) {
+        const sortDropdowns = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+        if (sortDropdowns.length > 1) {
+            const sortDropdown = sortDropdowns[1];
+            const icon = sortDropdown.querySelector('i');
+            if (icon) {
+                sortDropdown.innerHTML = `<i class="fas fa-sort me-1"></i>${text}`;
+            }
+        }
     }
     
     // Utility methods - validateInput is defined above in the Input validation section
