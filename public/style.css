@@ -974,23 +974,17 @@ header h1 {
 
 .recent-item .recent-info {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
 }
 
 .recent-item .recent-name {
     font-weight: var(--font-semibold);
-    color: var(--color-white);
     margin-bottom: var(--space-1);
-    font-size: var(--text-base);
+    color: var(--color-white);
 }
 
 .recent-item .recent-path {
-    font-size: var(--text-sm);
-    color: var(--color-gray-400);
-    margin-bottom: var(--space-1);
-    font-family: monospace;
+    font-size: var(--text-xs);
+    color: var(--color-gray-500);
 }
 
 .recent-item .recent-time {
@@ -1001,13 +995,7 @@ header h1 {
 
 .recent-item .recent-actions {
     display: flex;
-    gap: var(--space-2);
-    align-items: center;
-}
-
-.recent-item .recent-actions .btn {
-    padding: var(--space-1) var(--space-2);
-    font-size: var(--text-xs);
+    gap: var(--space-3);
 }
 
 .playlist-item .playlist-name, .favorite-item .favorite-name, .search-item .search-name {
