@@ -629,6 +629,122 @@ header h1 {
     display: block;
 }
 
+/* Fullscreen video styling */
+.video-container:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-container:fullscreen video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Webkit fullscreen support */
+.video-container:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-container:-webkit-full-screen video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Mozilla fullscreen support */
+.video-container:-moz-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-container:-moz-full-screen video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* MS fullscreen support */
+.video-container:-ms-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-container:-ms-fullscreen video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Fallback: Video player fullscreen styling */
+.video-player:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-black);
+    display: flex;
+    flex-direction: column;
+}
+
+.video-player:fullscreen .video-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player:fullscreen .video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.video-player:fullscreen .video-controls-panel {
+    flex-shrink: 0;
+}
+
+/* Webkit fallback */
+.video-player:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: var(--color-black);
+    display: flex;
+    flex-direction: column;
+}
+
+.video-player:-webkit-full-screen .video-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player:-webkit-full-screen .video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.video-player:-webkit-full-screen .video-controls-panel {
+    flex-shrink: 0;
+}
+
 .video-controls-panel {
     background: var(--color-black);
     padding: var(--space-4) var(--space-5);
