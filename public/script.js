@@ -92,7 +92,6 @@ class AdvancedVideoPlayerBrowser {
         this.cancelPlaylistBtn = document.getElementById('cancel-playlist-btn');
         
         // Drag and drop
-        this.dragOverlay = document.getElementById('drag-overlay');
         
     }
     
@@ -940,31 +939,6 @@ class AdvancedVideoPlayerBrowser {
     }
     
     // Drag and drop
-    handleDragOver(e) {
-        e.preventDefault();
-        this.dragOverlay.classList.add('active');
-    }
-    
-    handleDragLeave(e) {
-        if (!e.relatedTarget || !e.relatedTarget.closest('.drag-overlay')) {
-            this.dragOverlay.classList.remove('active');
-        }
-    }
-    
-    handleDrop(e) {
-        e.preventDefault();
-        this.dragOverlay.classList.remove('active');
-        
-        const files = Array.from(e.dataTransfer.files);
-        const videoFiles = files.filter(file => {
-            const ext = '.' + file.name.split('.').pop().toLowerCase();
-            return ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'].includes(ext);
-        });
-        
-        if (videoFiles.length > 0) {
-            this.showStatusMessage(`Dropped ${videoFiles.length} video file(s). Note: File upload is not implemented in this demo.`, 'info');
-        }
-    }
     
     showLoading() {
         this.fileList.innerHTML = '<div class="loading">Loading files...</div>';
