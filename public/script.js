@@ -80,6 +80,7 @@ class AdvancedVideoPlayerBrowser {
         this.volumeSlider = document.getElementById('volume-slider');
         this.speedSelect = document.getElementById('speed-select');
         this.fullscreenBtn = document.getElementById('fullscreen-btn');
+        this.fullscreenBtnControls = document.getElementById('fullscreen-btn-controls');
         this.closeVideoBtn = document.getElementById('close-video');
         
         // Playlist and favorites
@@ -157,6 +158,7 @@ class AdvancedVideoPlayerBrowser {
         this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
         this.speedSelect.addEventListener('change', (e) => this.setPlaybackSpeed(e.target.value));
         this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        this.fullscreenBtnControls.addEventListener('click', () => this.toggleFullscreen());
         this.closeVideoBtn.addEventListener('click', () => this.closeVideo());
         
         // Playlist and favorites
@@ -191,6 +193,9 @@ class AdvancedVideoPlayerBrowser {
         
         // Fullscreen events
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('MSFullscreenChange', () => this.handleFullscreenChange());
         
         // Global mouse events for progress bar dragging
         document.addEventListener('mousemove', (e) => this.handleProgressMouseMove(e));
@@ -577,19 +582,42 @@ class AdvancedVideoPlayerBrowser {
     }
     
     toggleFullscreen() {
+        console.log('Toggle fullscreen called, current state:', this.isFullscreen);
+        
         if (!this.isFullscreen) {
-            if (this.video.requestFullscreen) {
-                this.video.requestFullscreen();
-            } else if (this.video.webkitRequestFullscreen) {
-                this.video.webkitRequestFullscreen();
-            } else if (this.video.msRequestFullscreen) {
-                this.video.msRequestFullscreen();
+            // Enter fullscreen
+            const videoContainer = this.video.closest('.video-container');
+            const elementToFullscreen = videoContainer || this.video;
+            
+            console.log('Attempting to enter fullscreen with element:', elementToFullscreen);
+            
+            if (elementToFullscreen.requestFullscreen) {
+                elementToFullscreen.requestFullscreen().catch(err => {
+                    console.error('Fullscreen request failed:', err);
+                    this.showStatusMessage('Failed to enter fullscreen mode', 'error');
+                });
+            } else if (elementToFullscreen.webkitRequestFullscreen) {
+                elementToFullscreen.webkitRequestFullscreen();
+            } else if (elementToFullscreen.mozRequestFullScreen) {
+                elementToFullscreen.mozRequestFullScreen();
+            } else if (elementToFullscreen.msRequestFullscreen) {
+                elementToFullscreen.msRequestFullscreen();
+            } else {
+                console.error('Fullscreen not supported');
+                this.showStatusMessage('Fullscreen not supported by this browser', 'error');
             }
         } else {
+            // Exit fullscreen
+            console.log('Attempting to exit fullscreen');
+            
             if (document.exitFullscreen) {
-                document.exitFullscreen();
+                document.exitFullscreen().catch(err => {
+                    console.error('Exit fullscreen failed:', err);
+                });
             } else if (document.webkitExitFullscreen) {
                 document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
             } else if (document.msExitFullscreen) {
                 document.msExitFullscreen();
             }
@@ -598,7 +626,16 @@ class AdvancedVideoPlayerBrowser {
     
     handleFullscreenChange() {
         this.isFullscreen = !!document.fullscreenElement;
-        this.fullscreenBtn.innerHTML = this.isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+        const icon = this.isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+        
+        if (this.fullscreenBtn) {
+            this.fullscreenBtn.innerHTML = icon;
+        }
+        if (this.fullscreenBtnControls) {
+            this.fullscreenBtnControls.innerHTML = icon;
+        }
+        
+        console.log('Fullscreen state changed:', this.isFullscreen);
     }
     
     closeVideo() {
