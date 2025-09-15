@@ -480,78 +480,13 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updateProgress() {
-        if (this.video.duration) {
-            const progress = (this.video.currentTime / this.video.duration) * 100;
-            this.progressFill.style.width = progress + '%';
-            this.currentTime.textContent = this.formatTime(this.video.currentTime);
-            this.duration.textContent = this.formatTime(this.video.duration);
-            
+        if (this.video.duration && this.currentVideo) {
             // Save progress
             this.saveProgress(this.currentVideo.path, this.video.currentTime);
         }
     }
     
-    seekTo(event) {
-        if (!this.progressBar || !this.video.duration) {
-            console.log('Progress bar or video duration not available');
-            return;
-        }
-        
-        const rect = this.progressBar.getBoundingClientRect();
-        const pos = (event.clientX - rect.left) / rect.width;
-        const newTime = pos * this.video.duration;
-        
-        console.log('Seeking to:', newTime, 'seconds');
-        this.video.currentTime = newTime;
-    }
     
-    handleProgressMouseDown(event) {
-        this.isDragging = true;
-        this.seekTo(event);
-    }
-    
-    handleProgressMouseMove(event) {
-        if (this.isDragging) {
-            this.seekTo(event);
-        }
-    }
-    
-    handleProgressMouseUp(event) {
-        this.isDragging = false;
-    }
-    
-    toggleMute() {
-        if (!this.video || !this.videoState.isInitialized) return;
-        
-        this.video.muted = !this.videoState.isMuted;
-        this.videoState.isMuted = this.video.muted;
-        this.updateVideoControls();
-    }
-    
-    setVolume(value) {
-        if (!this.video || !this.videoState.isInitialized) return;
-        
-        const validatedVolume = this.validateVolume(value);
-        if (validatedVolume === null) return;
-        
-        const volume = validatedVolume / 100;
-        this.video.volume = volume;
-        this.video.muted = volume === 0;
-        this.videoState.volume = volume;
-        this.videoState.isMuted = this.video.muted;
-        this.updateVideoControls();
-    }
-    
-    setPlaybackSpeed(speed) {
-        if (!this.video || !this.videoState.isInitialized) return;
-        
-        const validatedSpeed = this.validatePlaybackSpeed(speed);
-        if (validatedSpeed === null) return;
-        
-        this.video.playbackRate = validatedSpeed;
-        this.videoState.playbackRate = validatedSpeed;
-        this.updateVideoControls();
-    }
     
     toggleFullscreen() {
         if (!this.isFullscreen) {
@@ -1622,31 +1557,7 @@ class AdvancedVideoPlayerBrowser {
     }
     
     updateVideoControls() {
-        if (!this.videoState.isInitialized) return;
-        
-        // Update play/pause button
-        if (this.playPauseBtn) {
-            this.playPauseBtn.innerHTML = this.videoState.isPlaying ? 
-                '<i class="fas fa-pause" aria-hidden="true"></i>' : 
-                '<i class="fas fa-play" aria-hidden="true"></i>';
-        }
-        
-        // Update mute button
-        if (this.muteBtn) {
-            this.muteBtn.innerHTML = this.videoState.isMuted ? 
-                '<i class="fas fa-volume-mute" aria-hidden="true"></i>' : 
-                '<i class="fas fa-volume-up" aria-hidden="true"></i>';
-        }
-        
-        // Update volume slider
-        if (this.volumeSlider) {
-            this.volumeSlider.value = this.videoState.isMuted ? 0 : this.videoState.volume * 100;
-        }
-        
-        // Update speed select
-        if (this.speedSelect) {
-            this.speedSelect.value = this.videoState.playbackRate;
-        }
+        // No custom controls to update - using native video controls
     }
     
     // ========================================
