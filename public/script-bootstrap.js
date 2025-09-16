@@ -49,101 +49,6 @@ class ModernVideoPlayerBrowser {
         // DOM elements
         this.initializeElements();
         this.init();
-        this.setupRequestInterception();
-    }
-    
-    setupRequestInterception() {
-        // Intercept fetch requests to throttle video requests
-        const originalFetch = window.fetch;
-        const self = this;
-        
-        window.fetch = function(...args) {
-            const url = args[0];
-            
-            // Check if this is a video request
-            if (typeof url === 'string' && url.includes('/videos/')) {
-                if (self.shouldBlockRequest(Date.now())) {
-                    console.warn('Fetch request blocked for video:', url);
-                    return Promise.reject(new Error('Request blocked due to throttling'));
-                }
-            }
-            
-            return originalFetch.apply(this, args);
-        };
-        
-        // Intercept XMLHttpRequest for video requests
-        const originalXHROpen = XMLHttpRequest.prototype.open;
-        const self2 = this;
-        
-        XMLHttpRequest.prototype.open = function(method, url, ...args) {
-            if (typeof url === 'string' && url.includes('/videos/')) {
-                if (self2.shouldBlockRequest(Date.now())) {
-                    console.warn('XHR request blocked for video:', url);
-                    throw new Error('Request blocked due to throttling');
-                }
-            }
-            
-            return originalXHROpen.call(this, method, url, ...args);
-        };
-        
-        // Intercept video element's internal requests more aggressively
-        this.interceptVideoElementRequests();
-    }
-    
-    interceptVideoElementRequests() {
-        // Override the video element's internal loading mechanism
-        const self = this;
-        
-        // Monitor for any video-related network activity
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
-                    const video = mutation.target;
-                    if (video.tagName === 'VIDEO' && video.src.includes('/videos/')) {
-                        console.log('Video src changed - applying strict controls');
-                        self.applyStrictVideoControls(video);
-                    }
-                }
-            });
-        });
-        
-        // Start observing
-        observer.observe(document.body, {
-            attributes: true,
-            subtree: true,
-            attributeFilter: ['src']
-        });
-    }
-    
-    applyStrictVideoControls(video) {
-        // Apply the most restrictive settings possible
-        video.preload = 'none';
-        video.setAttribute('preload', 'none');
-        video.autoplay = false;
-        video.muted = true;
-        
-        // Override the video's load method completely
-        const originalLoad = video.load.bind(video);
-        video.load = () => {
-            console.log('Video load intercepted - checking throttling');
-            if (this.shouldBlockRequest(Date.now())) {
-                console.warn('Video load blocked due to throttling');
-                return;
-            }
-            originalLoad();
-        };
-        
-        // Block all automatic events that might trigger loading
-        const blockEvents = ['loadstart', 'progress', 'canplay', 'canplaythrough'];
-        blockEvents.forEach(eventType => {
-            video.addEventListener(eventType, (e) => {
-                if (this.shouldBlockRequest(Date.now())) {
-                    console.warn(`Video ${eventType} event blocked`);
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            }, true);
-        });
     }
     
     initializeElements() {
@@ -564,14 +469,8 @@ class ModernVideoPlayerBrowser {
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
                 
-                // Set large file flag for aggressive throttling
-                this.isLargeFile = videoData.size > 100 * 1024 * 1024;
-                
-                // Log the video request (with throttling)
-                if (!this.logRequest(videoUrl, 'video')) {
-                    console.warn('Initial video request blocked due to throttling');
-                    return;
-                }
+                // Log the video request
+                this.logRequest(videoUrl, 'video');
                 
                 // Optimize video loading for large files
                 this.optimizeVideoForLargeFile(videoData.size);
@@ -725,9 +624,8 @@ class ModernVideoPlayerBrowser {
         if (fileSize > 100 * 1024 * 1024) {
             console.log('Optimizing video for large file:', this.formatFileSize(fileSize));
             
-            // Set preload to none to prevent any automatic loading
-            this.video.preload = 'none';
-            this.video.setAttribute('preload', 'none');
+            // Set preload to metadata only to reduce initial requests
+            this.video.preload = 'metadata';
             
             // Disable autoplay for large files to prevent excessive requests
             this.video.autoplay = false;
@@ -739,20 +637,10 @@ class ModernVideoPlayerBrowser {
             // Set crossOrigin to anonymous for better caching
             this.video.crossOrigin = 'anonymous';
             
-            // Disable automatic seeking to prevent range requests
-            this.video.defaultMuted = true;
-            this.video.muted = true;
+            // Set additional attributes for better buffering control
+            this.video.setAttribute('preload', 'metadata');
             
-            // Completely disable automatic buffering
-            this.video.setAttribute('data-buffering-disabled', 'true');
-            
-            // Override video methods to prevent automatic loading
-            this.disableVideoAutoLoading();
-            
-            // Add manual play control
-            this.setupManualVideoControl();
-            
-            console.log('Large file optimizations applied - manual control enabled');
+            console.log('Large file optimizations applied');
         } else {
             // For smaller files, use normal settings
             this.video.preload = 'auto';
@@ -760,175 +648,11 @@ class ModernVideoPlayerBrowser {
         }
     }
     
-    disableVideoAutoLoading() {
-        // Override the video's load method to prevent automatic loading
-        const originalLoad = this.video.load.bind(this.video);
-        this.video.load = () => {
-            console.log('Video load called - checking throttling');
-            if (this.shouldBlockRequest(Date.now())) {
-                console.warn('Video load blocked due to throttling');
-                return;
-            }
-            originalLoad();
-        };
-        
-        // Override play method to control when video actually loads
-        const originalPlay = this.video.play.bind(this.video);
-        this.video.play = () => {
-            console.log('Video play called - manual control');
-            if (this.video.preload === 'none') {
-                // Only load when user explicitly plays
-                this.video.preload = 'metadata';
-                this.video.load();
-            }
-            return originalPlay();
-        };
-        
-        // Prevent automatic seeking
-        this.video.addEventListener('seeking', (e) => {
-            console.log('Video seeking detected - blocking automatic seeking');
-            e.preventDefault();
-            e.stopPropagation();
-        }, true);
-        
-        // Prevent automatic progress events from triggering loads
-        this.video.addEventListener('progress', (e) => {
-            if (this.video.getAttribute('data-buffering-disabled') === 'true') {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, true);
-    }
-    
-    setupManualVideoControl() {
-        // Add a manual play button for large files
-        const playButton = document.createElement('button');
-        playButton.className = 'btn btn-primary btn-lg position-absolute top-50 start-50 translate-middle';
-        playButton.innerHTML = '<i class="fas fa-play"></i> Click to Load Video';
-        playButton.style.zIndex = '1000';
-        playButton.onclick = () => {
-            this.loadLargeVideo();
-            playButton.remove();
-        };
-        
-        // Add the button to the video container
-        const videoContainer = document.querySelector('.ratio');
-        if (videoContainer) {
-            videoContainer.style.position = 'relative';
-            videoContainer.appendChild(playButton);
-        }
-        
-        // Completely disable the video element until manual load
-        this.video.style.display = 'none';
-        this.video.removeAttribute('src');
-        this.video.load = () => {}; // Disable load completely
-    }
-    
-    loadLargeVideo() {
-        console.log('Manually loading large video with custom loader');
-        
-        // Show the video element
-        this.video.style.display = 'block';
-        
-        // Use a custom approach to load video with controlled chunking
-        this.loadVideoWithCustomChunking();
-    }
-    
-    loadVideoWithCustomChunking() {
-        const videoUrl = this.video.src;
-        console.log('Loading video with custom chunking control:', videoUrl);
-        
-        // Create a new video element with strict controls
-        const newVideo = document.createElement('video');
-        newVideo.controls = true;
-        newVideo.preload = 'none';
-        newVideo.style.width = '100%';
-        newVideo.style.height = '100%';
-        
-        // Replace the old video with the new one
-        const videoContainer = this.video.parentElement;
-        videoContainer.replaceChild(newVideo, this.video);
-        this.video = newVideo;
-        
-        // Set up the new video with strict controls
-        this.video.src = videoUrl;
-        this.video.preload = 'none';
-        this.video.setAttribute('preload', 'none');
-        
-        // Add event listeners
-        this.video.addEventListener('loadstart', () => {
-            console.log('Video load started - monitoring for chunking');
-        });
-        
-        this.video.addEventListener('progress', (e) => {
-            console.log('Video progress event - checking for excessive requests');
-            // Throttle progress events
-            if (this.shouldBlockRequest(Date.now())) {
-                console.warn('Progress event blocked due to throttling');
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        });
-        
-        this.video.addEventListener('canplay', () => {
-            console.log('Video can play - enabling controls');
-            this.video.style.display = 'block';
-        });
-        
-        // Only load when user explicitly plays
-        this.video.addEventListener('play', () => {
-            console.log('Video play requested - loading with metadata only');
-            if (this.video.preload === 'none') {
-                this.video.preload = 'metadata';
-                this.video.load();
-            }
-        });
-        
-        // Show a play button overlay
-        this.showCustomPlayButton();
-    }
-    
-    showCustomPlayButton() {
-        const playOverlay = document.createElement('div');
-        playOverlay.className = 'position-absolute top-50 start-50 translate-middle text-center';
-        playOverlay.style.zIndex = '1000';
-        playOverlay.innerHTML = `
-            <button class="btn btn-primary btn-lg mb-3" id="custom-play-btn">
-                <i class="fas fa-play"></i> Load & Play Video
-            </button>
-            <div class="text-light">
-                <small>Click to load video with optimized streaming</small>
-            </div>
-        `;
-        
-        const videoContainer = this.video.parentElement;
-        videoContainer.style.position = 'relative';
-        videoContainer.appendChild(playOverlay);
-        
-        document.getElementById('custom-play-btn').onclick = () => {
-            playOverlay.remove();
-            this.video.preload = 'metadata';
-            this.video.load();
-            this.video.play().catch(e => console.log('Play failed:', e));
-        };
-    }
-    
     logRequest(url, type = 'video') {
-        const now = Date.now();
-        
-        // Check if we should block this request
-        if (this.shouldBlockRequest(now)) {
-            console.warn(`Request blocked: Too many requests (${this.requestCount} in last second)`);
-            return false;
-        }
-        
         this.requestCount++;
+        const now = Date.now();
         const timeSinceLastRequest = now - this.lastRequestTime;
         this.lastRequestTime = now;
-        
-        // Track request times for throttling
-        this.requestTimes.push(now);
-        this.requestTimes = this.requestTimes.filter(time => now - time < 1000); // Keep last second
         
         this.requestLog.push({
             url: url,
@@ -950,26 +674,6 @@ class ModernVideoPlayerBrowser {
         }
         
         console.log(`Request #${this.requestCount} (${type}): ${url} - ${timeSinceLastRequest}ms since last`);
-        return true;
-    }
-    
-    shouldBlockRequest(now) {
-        // For large files, be more aggressive with blocking
-        if (this.isLargeFile) {
-            // Block if more than 3 requests in the last second
-            const recentRequests = this.requestTimes.filter(time => now - time < 1000);
-            if (recentRequests.length >= 3) {
-                return true;
-            }
-        } else {
-            // For smaller files, allow more requests
-            const recentRequests = this.requestTimes.filter(time => now - time < 1000);
-            if (recentRequests.length >= this.maxRequestsPerSecond) {
-                return true;
-            }
-        }
-        
-        return false;
     }
     
     formatTime(seconds) {
