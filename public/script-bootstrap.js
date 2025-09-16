@@ -858,6 +858,19 @@ class ModernVideoPlayerBrowser {
             const existingPlaylistsList = document.getElementById('existing-playlists-list');
             const noPlaylistsMessage = document.getElementById('no-playlists-message');
             
+            // Ensure the existing playlists tab is active
+            const existingTab = document.getElementById('existing-playlist-tab');
+            const newTab = document.getElementById('new-playlist-tab');
+            const existingPane = document.getElementById('existing-playlist-pane');
+            const newPane = document.getElementById('new-playlist-pane');
+            
+            if (existingTab && newTab && existingPane && newPane) {
+                existingTab.classList.add('active');
+                newTab.classList.remove('active');
+                existingPane.classList.add('show', 'active');
+                newPane.classList.remove('show', 'active');
+            }
+            
             if (data.playlists && data.playlists.length > 0) {
                 existingPlaylistsList.innerHTML = '';
                 noPlaylistsMessage.style.display = 'none';
