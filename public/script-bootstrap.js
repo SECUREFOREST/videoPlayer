@@ -36,6 +36,12 @@ class ModernVideoPlayerBrowser {
         this.lastRequestTime = 0;
         this.requestLog = [];
         
+        // Request throttling and blocking
+        this.requestBlocked = false;
+        this.maxRequestsPerSecond = 5;
+        this.requestTimes = [];
+        this.isLargeFile = false;
+        
         // Async operation tracking
         this.activeRequests = new Set();
         this.loadingStates = new Map();
@@ -43,6 +49,42 @@ class ModernVideoPlayerBrowser {
         // DOM elements
         this.initializeElements();
         this.init();
+        this.setupRequestInterception();
+    }
+    
+    setupRequestInterception() {
+        // Intercept fetch requests to throttle video requests
+        const originalFetch = window.fetch;
+        const self = this;
+        
+        window.fetch = function(...args) {
+            const url = args[0];
+            
+            // Check if this is a video request
+            if (typeof url === 'string' && url.includes('/videos/')) {
+                if (self.shouldBlockRequest(Date.now())) {
+                    console.warn('Fetch request blocked for video:', url);
+                    return Promise.reject(new Error('Request blocked due to throttling'));
+                }
+            }
+            
+            return originalFetch.apply(this, args);
+        };
+        
+        // Intercept XMLHttpRequest for video requests
+        const originalXHROpen = XMLHttpRequest.prototype.open;
+        const self2 = this;
+        
+        XMLHttpRequest.prototype.open = function(method, url, ...args) {
+            if (typeof url === 'string' && url.includes('/videos/')) {
+                if (self2.shouldBlockRequest(Date.now())) {
+                    console.warn('XHR request blocked for video:', url);
+                    throw new Error('Request blocked due to throttling');
+                }
+            }
+            
+            return originalXHROpen.call(this, method, url, ...args);
+        };
     }
     
     initializeElements() {
@@ -463,8 +505,14 @@ class ModernVideoPlayerBrowser {
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
                 
-                // Log the video request
-                this.logRequest(videoUrl, 'video');
+                // Set large file flag for aggressive throttling
+                this.isLargeFile = videoData.size > 100 * 1024 * 1024;
+                
+                // Log the video request (with throttling)
+                if (!this.logRequest(videoUrl, 'video')) {
+                    console.warn('Initial video request blocked due to throttling');
+                    return;
+                }
                 
                 // Optimize video loading for large files
                 this.optimizeVideoForLargeFile(videoData.size);
@@ -634,6 +682,25 @@ class ModernVideoPlayerBrowser {
             // Set additional attributes for better buffering control
             this.video.setAttribute('preload', 'metadata');
             
+            // Disable automatic seeking to prevent range requests
+            this.video.defaultMuted = true;
+            this.video.muted = true;
+            
+            // Add aggressive buffering control
+            this.video.addEventListener('seeking', (e) => {
+                console.log('Video seeking detected - this may trigger range requests');
+            });
+            
+            // Override the video's load method to add throttling
+            const originalLoad = this.video.load.bind(this.video);
+            this.video.load = () => {
+                if (this.shouldBlockRequest(Date.now())) {
+                    console.warn('Video load blocked due to throttling');
+                    return;
+                }
+                originalLoad();
+            };
+            
             console.log('Large file optimizations applied');
         } else {
             // For smaller files, use normal settings
@@ -643,10 +710,21 @@ class ModernVideoPlayerBrowser {
     }
     
     logRequest(url, type = 'video') {
-        this.requestCount++;
         const now = Date.now();
+        
+        // Check if we should block this request
+        if (this.shouldBlockRequest(now)) {
+            console.warn(`Request blocked: Too many requests (${this.requestCount} in last second)`);
+            return false;
+        }
+        
+        this.requestCount++;
         const timeSinceLastRequest = now - this.lastRequestTime;
         this.lastRequestTime = now;
+        
+        // Track request times for throttling
+        this.requestTimes.push(now);
+        this.requestTimes = this.requestTimes.filter(time => now - time < 1000); // Keep last second
         
         this.requestLog.push({
             url: url,
@@ -668,6 +746,26 @@ class ModernVideoPlayerBrowser {
         }
         
         console.log(`Request #${this.requestCount} (${type}): ${url} - ${timeSinceLastRequest}ms since last`);
+        return true;
+    }
+    
+    shouldBlockRequest(now) {
+        // For large files, be more aggressive with blocking
+        if (this.isLargeFile) {
+            // Block if more than 3 requests in the last second
+            const recentRequests = this.requestTimes.filter(time => now - time < 1000);
+            if (recentRequests.length >= 3) {
+                return true;
+            }
+        } else {
+            // For smaller files, allow more requests
+            const recentRequests = this.requestTimes.filter(time => now - time < 1000);
+            if (recentRequests.length >= this.maxRequestsPerSecond) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     formatTime(seconds) {
