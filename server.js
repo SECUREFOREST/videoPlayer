@@ -72,13 +72,17 @@ app.use('/', express.static(path.join(__dirname, 'public'), {
 // Serve static files on root path
 app.use('/videos', express.static(path.join(__dirname, 'videos')));
 
-// Custom thumbnail serving with URL decoding
-app.get('/thumbnails/*', (req, res) => {
+// Custom thumbnail serving with URL decoding (must come before static file serving)
+app.get('/thumbnails/:filename', (req, res) => {
+    console.log('=== THUMBNAIL REQUEST RECEIVED ===');
+    console.log('URL:', req.url);
+    console.log('Params:', req.params);
+    
     try {
-        const filename = decodeURIComponent(req.params[0]);
+        const filename = decodeURIComponent(req.params.filename);
         const thumbnailPath = path.join(__dirname, 'thumbnails', filename);
         
-        console.log('Thumbnail request - Original:', req.params[0]);
+        console.log('Thumbnail request - Original:', req.params.filename);
         console.log('Thumbnail request - Decoded:', filename);
         console.log('Thumbnail request - Full path:', thumbnailPath);
         
