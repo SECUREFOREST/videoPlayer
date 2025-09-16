@@ -71,7 +71,38 @@ app.use('/', express.static(path.join(__dirname, 'public'), {
 
 // Serve static files on root path
 app.use('/videos', express.static(path.join(__dirname, 'videos')));
-app.use('/thumbnails', express.static(path.join(__dirname, 'thumbnails')));
+
+// Custom thumbnail serving with URL decoding
+app.get('/thumbnails/*', (req, res) => {
+    try {
+        const filename = decodeURIComponent(req.params[0]);
+        const thumbnailPath = path.join(__dirname, 'thumbnails', filename);
+        
+        console.log('Thumbnail request - Original:', req.params[0]);
+        console.log('Thumbnail request - Decoded:', filename);
+        console.log('Thumbnail request - Full path:', thumbnailPath);
+        
+        if (fs.existsSync(thumbnailPath)) {
+            res.sendFile(thumbnailPath);
+        } else {
+            // Try with quotes around the filename (ffmpeg sometimes adds quotes)
+            const quotedFilename = `'${filename}'`;
+            const quotedThumbnailPath = path.join(__dirname, 'thumbnails', quotedFilename);
+            console.log('Trying quoted filename:', quotedFilename);
+            console.log('Trying quoted path:', quotedThumbnailPath);
+            
+            if (fs.existsSync(quotedThumbnailPath)) {
+                res.sendFile(quotedThumbnailPath);
+            } else {
+                console.log('Thumbnail file not found:', thumbnailPath);
+                res.status(404).send('Thumbnail not found');
+            }
+        }
+    } catch (error) {
+        console.error('Error serving thumbnail:', error);
+        res.status(500).send('Error serving thumbnail');
+    }
+});
 
 // Helper function to check if file is video
 function isVideoFile(extension) {
@@ -253,12 +284,17 @@ app.get('/api/thumbnail', async (req, res) => {
         }
 
         const videoName = path.basename(videoPath, ext);
-        const thumbnailPath = path.join(thumbnailsDir, `${videoName}_thumb.jpg`);
+        // Remove any quotes that might be in the filename
+        const cleanVideoName = videoName.replace(/['"]/g, '');
+        const thumbnailPath = path.join(thumbnailsDir, `${cleanVideoName}_thumb.jpg`);
 
         // Check if thumbnail already exists
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailFilename = path.basename(thumbnailPath);
-            return res.json({ thumbnailUrl: `/thumbnails/${encodeURIComponent(thumbnailFilename)}` });
+            const thumbnailUrl = `/thumbnails/${encodeURIComponent(thumbnailFilename)}`;
+            console.log('Thumbnail exists - Filename:', thumbnailFilename);
+            console.log('Thumbnail exists - URL:', thumbnailUrl);
+            return res.json({ thumbnailUrl: thumbnailUrl });
         }
 
         // Generate thumbnail using ffmpeg
