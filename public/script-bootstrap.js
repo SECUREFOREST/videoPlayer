@@ -823,17 +823,21 @@ class ModernVideoPlayerBrowser {
             const freshNewTab = document.getElementById('new-playlist-tab');
             
             freshExistingTab.addEventListener('click', () => {
-                this.selectedPlaylistId = null;
-                // Clear any selected playlist
-                const existingPlaylistsList = document.getElementById('existing-playlists-list');
-                if (existingPlaylistsList) {
-                    existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
-                        item.classList.remove('active');
-                    });
+                console.log('Switched to existing playlists tab');
+                // Don't reset selectedPlaylistId when switching to existing playlists tab
+                // Only clear visual selection if no playlist is actually selected
+                if (!this.selectedPlaylistId) {
+                    const existingPlaylistsList = document.getElementById('existing-playlists-list');
+                    if (existingPlaylistsList) {
+                        existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                    }
                 }
             });
             
             freshNewTab.addEventListener('click', () => {
+                console.log('Switched to new playlist tab');
                 this.selectedPlaylistId = null;
                 // Clear any selected playlist
                 const existingPlaylistsList = document.getElementById('existing-playlists-list');
@@ -888,6 +892,7 @@ class ModernVideoPlayerBrowser {
                     `;
                     
                     playlistItem.addEventListener('click', () => {
+                        console.log('Playlist clicked:', playlist.name, 'ID:', playlist.id);
                         // Remove active class from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                             item.classList.remove('active');
@@ -895,6 +900,7 @@ class ModernVideoPlayerBrowser {
                         // Add active class to clicked item
                         playlistItem.classList.add('active');
                         this.selectedPlaylistId = playlist.id;
+                        console.log('Selected playlist ID set to:', this.selectedPlaylistId);
                     });
                     
                     existingPlaylistsList.appendChild(playlistItem);
@@ -935,8 +941,10 @@ class ModernVideoPlayerBrowser {
     }
     
     async savePlaylist() {
+        console.log('savePlaylist called, selectedPlaylistId:', this.selectedPlaylistId);
         // Check if we're adding to an existing playlist
         if (this.selectedPlaylistId) {
+            console.log('Adding to existing playlist:', this.selectedPlaylistId);
             await this.addVideoToExistingPlaylist();
         } else {
             // Check if we're on the existing playlists tab but no playlist selected
@@ -948,34 +956,33 @@ class ModernVideoPlayerBrowser {
             
             // Check if we're on the new playlist tab
             const newPlaylistPane = document.getElementById('new-playlist-pane');
-            if (!newPlaylistPane || !newPlaylistPane.classList.contains('active')) {
-                this.showStatusMessage('Please select a playlist or create a new one', 'warning');
-                return;
-            }
-            
-            // Create new playlist
-            const name = this.validatePlaylistName(this.playlistName.value);
-            if (!name) return;
-            
-            const videos = this.currentVideo ? [this.currentVideo] : [];
-            
-            try {
-                const response = await fetch('/api/playlists', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, videos })
-                });
+            if (newPlaylistPane && newPlaylistPane.classList.contains('active')) {
+                // Create new playlist
+                const name = this.validatePlaylistName(this.playlistName.value);
+                if (!name) return;
                 
-                if (response.ok) {
-                    this.hidePlaylistModal();
-                    this.loadPlaylists();
-                    this.showStatusMessage('Playlist created successfully!', 'success');
-                } else {
-                    const data = await response.json();
-                    this.showStatusMessage('Failed to create playlist: ' + data.error, 'error');
+                const videos = this.currentVideo ? [this.currentVideo] : [];
+                
+                try {
+                    const response = await fetch('/api/playlists', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, videos })
+                    });
+                    
+                    if (response.ok) {
+                        this.hidePlaylistModal();
+                        this.loadPlaylists();
+                        this.showStatusMessage('Playlist created successfully!', 'success');
+                    } else {
+                        const data = await response.json();
+                        this.showStatusMessage('Failed to create playlist: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    this.showStatusMessage('Error creating playlist: ' + error.message, 'error');
                 }
-            } catch (error) {
-                this.showStatusMessage('Error creating playlist: ' + error.message, 'error');
+            } else {
+                this.showStatusMessage('Please select a playlist or create a new one', 'warning');
             }
         }
     }
