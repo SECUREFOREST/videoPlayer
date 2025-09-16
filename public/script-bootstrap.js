@@ -173,7 +173,7 @@ class ModernVideoPlayerBrowser {
         if (this.favoriteBtn) this.favoriteBtn.addEventListener('click', () => this.toggleFavorite());
         
         // Playlist and favorites
-        if (this.createPlaylistBtn) this.createPlaylistBtn.addEventListener('click', () => this.showPlaylistModal());
+        if (this.createPlaylistBtn) this.createPlaylistBtn.addEventListener('click', () => this.showCreatePlaylistModal());
         if (this.savePlaylistBtn) this.savePlaylistBtn.addEventListener('click', () => this.savePlaylist());
         
         // Enhanced keyboard navigation and accessibility
@@ -799,6 +799,12 @@ class ModernVideoPlayerBrowser {
     async addToPlaylist() {
         if (!this.currentVideo) return;
         
+        // Update modal title
+        const modalTitle = document.getElementById('playlistModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = 'Add to Playlist';
+        }
+        
         this.showPlaylistModal();
         this.playlistVideos.innerHTML = `
             <div class="alert alert-info">
@@ -880,6 +886,25 @@ class ModernVideoPlayerBrowser {
         this.playlistModal.show();
     }
     
+    showCreatePlaylistModal() {
+        // Clear any previous state
+        this.selectedPlaylistId = null;
+        this.playlistName.value = '';
+        this.playlistVideos.innerHTML = '';
+        
+        // Update modal title
+        const modalTitle = document.getElementById('playlistModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = 'Create New Playlist';
+        }
+        
+        // Switch to "Create New" tab
+        this.switchToNewPlaylistTab();
+        
+        // Show the modal
+        this.playlistModal.show();
+    }
+    
     async loadExistingPlaylists() {
         try {
             const response = await fetch('/api/playlists');
@@ -909,6 +934,7 @@ class ModernVideoPlayerBrowser {
                     const playlistItem = document.createElement('div');
                     playlistItem.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary';
                     playlistItem.style.cursor = 'pointer';
+                    playlistItem.style.transition = 'all 0.2s ease';
                     playlistItem.innerHTML = `
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">${playlist.name}</h6>
@@ -917,14 +943,34 @@ class ModernVideoPlayerBrowser {
                         <small class="text-muted">Created: ${new Date(playlist.created).toLocaleDateString()}</small>
                     `;
                     
+                    // Add hover effects
+                    playlistItem.addEventListener('mouseenter', () => {
+                        if (!playlistItem.classList.contains('active')) {
+                            playlistItem.style.backgroundColor = '#495057';
+                        }
+                    });
+                    
+                    playlistItem.addEventListener('mouseleave', () => {
+                        if (!playlistItem.classList.contains('active')) {
+                            playlistItem.style.backgroundColor = '';
+                        }
+                    });
+                    
                     playlistItem.addEventListener('click', () => {
-                        // Remove active class from all items
+                        console.log('Playlist clicked:', playlist.name);
+                        // Remove active class and custom selection styling from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                             item.classList.remove('active');
+                            item.style.backgroundColor = '';
+                            item.style.borderColor = '';
                         });
-                        // Add active class to clicked item
+                        // Add active class and custom selection styling to clicked item
                         playlistItem.classList.add('active');
+                        playlistItem.style.backgroundColor = '#0d6efd';
+                        playlistItem.style.borderColor = '#0d6efd';
                         this.selectedPlaylistId = playlist.id;
+                        console.log('Selected playlist ID:', this.selectedPlaylistId);
+                        console.log('Playlist item classes:', playlistItem.className);
                     });
                     
                     existingPlaylistsList.appendChild(playlistItem);
@@ -944,6 +990,12 @@ class ModernVideoPlayerBrowser {
         this.playlistName.value = '';
         this.playlistVideos.innerHTML = '';
         this.selectedPlaylistId = null;
+        
+        // Reset modal title
+        const modalTitle = document.getElementById('playlistModalLabel');
+        if (modalTitle) {
+            modalTitle.textContent = 'Add to Playlist';
+        }
         
         // Reset tab to existing playlists
         this.resetPlaylistModalTabs();
@@ -971,6 +1023,8 @@ class ModernVideoPlayerBrowser {
         if (existingPlaylistsList) {
             existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                 item.classList.remove('active');
+                item.style.backgroundColor = '';
+                item.style.borderColor = '';
             });
         }
     }
