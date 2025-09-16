@@ -357,22 +357,58 @@ class ModernVideoPlayerBrowser {
             if (data.thumbnailUrl) {
                 const img = document.createElement('img');
                 img.src = data.thumbnailUrl;
-                img.className = 'thumbnail';
+                img.className = 'img-fluid rounded';
                 img.alt = item.name;
-                img.onload = () => console.log('Thumbnail loaded successfully:', data.thumbnailUrl);
+                img.style.width = '100%';
+                img.style.height = '120px';
+                img.style.objectFit = 'cover';
+                img.onload = () => {
+                    console.log('Thumbnail loaded successfully:', data.thumbnailUrl);
+                    // Remove the spinner
+                    const spinner = container.querySelector('.spinner-border');
+                    if (spinner) {
+                        spinner.remove();
+                    }
+                };
                 img.onerror = (e) => {
                     console.warn('Thumbnail failed to load:', data.thumbnailUrl, e);
-                    // Remove the broken image
-                    if (img.parentNode) {
-                        img.parentNode.removeChild(img);
+                    // Remove the spinner and show a placeholder
+                    const spinner = container.querySelector('.spinner-border');
+                    if (spinner) {
+                        spinner.remove();
                     }
+                    container.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                            <i class="fas fa-video fa-2x"></i>
+                        </div>
+                    `;
                 };
                 container.insertBefore(img, container.firstChild);
             } else {
                 console.log('No thumbnail URL returned for:', item.name);
+                // Remove the spinner and show a placeholder
+                const spinner = container.querySelector('.spinner-border');
+                if (spinner) {
+                    spinner.remove();
+                }
+                container.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <i class="fas fa-video fa-2x"></i>
+                    </div>
+                `;
             }
         } catch (error) {
             console.warn('Thumbnail generation failed for', item.name, ':', error.message);
+            // Remove the spinner and show a placeholder
+            const spinner = container.querySelector('.spinner-border');
+            if (spinner) {
+                spinner.remove();
+            }
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                    <i class="fas fa-video fa-2x"></i>
+                </div>
+            `;
         }
     }
     
@@ -829,12 +865,10 @@ class ModernVideoPlayerBrowser {
             div.style.transition = 'all 0.2s ease';
             
             div.innerHTML = `
-                <div class="video-thumbnail mb-2 position-relative">
-                    <img src="/api/thumbnail?path=${encodeURIComponent(video.path)}" 
-                         alt="${video.name}" 
-                         class="img-fluid rounded" 
-                         style="width: 100%; height: 120px; object-fit: cover;"
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjMzQzYTQwIi8+CjxwYXRoIGQ9Ik04MCA0MEwxMjAgNjBMMTgwIDQwVjgwSDEyMFY2MEw4MCA4MFY0MFoiIGZpbGw9IiM2Yzc1N2QiLz4KPC9zdmc+'">
+                <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #343a40; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                     <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
                             onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
                             title="Remove from playlist">
@@ -865,6 +899,10 @@ class ModernVideoPlayerBrowser {
                 this.currentPlaylistIndex = index;
                 this.playVideo(video);
             });
+            
+            // Load thumbnail for this video
+            const thumbnailContainer = div.querySelector('.video-thumbnail');
+            this.loadThumbnail(video, thumbnailContainer);
             
             col.appendChild(div);
             this.playlistList.appendChild(col);
