@@ -286,7 +286,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-name">${item.name}</div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ? 
-                        `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` : 
+                        `<span class="file-size">${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` : 
                         `<span class="file-size">${size}</span>`
                     }
                     <span class="file-date">${date}</span>
