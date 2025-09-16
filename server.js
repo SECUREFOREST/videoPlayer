@@ -371,17 +371,34 @@ app.post('/api/playlists', (req, res) => {
         const playlistsFile = path.join(__dirname, 'playlists.json');
         const { name, videos } = req.body;
 
+        // Validate input
+        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+            return res.status(400).json({ error: 'Playlist name is required' });
+        }
+
+        if (name.trim().length > 100) {
+            return res.status(400).json({ error: 'Playlist name is too long (max 100 characters)' });
+        }
+
         let playlists = { playlists: [] };
         if (fs.existsSync(playlistsFile)) {
             const data = fs.readFileSync(playlistsFile, 'utf8');
             playlists = JSON.parse(data);
         }
 
+        // Check for duplicate playlist names
+        const trimmedName = name.trim();
+        const duplicateExists = playlists.playlists.some(p => p.name.toLowerCase() === trimmedName.toLowerCase());
+        if (duplicateExists) {
+            return res.status(400).json({ error: 'A playlist with this name already exists' });
+        }
+
         const newPlaylist = {
             id: Date.now().toString(),
-            name: name,
+            name: trimmedName,
             videos: videos || [],
-            created: new Date().toISOString()
+            created: new Date().toISOString(),
+            modified: new Date().toISOString()
         };
 
         playlists.playlists.push(newPlaylist);
@@ -389,6 +406,7 @@ app.post('/api/playlists', (req, res) => {
 
         res.json(newPlaylist);
     } catch (error) {
+        console.error('Error creating playlist:', error);
         res.status(500).json({ error: 'Unable to save playlist' });
     }
 });
@@ -397,6 +415,11 @@ app.delete('/api/playlists/:id', (req, res) => {
     try {
         const playlistsFile = path.join(__dirname, 'playlists.json');
         const { id } = req.params;
+
+        // Validate ID
+        if (!id || typeof id !== 'string' || id.trim().length === 0) {
+            return res.status(400).json({ error: 'Invalid playlist ID' });
+        }
 
         let playlists = { playlists: [] };
         if (fs.existsSync(playlistsFile)) {
@@ -414,7 +437,66 @@ app.delete('/api/playlists/:id', (req, res) => {
         fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
         res.json({ success: true });
     } catch (error) {
+        console.error('Error deleting playlist:', error);
         res.status(500).json({ error: 'Unable to delete playlist' });
+    }
+});
+
+// API endpoint to update playlist
+app.put('/api/playlists/:id', (req, res) => {
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { id } = req.params;
+        const { name, videos } = req.body;
+
+        // Validate ID
+        if (!id || typeof id !== 'string' || id.trim().length === 0) {
+            return res.status(400).json({ error: 'Invalid playlist ID' });
+        }
+
+        // Validate input
+        if (name !== undefined && (!name || typeof name !== 'string' || name.trim().length === 0)) {
+            return res.status(400).json({ error: 'Playlist name is required' });
+        }
+
+        if (name && name.trim().length > 100) {
+            return res.status(400).json({ error: 'Playlist name is too long (max 100 characters)' });
+        }
+
+        let playlists = { playlists: [] };
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            playlists = JSON.parse(data);
+        }
+
+        const playlist = playlists.playlists.find(p => p.id === id);
+        if (!playlist) {
+            return res.status(404).json({ error: 'Playlist not found' });
+        }
+
+        // Check for duplicate playlist names (excluding current playlist)
+        if (name) {
+            const trimmedName = name.trim();
+            const duplicateExists = playlists.playlists.some(p => 
+                p.id !== id && p.name.toLowerCase() === trimmedName.toLowerCase()
+            );
+            if (duplicateExists) {
+                return res.status(400).json({ error: 'A playlist with this name already exists' });
+            }
+            playlist.name = trimmedName;
+        }
+
+        if (videos !== undefined) {
+            playlist.videos = videos;
+        }
+
+        playlist.modified = new Date().toISOString();
+
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+        res.json({ success: true, playlist: playlist });
+    } catch (error) {
+        console.error('Error updating playlist:', error);
+        res.status(500).json({ error: 'Unable to update playlist' });
     }
 });
 
@@ -454,6 +536,49 @@ app.post('/api/playlists/:id/add-video', (req, res) => {
         res.json({ success: true, playlist: playlist });
     } catch (error) {
         res.status(500).json({ error: 'Unable to add video to playlist' });
+    }
+});
+
+// API endpoint to remove video from playlist
+app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { id, videoPath } = req.params;
+
+        // Validate ID
+        if (!id || typeof id !== 'string' || id.trim().length === 0) {
+            return res.status(400).json({ error: 'Invalid playlist ID' });
+        }
+
+        if (!videoPath) {
+            return res.status(400).json({ error: 'Video path is required' });
+        }
+
+        let playlists = { playlists: [] };
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            playlists = JSON.parse(data);
+        }
+
+        const playlist = playlists.playlists.find(p => p.id === id);
+        if (!playlist) {
+            return res.status(404).json({ error: 'Playlist not found' });
+        }
+
+        const initialLength = playlist.videos.length;
+        playlist.videos = playlist.videos.filter(video => video.path !== videoPath);
+        
+        if (playlist.videos.length === initialLength) {
+            return res.status(404).json({ error: 'Video not found in playlist' });
+        }
+
+        playlist.modified = new Date().toISOString();
+
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+        res.json({ success: true, playlist: playlist });
+    } catch (error) {
+        console.error('Error removing video from playlist:', error);
+        res.status(500).json({ error: 'Unable to remove video from playlist' });
     }
 });
 

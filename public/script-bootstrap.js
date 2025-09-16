@@ -701,9 +701,13 @@ class ModernVideoPlayerBrowser {
             if (response.ok) {
                 this.playlists = data.playlists || [];
                 this.renderPlaylists();
+            } else {
+                console.error('Failed to load playlists:', data.error);
+                this.showStatusMessage('Failed to load playlists: ' + data.error, 'error');
             }
         } catch (error) {
             console.error('Failed to load playlists:', error);
+            this.showStatusMessage('Failed to load playlists: ' + error.message, 'error');
         }
     }
     
@@ -822,31 +826,53 @@ class ModernVideoPlayerBrowser {
             const freshExistingTab = document.getElementById('existing-playlist-tab');
             const freshNewTab = document.getElementById('new-playlist-tab');
             
-            freshExistingTab.addEventListener('click', () => {
-                console.log('Switched to existing playlists tab');
-                // Don't reset selectedPlaylistId when switching to existing playlists tab
-                // Only clear visual selection if no playlist is actually selected
-                if (!this.selectedPlaylistId) {
-                    const existingPlaylistsList = document.getElementById('existing-playlists-list');
-                    if (existingPlaylistsList) {
-                        existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
-                            item.classList.remove('active');
-                        });
-                    }
-                }
+            freshExistingTab.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchToExistingPlaylistsTab();
             });
             
-            freshNewTab.addEventListener('click', () => {
-                console.log('Switched to new playlist tab');
-                this.selectedPlaylistId = null;
-                // Clear any selected playlist
-                const existingPlaylistsList = document.getElementById('existing-playlists-list');
-                if (existingPlaylistsList) {
-                    existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                }
+            freshNewTab.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchToNewPlaylistTab();
             });
+        }
+    }
+    
+    switchToExistingPlaylistsTab() {
+        const existingTab = document.getElementById('existing-playlist-tab');
+        const newTab = document.getElementById('new-playlist-tab');
+        const existingPane = document.getElementById('existing-playlist-pane');
+        const newPane = document.getElementById('new-playlist-pane');
+        
+        if (existingTab && newTab && existingPane && newPane) {
+            existingTab.classList.add('active');
+            newTab.classList.remove('active');
+            existingPane.classList.add('show', 'active');
+            newPane.classList.remove('show', 'active');
+            
+            // Don't reset selectedPlaylistId when switching to existing playlists tab
+            // Only clear visual selection if no playlist is actually selected
+            if (!this.selectedPlaylistId) {
+                this.clearPlaylistSelection();
+            }
+        }
+    }
+    
+    switchToNewPlaylistTab() {
+        const existingTab = document.getElementById('existing-playlist-tab');
+        const newTab = document.getElementById('new-playlist-tab');
+        const existingPane = document.getElementById('existing-playlist-pane');
+        const newPane = document.getElementById('new-playlist-pane');
+        
+        if (existingTab && newTab && existingPane && newPane) {
+            newTab.classList.add('active');
+            existingTab.classList.remove('active');
+            newPane.classList.add('show', 'active');
+            existingPane.classList.remove('show', 'active');
+            
+            // Reset selection when switching to new playlist tab
+            this.selectedPlaylistId = null;
+            this.clearPlaylistSelection();
         }
     }
     
@@ -892,7 +918,6 @@ class ModernVideoPlayerBrowser {
                     `;
                     
                     playlistItem.addEventListener('click', () => {
-                        console.log('Playlist clicked:', playlist.name, 'ID:', playlist.id);
                         // Remove active class from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                             item.classList.remove('active');
@@ -900,7 +925,6 @@ class ModernVideoPlayerBrowser {
                         // Add active class to clicked item
                         playlistItem.classList.add('active');
                         this.selectedPlaylistId = playlist.id;
-                        console.log('Selected playlist ID set to:', this.selectedPlaylistId);
                     });
                     
                     existingPlaylistsList.appendChild(playlistItem);
@@ -922,16 +946,27 @@ class ModernVideoPlayerBrowser {
         this.selectedPlaylistId = null;
         
         // Reset tab to existing playlists
-        const existingTab = document.getElementById('existing-playlist-tab');
-        const newTab = document.getElementById('new-playlist-tab');
-        if (existingTab && newTab) {
-            existingTab.classList.add('active');
-            newTab.classList.remove('active');
-            document.getElementById('existing-playlist-pane').classList.add('show', 'active');
-            document.getElementById('new-playlist-pane').classList.remove('show', 'active');
-        }
+        this.resetPlaylistModalTabs();
         
         // Clear selected playlist
+        this.clearPlaylistSelection();
+    }
+    
+    resetPlaylistModalTabs() {
+        const existingTab = document.getElementById('existing-playlist-tab');
+        const newTab = document.getElementById('new-playlist-tab');
+        const existingPane = document.getElementById('existing-playlist-pane');
+        const newPane = document.getElementById('new-playlist-pane');
+        
+        if (existingTab && newTab && existingPane && newPane) {
+            existingTab.classList.add('active');
+            newTab.classList.remove('active');
+            existingPane.classList.add('show', 'active');
+            newPane.classList.remove('show', 'active');
+        }
+    }
+    
+    clearPlaylistSelection() {
         const existingPlaylistsList = document.getElementById('existing-playlists-list');
         if (existingPlaylistsList) {
             existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
@@ -941,10 +976,8 @@ class ModernVideoPlayerBrowser {
     }
     
     async savePlaylist() {
-        console.log('savePlaylist called, selectedPlaylistId:', this.selectedPlaylistId);
         // Check if we're adding to an existing playlist
         if (this.selectedPlaylistId) {
-            console.log('Adding to existing playlist:', this.selectedPlaylistId);
             await this.addVideoToExistingPlaylist();
         } else {
             // Check if we're on the existing playlists tab but no playlist selected
@@ -988,7 +1021,9 @@ class ModernVideoPlayerBrowser {
     }
     
     async addVideoToExistingPlaylist() {
-        if (!this.selectedPlaylistId || !this.currentVideo) return;
+        if (!this.selectedPlaylistId || !this.currentVideo) {
+            return;
+        }
         
         try {
             const response = await fetch(`/api/playlists/${this.selectedPlaylistId}/add-video`, {
