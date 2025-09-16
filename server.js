@@ -312,8 +312,28 @@ app.get('/api/thumbnail', async (req, res) => {
             return res.json({ thumbnailUrl: thumbnailUrl });
         }
 
-        // Generate thumbnail using ffmpeg
-        const command = `ffmpeg -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+        // Get video duration to calculate middle timestamp
+        let middleTimestamp = timestamp; // fallback to provided timestamp
+        try {
+            const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+            const durationOutput = await execAsync(durationCommand);
+            const duration = parseFloat(durationOutput.trim());
+            
+            if (duration && duration > 0) {
+                // Calculate middle timestamp in seconds
+                const middleSeconds = Math.floor(duration / 2);
+                const hours = Math.floor(middleSeconds / 3600);
+                const minutes = Math.floor((middleSeconds % 3600) / 60);
+                const seconds = middleSeconds % 60;
+                middleTimestamp = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                console.log(`Video duration: ${duration}s, generating thumbnail at: ${middleTimestamp}`);
+            }
+        } catch (durationError) {
+            console.log('Could not get video duration, using fallback timestamp:', timestamp);
+        }
+
+        // Generate thumbnail using ffmpeg from middle of video
+        const command = `ffmpeg -i "${videoPath}" -ss ${middleTimestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
 
         try {
             await execAsync(command);
