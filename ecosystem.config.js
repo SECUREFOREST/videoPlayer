@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'video-player',
       script: 'server.js',
-      cwd: '/Users/gtoptuno/Code/videoPlayer',
+      cwd: '/app/videoPlayer',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
