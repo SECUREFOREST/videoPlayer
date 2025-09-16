@@ -804,6 +804,46 @@ class ModernVideoPlayerBrowser {
         
         // Load existing playlists
         await this.loadExistingPlaylists();
+        
+        // Add tab switching event listeners
+        this.setupPlaylistModalTabs();
+    }
+    
+    setupPlaylistModalTabs() {
+        const existingTab = document.getElementById('existing-playlist-tab');
+        const newTab = document.getElementById('new-playlist-tab');
+        
+        if (existingTab && newTab) {
+            // Remove existing listeners to avoid duplicates
+            existingTab.replaceWith(existingTab.cloneNode(true));
+            newTab.replaceWith(newTab.cloneNode(true));
+            
+            // Get fresh references
+            const freshExistingTab = document.getElementById('existing-playlist-tab');
+            const freshNewTab = document.getElementById('new-playlist-tab');
+            
+            freshExistingTab.addEventListener('click', () => {
+                this.selectedPlaylistId = null;
+                // Clear any selected playlist
+                const existingPlaylistsList = document.getElementById('existing-playlists-list');
+                if (existingPlaylistsList) {
+                    existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                }
+            });
+            
+            freshNewTab.addEventListener('click', () => {
+                this.selectedPlaylistId = null;
+                // Clear any selected playlist
+                const existingPlaylistsList = document.getElementById('existing-playlists-list');
+                if (existingPlaylistsList) {
+                    existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                }
+            });
+        }
     }
     
     showPlaylistModal() {
@@ -886,6 +926,20 @@ class ModernVideoPlayerBrowser {
         if (this.selectedPlaylistId) {
             await this.addVideoToExistingPlaylist();
         } else {
+            // Check if we're on the existing playlists tab but no playlist selected
+            const existingPlaylistPane = document.getElementById('existing-playlist-pane');
+            if (existingPlaylistPane && existingPlaylistPane.classList.contains('active')) {
+                this.showStatusMessage('Please select a playlist to add the video to', 'warning');
+                return;
+            }
+            
+            // Check if we're on the new playlist tab
+            const newPlaylistPane = document.getElementById('new-playlist-pane');
+            if (!newPlaylistPane || !newPlaylistPane.classList.contains('active')) {
+                this.showStatusMessage('Please select a playlist or create a new one', 'warning');
+                return;
+            }
+            
             // Create new playlist
             const name = this.validatePlaylistName(this.playlistName.value);
             if (!name) return;
