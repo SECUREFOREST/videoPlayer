@@ -57,11 +57,22 @@ function resolveSafePath(requestedPath) {
 app.use(cors());
 app.use(express.json());
 
+// Debug route to catch all requests
+app.use((req, res, next) => {
+    if (req.url.startsWith('/thumbnails/')) {
+        console.log('=== THUMBNAIL REQUEST INTERCEPTED ===');
+        console.log('URL:', req.url);
+        console.log('Method:', req.method);
+    }
+    next();
+});
+
 // Custom thumbnail serving with URL decoding (MUST come before static file serving)
 app.get('/thumbnails/*', (req, res) => {
     console.log('=== THUMBNAIL REQUEST RECEIVED ===');
     console.log('URL:', req.url);
     console.log('Params:', req.params);
+    console.log('Original URL:', req.originalUrl);
     
     try {
         const filename = decodeURIComponent(req.params[0]);
