@@ -31,6 +31,11 @@ class ModernVideoPlayerBrowser {
         this.debounceTimeout = null;
         this.animationFrame = null;
         
+        // Request monitoring for debugging
+        this.requestCount = 0;
+        this.lastRequestTime = 0;
+        this.requestLog = [];
+        
         // Async operation tracking
         this.activeRequests = new Set();
         this.loadingStates = new Map();
@@ -458,6 +463,12 @@ class ModernVideoPlayerBrowser {
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
                 
+                // Log the video request
+                this.logRequest(videoUrl, 'video');
+                
+                // Optimize video loading for large files
+                this.optimizeVideoForLargeFile(videoData.size);
+                
                 // Add loading event listeners for large files
                 this.addVideoLoadingListeners(videoData.size);
                 
@@ -543,13 +554,27 @@ class ModernVideoPlayerBrowser {
         this.video.removeEventListener('progress', this.handleVideoProgress);
         this.video.removeEventListener('canplay', this.handleVideoCanPlay);
         this.video.removeEventListener('error', this.handleVideoError);
+        this.video.removeEventListener('waiting', this.handleVideoWaiting);
+        this.video.removeEventListener('canplaythrough', this.handleVideoCanPlayThrough);
+        
+        // Throttle progress updates to reduce UI updates
+        let progressTimeout;
+        let lastProgressUpdate = 0;
         
         // Add new listeners
         this.handleVideoLoadStart = () => {
             this.showLoadingIndicator('Loading video...');
+            console.log('Video load started for file size:', this.formatFileSize(fileSize));
         };
         
         this.handleVideoProgress = (e) => {
+            // Throttle progress updates to every 500ms
+            const now = Date.now();
+            if (now - lastProgressUpdate < 500) {
+                return;
+            }
+            lastProgressUpdate = now;
+            
             if (e.target.buffered.length > 0) {
                 const bufferedEnd = e.target.buffered.end(e.target.buffered.length - 1);
                 const duration = e.target.duration;
@@ -560,19 +585,89 @@ class ModernVideoPlayerBrowser {
             }
         };
         
+        this.handleVideoWaiting = () => {
+            this.showLoadingIndicator('Buffering...');
+        };
+        
         this.handleVideoCanPlay = () => {
+            console.log('Video can start playing');
+            this.hideLoadingIndicator();
+        };
+        
+        this.handleVideoCanPlayThrough = () => {
+            console.log('Video can play through without buffering');
             this.hideLoadingIndicator();
         };
         
         this.handleVideoError = (e) => {
             this.hideLoadingIndicator();
+            console.error('Video error:', e);
             this.showStatusMessage('Error loading video. The file might be corrupted or too large.', 'error');
         };
         
         this.video.addEventListener('loadstart', this.handleVideoLoadStart);
         this.video.addEventListener('progress', this.handleVideoProgress);
+        this.video.addEventListener('waiting', this.handleVideoWaiting);
         this.video.addEventListener('canplay', this.handleVideoCanPlay);
+        this.video.addEventListener('canplaythrough', this.handleVideoCanPlayThrough);
         this.video.addEventListener('error', this.handleVideoError);
+    }
+    
+    optimizeVideoForLargeFile(fileSize) {
+        // For large files (>100MB), optimize loading behavior
+        if (fileSize > 100 * 1024 * 1024) {
+            console.log('Optimizing video for large file:', this.formatFileSize(fileSize));
+            
+            // Set preload to metadata only to reduce initial requests
+            this.video.preload = 'metadata';
+            
+            // Disable autoplay for large files to prevent excessive requests
+            this.video.autoplay = false;
+            
+            // Set a reasonable buffer size
+            this.video.buffered = null;
+            
+            // Add custom attributes for better streaming
+            this.video.setAttribute('playsinline', 'true');
+            this.video.setAttribute('webkit-playsinline', 'true');
+            
+            // Set crossOrigin to anonymous for better caching
+            this.video.crossOrigin = 'anonymous';
+            
+            console.log('Large file optimizations applied');
+        } else {
+            // For smaller files, use normal settings
+            this.video.preload = 'auto';
+            this.video.autoplay = true;
+        }
+    }
+    
+    logRequest(url, type = 'video') {
+        this.requestCount++;
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        this.lastRequestTime = now;
+        
+        this.requestLog.push({
+            url: url,
+            type: type,
+            timestamp: now,
+            timeSinceLastRequest: timeSinceLastRequest,
+            requestNumber: this.requestCount
+        });
+        
+        // Keep only last 50 requests
+        if (this.requestLog.length > 50) {
+            this.requestLog.shift();
+        }
+        
+        // Log if requests are too frequent (less than 100ms apart)
+        if (timeSinceLastRequest < 100 && this.requestCount > 1) {
+            console.warn(`Frequent requests detected: ${timeSinceLastRequest}ms since last request`);
+            console.log('Request log:', this.requestLog.slice(-10));
+        }
+        
+        console.log(`Request #${this.requestCount} (${type}): ${url} - ${timeSinceLastRequest}ms since last`);
     }
     
     formatTime(seconds) {
