@@ -539,7 +539,57 @@ app.post('/api/playlists/:id/add-video', (req, res) => {
     }
 });
 
-// API endpoint to remove video from playlist
+// API endpoint to remove video from playlist (POST version)
+app.post('/api/playlists/:id/remove-video', (req, res) => {
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { id } = req.params;
+        const { videoPath } = req.body;
+
+        // Validate ID
+        if (!id || typeof id !== 'string' || id.trim().length === 0) {
+            return res.status(400).json({ error: 'Invalid playlist ID' });
+        }
+
+        if (!videoPath) {
+            return res.status(400).json({ error: 'Video path is required' });
+        }
+
+        console.log('Remove video request - Playlist ID:', id);
+        console.log('Remove video request - Video path:', videoPath);
+
+        let playlists = { playlists: [] };
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            playlists = JSON.parse(data);
+        }
+
+        const playlist = playlists.playlists.find(p => p.id === id);
+        if (!playlist) {
+            return res.status(404).json({ error: 'Playlist not found' });
+        }
+
+        console.log('Playlist videos:', playlist.videos.map(v => v.path));
+        console.log('Looking for video with path:', videoPath);
+
+        const initialLength = playlist.videos.length;
+        playlist.videos = playlist.videos.filter(video => video.path !== videoPath);
+        
+        if (playlist.videos.length === initialLength) {
+            return res.status(404).json({ error: 'Video not found in playlist' });
+        }
+
+        playlist.modified = new Date().toISOString();
+
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+        res.json({ success: true, playlist: playlist });
+    } catch (error) {
+        console.error('Error removing video from playlist:', error);
+        res.status(500).json({ error: 'Unable to remove video from playlist' });
+    }
+});
+
+// API endpoint to remove video from playlist (DELETE version - keeping for compatibility)
 app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
     try {
         const playlistsFile = path.join(__dirname, 'playlists.json');

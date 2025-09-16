@@ -884,8 +884,14 @@ class ModernVideoPlayerBrowser {
         }
         
         try {
-            const response = await fetch(`/api/playlists/${playlistId}/videos/${encodeURIComponent(videoPath)}`, {
-                method: 'DELETE'
+            console.log('Removing video with path:', videoPath);
+            
+            const response = await fetch(`/api/playlists/${playlistId}/remove-video`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ videoPath: videoPath })
             });
             
             if (response.ok) {
