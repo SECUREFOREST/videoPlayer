@@ -932,9 +932,8 @@ class ModernVideoPlayerBrowser {
                 
                 data.playlists.forEach(playlist => {
                     const playlistItem = document.createElement('div');
-                    playlistItem.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary';
+                    playlistItem.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary playlist-item-hover';
                     playlistItem.style.cursor = 'pointer';
-                    playlistItem.style.transition = 'all 0.2s ease';
                     playlistItem.innerHTML = `
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">${playlist.name}</h6>
@@ -943,41 +942,17 @@ class ModernVideoPlayerBrowser {
                         <small class="text-muted">Created: ${new Date(playlist.created).toLocaleDateString()}</small>
                     `;
                     
-                    // Add hover effects
-                    playlistItem.addEventListener('mouseenter', () => {
-                        if (!playlistItem.classList.contains('active')) {
-                            playlistItem.style.backgroundColor = '#495057';
-                        }
-                    });
-                    
-                    playlistItem.addEventListener('mouseleave', () => {
-                        if (!playlistItem.classList.contains('active')) {
-                            playlistItem.style.backgroundColor = '';
-                        }
-                    });
-                    
                     playlistItem.addEventListener('click', () => {
                         console.log('Playlist clicked:', playlist.name);
                         // Remove active class and custom selection styling from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
-                            item.classList.remove('active');
-                            item.style.backgroundColor = '';
-                            item.style.borderColor = '';
-                            item.style.boxShadow = '';
+                            item.classList.remove('active', 'playlist-item-selected');
                         });
                         // Add active class and custom selection styling to clicked item
-                        playlistItem.classList.add('active');
-                        playlistItem.style.backgroundColor = '#28a745'; // Green background
-                        playlistItem.style.borderColor = '#28a745'; // Green border
-                        playlistItem.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.5)'; // Green glow
-                        playlistItem.style.transform = 'scale(1.02)'; // Slight scale up
+                        playlistItem.classList.add('active', 'playlist-item-selected');
                         this.selectedPlaylistId = playlist.id;
                         console.log('Selected playlist ID:', this.selectedPlaylistId);
-                        console.log('Applied styles:', {
-                            backgroundColor: playlistItem.style.backgroundColor,
-                            borderColor: playlistItem.style.borderColor,
-                            boxShadow: playlistItem.style.boxShadow
-                        });
+                        console.log('Playlist item classes:', playlistItem.className);
                     });
                     
                     existingPlaylistsList.appendChild(playlistItem);
@@ -1029,11 +1004,7 @@ class ModernVideoPlayerBrowser {
         const existingPlaylistsList = document.getElementById('existing-playlists-list');
         if (existingPlaylistsList) {
             existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
-                item.classList.remove('active');
-                item.style.backgroundColor = '';
-                item.style.borderColor = '';
-                item.style.boxShadow = '';
-                item.style.transform = '';
+                item.classList.remove('active', 'playlist-item-selected');
             });
         }
     }
