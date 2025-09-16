@@ -165,6 +165,17 @@ app.get('/api/browse', (req, res) => {
             const fullPath = path.join(directoryPath, item.name);
             const stats = fs.statSync(fullPath);
             const extension = path.extname(item.name).toLowerCase();
+            
+            let fileCount = null;
+            if (item.isDirectory()) {
+                try {
+                    const dirContents = fs.readdirSync(fullPath, { withFileTypes: true });
+                    fileCount = dirContents.filter(dirItem => !dirItem.name.startsWith('._')).length;
+                } catch (err) {
+                    fileCount = 0; // Directory not accessible
+                }
+            }
+            
             return {
                 name: item.name,
                 path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
@@ -174,7 +185,8 @@ app.get('/api/browse', (req, res) => {
                 modified: stats.mtime,
                 extension: extension,
                 isVideo: isVideoFile(extension),
-                mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null
+                mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null,
+                fileCount: fileCount
             };
         });
 
