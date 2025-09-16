@@ -31,11 +31,6 @@ class ModernVideoPlayerBrowser {
         this.debounceTimeout = null;
         this.animationFrame = null;
         
-        // Request monitoring for debugging
-        this.requestCount = 0;
-        this.lastRequestTime = 0;
-        this.requestLog = [];
-        
         // Async operation tracking
         this.activeRequests = new Set();
         this.loadingStates = new Map();
@@ -463,9 +458,6 @@ class ModernVideoPlayerBrowser {
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
                 
-                // Log the video request
-                this.logRequest(videoUrl, 'video');
-                
                 // Optimize video loading for large files
                 this.optimizeVideoForLargeFile(videoData.size);
                 
@@ -611,63 +603,6 @@ class ModernVideoPlayerBrowser {
         this.video.addEventListener('canplay', this.handleVideoCanPlay);
         this.video.addEventListener('canplaythrough', this.handleVideoCanPlayThrough);
         this.video.addEventListener('error', this.handleVideoError);
-    }
-    
-    optimizeVideoForLargeFile(fileSize) {
-        // For large files (>100MB), optimize loading behavior
-        if (fileSize > 100 * 1024 * 1024) {
-            console.log('Optimizing video for large file:', this.formatFileSize(fileSize));
-            
-            // Set preload to metadata only to reduce initial requests
-            this.video.preload = 'metadata';
-            
-            // Disable autoplay for large files to prevent excessive requests
-            this.video.autoplay = false;
-            
-            // Add custom attributes for better streaming
-            this.video.setAttribute('playsinline', 'true');
-            this.video.setAttribute('webkit-playsinline', 'true');
-            
-            // Set crossOrigin to anonymous for better caching
-            this.video.crossOrigin = 'anonymous';
-            
-            // Set additional attributes for better buffering control
-            this.video.setAttribute('preload', 'metadata');
-            
-            console.log('Large file optimizations applied');
-        } else {
-            // For smaller files, use normal settings
-            this.video.preload = 'auto';
-            this.video.autoplay = true;
-        }
-    }
-    
-    logRequest(url, type = 'video') {
-        this.requestCount++;
-        const now = Date.now();
-        const timeSinceLastRequest = now - this.lastRequestTime;
-        this.lastRequestTime = now;
-        
-        this.requestLog.push({
-            url: url,
-            type: type,
-            timestamp: now,
-            timeSinceLastRequest: timeSinceLastRequest,
-            requestNumber: this.requestCount
-        });
-        
-        // Keep only last 50 requests
-        if (this.requestLog.length > 50) {
-            this.requestLog.shift();
-        }
-        
-        // Log if requests are too frequent (less than 100ms apart)
-        if (timeSinceLastRequest < 100 && this.requestCount > 1) {
-            console.warn(`Frequent requests detected: ${timeSinceLastRequest}ms since last request`);
-            console.log('Request log:', this.requestLog.slice(-10));
-        }
-        
-        console.log(`Request #${this.requestCount} (${type}): ${url} - ${timeSinceLastRequest}ms since last`);
     }
     
     formatTime(seconds) {
