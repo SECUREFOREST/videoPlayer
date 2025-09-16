@@ -146,7 +146,7 @@ app.get('/login', (req, res) => {
                     border: 1px solid #495057;
                 }
                 .login-header { 
-                    background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%); 
+                    background: linear-gradient(135deg, #8B1538 0%, #A01E42 100%); 
                     color: white; 
                     border-radius: 20px 20px 0 0; 
                     border: none;
@@ -158,24 +158,25 @@ app.get('/login', (req, res) => {
                 }
                 .form-control:focus {
                     background-color: #212529;
-                    border-color: #0d6efd;
+                    border-color: #8B1538;
                     color: #ffffff;
-                    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+                    box-shadow: 0 0 0 0.2rem rgba(139, 21, 56, 0.25);
                 }
                 .form-label {
                     color: #ffffff;
                     font-weight: 500;
                 }
                 .btn-primary {
-                    background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);
-                    border: none;
+                    background: linear-gradient(135deg, #8B1538 0%, #A01E42 100%);
+                    border: 1px solid #8B0000;
                     font-weight: 600;
                     padding: 12px;
+                    box-shadow: 0 4px 15px rgba(139, 21, 56, 0.3);
                 }
                 .btn-primary:hover {
-                    background: linear-gradient(135deg, #0b5ed7 0%, #5a32a3 100%);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                    background: linear-gradient(135deg, #A01E42 0%, #C01E4A 100%);
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(139, 21, 56, 0.4);
                 }
                 .alert-danger {
                     background-color: #dc3545;
@@ -193,7 +194,7 @@ app.get('/login', (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
                 <div class="container-fluid">
                     <a class="navbar-brand d-flex align-items-center" href="#">
-                        <i class="fas fa-play-circle me-2 text-primary"></i>
+                        <i class="fas fa-play-circle me-2" style="color: #8B1538;"></i>
                         <span class="fw-bold">Shibari Videos</span>
                     </a>
                 </div>
