@@ -257,7 +257,8 @@ app.get('/api/thumbnail', async (req, res) => {
 
         // Check if thumbnail already exists
         if (fs.existsSync(thumbnailPath)) {
-            return res.json({ thumbnailUrl: `/thumbnails/${path.basename(thumbnailPath)}` });
+            const thumbnailFilename = path.basename(thumbnailPath);
+            return res.json({ thumbnailUrl: `/thumbnails/${encodeURIComponent(thumbnailFilename)}` });
         }
 
         // Generate thumbnail using ffmpeg
@@ -265,7 +266,8 @@ app.get('/api/thumbnail', async (req, res) => {
 
         try {
             await execAsync(command);
-            res.json({ thumbnailUrl: `/thumbnails/${path.basename(thumbnailPath)}` });
+            const thumbnailFilename = path.basename(thumbnailPath);
+            res.json({ thumbnailUrl: `/thumbnails/${encodeURIComponent(thumbnailFilename)}` });
         } catch (ffmpegError) {
             // If ffmpeg fails, return a default thumbnail
             res.json({ thumbnailUrl: null });
