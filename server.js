@@ -554,6 +554,11 @@ app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
             return res.status(400).json({ error: 'Video path is required' });
         }
 
+        // URL decode the video path
+        const decodedVideoPath = decodeURIComponent(videoPath);
+        console.log('Remove video request - Original path:', videoPath);
+        console.log('Remove video request - Decoded path:', decodedVideoPath);
+
         let playlists = { playlists: [] };
         if (fs.existsSync(playlistsFile)) {
             const data = fs.readFileSync(playlistsFile, 'utf8');
@@ -565,8 +570,11 @@ app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
             return res.status(404).json({ error: 'Playlist not found' });
         }
 
+        console.log('Playlist videos:', playlist.videos.map(v => v.path));
+        console.log('Looking for video with path:', decodedVideoPath);
+
         const initialLength = playlist.videos.length;
-        playlist.videos = playlist.videos.filter(video => video.path !== videoPath);
+        playlist.videos = playlist.videos.filter(video => video.path !== decodedVideoPath);
         
         if (playlist.videos.length === initialLength) {
             return res.status(404).json({ error: 'Video not found in playlist' });
