@@ -14,6 +14,7 @@ class AdvancedVideoPlayerBrowser {
         this.focusedElement = null;
         this.keyboardNavigation = true;
         this.loadingStates = new Map();
+        this.selectedPlaylistId = null;
         
         // Video player state management
         this.videoState = {
@@ -748,41 +749,136 @@ class AdvancedVideoPlayerBrowser {
                 <i class="fas fa-video"></i> ${this.currentVideo.name}
             </div>
         `;
+        
+        // Load existing playlists
+        await this.loadExistingPlaylists();
     }
     
     showPlaylistModal() {
         this.playlistModal.classList.add('active');
     }
     
+    async loadExistingPlaylists() {
+        try {
+            const response = await fetch('/api/playlists');
+            const data = await response.json();
+            
+            const existingPlaylistsList = document.getElementById('existing-playlists-list');
+            const noPlaylistsMessage = document.getElementById('no-playlists-message');
+            
+            if (data.playlists && data.playlists.length > 0) {
+                if (existingPlaylistsList) {
+                    existingPlaylistsList.innerHTML = '';
+                    data.playlists.forEach(playlist => {
+                        const playlistItem = document.createElement('div');
+                        playlistItem.className = 'playlist-item';
+                        playlistItem.style.cursor = 'pointer';
+                        playlistItem.innerHTML = `
+                            <div class="playlist-info">
+                                <div class="playlist-name">${playlist.name}</div>
+                                <div class="playlist-count">${playlist.videos.length} videos</div>
+                            </div>
+                        `;
+                        
+                        playlistItem.addEventListener('click', () => {
+                            // Remove active class from all items
+                            if (existingPlaylistsList) {
+                                existingPlaylistsList.querySelectorAll('.playlist-item').forEach(item => {
+                                    item.classList.remove('active');
+                                });
+                            }
+                            // Add active class to clicked item
+                            playlistItem.classList.add('active');
+                            this.selectedPlaylistId = playlist.id;
+                        });
+                        
+                        existingPlaylistsList.appendChild(playlistItem);
+                    });
+                }
+                if (noPlaylistsMessage) {
+                    noPlaylistsMessage.style.display = 'none';
+                }
+            } else {
+                if (existingPlaylistsList) {
+                    existingPlaylistsList.innerHTML = '';
+                }
+                if (noPlaylistsMessage) {
+                    noPlaylistsMessage.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading playlists:', error);
+            this.showStatusMessage('Error loading playlists', 'error');
+        }
+    }
+    
     hidePlaylistModal() {
         this.playlistModal.classList.remove('active');
         this.playlistName.value = '';
         this.playlistVideos.innerHTML = '';
+        this.selectedPlaylistId = null;
+        
+        // Clear selected playlist
+        const existingPlaylistsList = document.getElementById('existing-playlists-list');
+        if (existingPlaylistsList) {
+            existingPlaylistsList.querySelectorAll('.playlist-item').forEach(item => {
+                item.classList.remove('active');
+            });
+        }
     }
     
     async savePlaylist() {
-        const name = this.validatePlaylistName(this.playlistName.value);
-        if (!name) return;
-        
-        const videos = this.currentVideo ? [this.currentVideo] : [];
+        // Check if we're adding to an existing playlist
+        if (this.selectedPlaylistId) {
+            await this.addVideoToExistingPlaylist();
+        } else {
+            // Create new playlist
+            const name = this.validatePlaylistName(this.playlistName.value);
+            if (!name) return;
+            
+            const videos = this.currentVideo ? [this.currentVideo] : [];
+            
+            try {
+                const response = await fetch('/api/playlists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, videos })
+                });
+                
+                if (response.ok) {
+                    this.hidePlaylistModal();
+                    this.loadPlaylists();
+                    this.showStatusMessage('Playlist created successfully!', 'success');
+                } else {
+                    const data = await response.json();
+                    this.showStatusMessage('Failed to create playlist: ' + data.error, 'error');
+                }
+            } catch (error) {
+                this.showStatusMessage('Error creating playlist: ' + error.message, 'error');
+            }
+        }
+    }
+    
+    async addVideoToExistingPlaylist() {
+        if (!this.selectedPlaylistId || !this.currentVideo) return;
         
         try {
-            const response = await fetch('/api/playlists', {
+            const response = await fetch(`/api/playlists/${this.selectedPlaylistId}/add-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, videos })
+                body: JSON.stringify({ video: this.currentVideo })
             });
             
             if (response.ok) {
                 this.hidePlaylistModal();
                 this.loadPlaylists();
-                this.showStatusMessage('Playlist created successfully!', 'success');
+                this.showStatusMessage('Video added to playlist successfully!', 'success');
             } else {
                 const data = await response.json();
-                this.showStatusMessage('Failed to create playlist: ' + data.error, 'error');
+                this.showStatusMessage('Failed to add video to playlist: ' + data.error, 'error');
             }
         } catch (error) {
-            this.showStatusMessage('Error creating playlist: ' + error.message, 'error');
+            this.showStatusMessage('Error adding video to playlist: ' + error.message, 'error');
         }
     }
     

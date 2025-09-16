@@ -418,6 +418,45 @@ app.delete('/api/playlists/:id', (req, res) => {
     }
 });
 
+// API endpoint to add video to existing playlist
+app.post('/api/playlists/:id/add-video', (req, res) => {
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { id } = req.params;
+        const { video } = req.body;
+
+        if (!video) {
+            return res.status(400).json({ error: 'Video data is required' });
+        }
+
+        let playlists = { playlists: [] };
+        if (fs.existsSync(playlistsFile)) {
+            const data = fs.readFileSync(playlistsFile, 'utf8');
+            playlists = JSON.parse(data);
+        }
+
+        const playlist = playlists.playlists.find(p => p.id === id);
+        if (!playlist) {
+            return res.status(404).json({ error: 'Playlist not found' });
+        }
+
+        // Check if video already exists in playlist
+        const videoExists = playlist.videos.some(v => v.path === video.path);
+        if (videoExists) {
+            return res.status(400).json({ error: 'Video already exists in playlist' });
+        }
+
+        // Add video to playlist
+        playlist.videos.push(video);
+        playlist.modified = new Date().toISOString();
+
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+        res.json({ success: true, playlist: playlist });
+    } catch (error) {
+        res.status(500).json({ error: 'Unable to add video to playlist' });
+    }
+});
+
 // API endpoint to manage favorites
 app.get('/api/favorites', (req, res) => {
     try {

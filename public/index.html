@@ -289,21 +289,57 @@
         <div class="modal-dialog">
             <div class="modal-content bg-dark">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title text-light" id="playlistModalLabel">Create Playlist</h5>
+                    <h5 class="modal-title text-light" id="playlistModalLabel">Add to Playlist</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="playlist-name" class="form-label">Playlist Name</label>
-                        <input type="text" class="form-control bg-dark text-light border-secondary" id="playlist-name" placeholder="Enter playlist name...">
+                    <!-- Playlist Selection Tabs -->
+                    <ul class="nav nav-tabs nav-fill mb-3" id="playlist-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="existing-playlist-tab" data-bs-toggle="tab" data-bs-target="#existing-playlist-pane" type="button" role="tab">
+                                <i class="fas fa-list me-1"></i>Existing Playlists
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="new-playlist-tab" data-bs-toggle="tab" data-bs-target="#new-playlist-pane" type="button" role="tab">
+                                <i class="fas fa-plus me-1"></i>Create New
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="playlist-tab-content">
+                        <!-- Existing Playlists Tab -->
+                        <div class="tab-pane fade show active" id="existing-playlist-pane" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label">Select Playlist</label>
+                                <div id="existing-playlists-list" class="list-group">
+                                    <!-- Existing playlists will be loaded here -->
+                                </div>
+                                <div id="no-playlists-message" class="text-center text-muted py-3" style="display: none;">
+                                    <i class="fas fa-list fa-2x mb-2"></i>
+                                    <p>No playlists available. Create a new one!</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Playlist Tab -->
+                        <div class="tab-pane fade" id="new-playlist-pane" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="playlist-name" class="form-label">Playlist Name</label>
+                                <input type="text" class="form-control bg-dark text-light border-secondary" id="playlist-name" placeholder="Enter playlist name...">
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Selected Video Display -->
                     <div id="playlist-videos" class="mb-3">
                         <!-- Selected videos will appear here -->
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="save-playlist-btn">Save Playlist</button>
+                    <button type="button" class="btn btn-primary" id="save-playlist-btn">Add to Playlist</button>
                 </div>
             </div>
         </div>
