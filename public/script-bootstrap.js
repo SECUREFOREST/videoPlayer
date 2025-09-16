@@ -85,6 +85,65 @@ class ModernVideoPlayerBrowser {
             
             return originalXHROpen.call(this, method, url, ...args);
         };
+        
+        // Intercept video element's internal requests more aggressively
+        this.interceptVideoElementRequests();
+    }
+    
+    interceptVideoElementRequests() {
+        // Override the video element's internal loading mechanism
+        const self = this;
+        
+        // Monitor for any video-related network activity
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+                    const video = mutation.target;
+                    if (video.tagName === 'VIDEO' && video.src.includes('/videos/')) {
+                        console.log('Video src changed - applying strict controls');
+                        self.applyStrictVideoControls(video);
+                    }
+                }
+            });
+        });
+        
+        // Start observing
+        observer.observe(document.body, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['src']
+        });
+    }
+    
+    applyStrictVideoControls(video) {
+        // Apply the most restrictive settings possible
+        video.preload = 'none';
+        video.setAttribute('preload', 'none');
+        video.autoplay = false;
+        video.muted = true;
+        
+        // Override the video's load method completely
+        const originalLoad = video.load.bind(video);
+        video.load = () => {
+            console.log('Video load intercepted - checking throttling');
+            if (this.shouldBlockRequest(Date.now())) {
+                console.warn('Video load blocked due to throttling');
+                return;
+            }
+            originalLoad();
+        };
+        
+        // Block all automatic events that might trigger loading
+        const blockEvents = ['loadstart', 'progress', 'canplay', 'canplaythrough'];
+        blockEvents.forEach(eventType => {
+            video.addEventListener(eventType, (e) => {
+                if (this.shouldBlockRequest(Date.now())) {
+                    console.warn(`Video ${eventType} event blocked`);
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, true);
+        });
     }
     
     initializeElements() {
@@ -758,18 +817,100 @@ class ModernVideoPlayerBrowser {
             videoContainer.style.position = 'relative';
             videoContainer.appendChild(playButton);
         }
+        
+        // Completely disable the video element until manual load
+        this.video.style.display = 'none';
+        this.video.removeAttribute('src');
+        this.video.load = () => {}; // Disable load completely
     }
     
     loadLargeVideo() {
-        console.log('Manually loading large video');
-        this.video.preload = 'metadata';
-        this.video.load();
+        console.log('Manually loading large video with custom loader');
         
-        // Add event listeners after manual load
-        this.video.addEventListener('canplay', () => {
-            console.log('Video can play - enabling full functionality');
-            this.video.preload = 'auto';
+        // Show the video element
+        this.video.style.display = 'block';
+        
+        // Use a custom approach to load video with controlled chunking
+        this.loadVideoWithCustomChunking();
+    }
+    
+    loadVideoWithCustomChunking() {
+        const videoUrl = this.video.src;
+        console.log('Loading video with custom chunking control:', videoUrl);
+        
+        // Create a new video element with strict controls
+        const newVideo = document.createElement('video');
+        newVideo.controls = true;
+        newVideo.preload = 'none';
+        newVideo.style.width = '100%';
+        newVideo.style.height = '100%';
+        
+        // Replace the old video with the new one
+        const videoContainer = this.video.parentElement;
+        videoContainer.replaceChild(newVideo, this.video);
+        this.video = newVideo;
+        
+        // Set up the new video with strict controls
+        this.video.src = videoUrl;
+        this.video.preload = 'none';
+        this.video.setAttribute('preload', 'none');
+        
+        // Add event listeners
+        this.video.addEventListener('loadstart', () => {
+            console.log('Video load started - monitoring for chunking');
         });
+        
+        this.video.addEventListener('progress', (e) => {
+            console.log('Video progress event - checking for excessive requests');
+            // Throttle progress events
+            if (this.shouldBlockRequest(Date.now())) {
+                console.warn('Progress event blocked due to throttling');
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        this.video.addEventListener('canplay', () => {
+            console.log('Video can play - enabling controls');
+            this.video.style.display = 'block';
+        });
+        
+        // Only load when user explicitly plays
+        this.video.addEventListener('play', () => {
+            console.log('Video play requested - loading with metadata only');
+            if (this.video.preload === 'none') {
+                this.video.preload = 'metadata';
+                this.video.load();
+            }
+        });
+        
+        // Show a play button overlay
+        this.showCustomPlayButton();
+    }
+    
+    showCustomPlayButton() {
+        const playOverlay = document.createElement('div');
+        playOverlay.className = 'position-absolute top-50 start-50 translate-middle text-center';
+        playOverlay.style.zIndex = '1000';
+        playOverlay.innerHTML = `
+            <button class="btn btn-primary btn-lg mb-3" id="custom-play-btn">
+                <i class="fas fa-play"></i> Load & Play Video
+            </button>
+            <div class="text-light">
+                <small>Click to load video with optimized streaming</small>
+            </div>
+        `;
+        
+        const videoContainer = this.video.parentElement;
+        videoContainer.style.position = 'relative';
+        videoContainer.appendChild(playOverlay);
+        
+        document.getElementById('custom-play-btn').onclick = () => {
+            playOverlay.remove();
+            this.video.preload = 'metadata';
+            this.video.load();
+            this.video.play().catch(e => console.log('Play failed:', e));
+        };
     }
     
     logRequest(url, type = 'video') {
