@@ -36,12 +36,6 @@ class ModernVideoPlayerBrowser {
         this.lastRequestTime = 0;
         this.requestLog = [];
         
-        // Request throttling and blocking
-        this.requestBlocked = false;
-        this.maxRequestsPerSecond = 5;
-        this.requestTimes = [];
-        this.isLargeFile = false;
-        
         // Async operation tracking
         this.activeRequests = new Set();
         this.loadingStates = new Map();
