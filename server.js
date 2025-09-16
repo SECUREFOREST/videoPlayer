@@ -107,37 +107,125 @@ function requireAuth(req, res, next) {
 app.get('/login', (req, res) => {
     res.send(`
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="en" data-bs-theme="dark">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Login - Video Player</title>
+            <meta name="description" content="Login to access the Video Player">
+            <meta name="theme-color" content="#000000">
+            <title>Login - Shibari Videos</title>
+            
+            <!-- Bootstrap 5 CSS -->
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <!-- Bootstrap Icons -->
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+            <!-- Font Awesome -->
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+            <!-- Google Fonts -->
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            
             <style>
-                body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
-                .login-container { min-height: 100vh; display: flex; align-items: center; }
-                .login-card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-                .login-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px 20px 0 0; }
+                body { 
+                    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); 
+                    min-height: 100vh; 
+                    font-family: 'Inter', sans-serif;
+                }
+                .login-container { 
+                    min-height: 100vh; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                }
+                .login-card { 
+                    background: rgba(33, 37, 41, 0.95); 
+                    backdrop-filter: blur(10px); 
+                    border-radius: 20px; 
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                    border: 1px solid #495057;
+                }
+                .login-header { 
+                    background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%); 
+                    color: white; 
+                    border-radius: 20px 20px 0 0; 
+                    border: none;
+                }
+                .form-control {
+                    background-color: #212529;
+                    border-color: #495057;
+                    color: #ffffff;
+                }
+                .form-control:focus {
+                    background-color: #212529;
+                    border-color: #0d6efd;
+                    color: #ffffff;
+                    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+                }
+                .form-label {
+                    color: #ffffff;
+                    font-weight: 500;
+                }
+                .btn-primary {
+                    background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);
+                    border: none;
+                    font-weight: 600;
+                    padding: 12px;
+                }
+                .btn-primary:hover {
+                    background: linear-gradient(135deg, #0b5ed7 0%, #5a32a3 100%);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                }
+                .alert-danger {
+                    background-color: #dc3545;
+                    border-color: #dc3545;
+                    color: white;
+                }
+                .navbar-brand {
+                    font-weight: 700;
+                    font-size: 1.5rem;
+                }
             </style>
         </head>
-        <body>
+        <body class="bg-dark text-light">
+            <!-- Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
+                <div class="container-fluid">
+                    <a class="navbar-brand d-flex align-items-center" href="#">
+                        <i class="fas fa-play-circle me-2 text-primary"></i>
+                        <span class="fw-bold">Shibari Videos</span>
+                    </a>
+                </div>
+            </nav>
+
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-md-6 col-lg-4">
-                        <div class="card login-card">
+                        <div class="card login-card mt-5">
                             <div class="card-header login-header text-center py-4">
-                                <h3 class="mb-0"><i class="fas fa-play-circle me-2"></i>Video Player</h3>
-                                <p class="mb-0 mt-2">Enter password to access</p>
+                                <h3 class="mb-0"><i class="fas fa-lock me-2"></i>Access Required</h3>
+                                <p class="mb-0 mt-2">Enter password to continue</p>
                             </div>
                             <div class="card-body p-4">
                                 <form method="POST" action="/api/login">
                                     <div class="mb-3">
-                                        <label for="password" class="form-label">Password</label>
-                                        <input type="password" class="form-control" id="password" name="password" required autofocus>
+                                        <label for="password" class="form-label">
+                                            <i class="fas fa-key me-2"></i>Password
+                                        </label>
+                                        <input type="password" 
+                                               class="form-control" 
+                                               id="password" 
+                                               name="password" 
+                                               placeholder="Enter your password..."
+                                               required 
+                                               autofocus>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                                    </button>
                                 </form>
-                                ${req.query.error ? '<div class="alert alert-danger mt-3">Invalid password</div>' : ''}
+                                ${req.query.error ? '<div class="alert alert-danger mt-3"><i class="fas fa-exclamation-triangle me-2"></i>Invalid password</div>' : ''}
                             </div>
                         </div>
                     </div>
