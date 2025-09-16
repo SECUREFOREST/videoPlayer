@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const session = require('express-session');
 
 const execAsync = promisify(exec);
 const app = express();
@@ -56,6 +57,117 @@ function resolveSafePath(requestedPath) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session middleware
+app.use(session({
+    secret: 'video-player-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: false, // Set to true if using HTTPS
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Password protection middleware
+const PASSWORD = 'bringbeerforpassword';
+
+// Check if user is authenticated
+function requireAuth(req, res, next) {
+    // Skip auth for login endpoint and static files
+    if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/static/')) {
+        return next();
+    }
+    
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Basic ')) {
+        const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString('ascii');
+        const [username, password] = credentials.split(':');
+        
+        if (password === PASSWORD) {
+            return next();
+        }
+    }
+    
+    // Check for session-based auth
+    if (req.session && req.session.authenticated) {
+        return next();
+    }
+    
+    // Return 401 for API requests, redirect for page requests
+    if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ error: 'Authentication required' });
+    } else {
+        return res.redirect('/login');
+    }
+}
+
+// Login page
+app.get('/login', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Login - Video Player</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+                .login-container { min-height: 100vh; display: flex; align-items: center; }
+                .login-card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+                .login-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px 20px 0 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card login-card">
+                            <div class="card-header login-header text-center py-4">
+                                <h3 class="mb-0"><i class="fas fa-play-circle me-2"></i>Video Player</h3>
+                                <p class="mb-0 mt-2">Enter password to access</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <form method="POST" action="/api/login">
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="password" name="password" required autofocus>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                                </form>
+                                ${req.query.error ? '<div class="alert alert-danger mt-3">Invalid password</div>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
+// Login API endpoint
+app.post('/api/login', (req, res) => {
+    const { password } = req.body;
+    
+    if (password === PASSWORD) {
+        req.session.authenticated = true;
+        res.redirect('/');
+    } else {
+        res.redirect('/login?error=1');
+    }
+});
+
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/login');
+});
+
+// Apply authentication to all routes except login
+app.use(requireAuth);
 
 // Debug route to catch all requests
 app.use((req, res, next) => {

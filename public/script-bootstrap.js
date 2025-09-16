@@ -118,6 +118,10 @@ class ModernVideoPlayerBrowser {
         if (this.backBtn) this.backBtn.addEventListener('click', () => this.goBack());
         if (this.refreshBtn) this.refreshBtn.addEventListener('click', () => this.loadDirectory());
         
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) logoutBtn.addEventListener('click', () => this.logout());
+        
         // View toggle
         if (this.gridViewRadio) this.gridViewRadio.addEventListener('change', () => this.toggleView(true));
         if (this.listViewRadio) this.listViewRadio.addEventListener('change', () => this.toggleView(false));
@@ -1884,6 +1888,22 @@ class ModernVideoPlayerBrowser {
     cancelActiveRequests() {
         this.activeRequests.clear();
         this.loadingStates.clear();
+    }
+    
+    logout() {
+        if (confirm('Are you sure you want to logout?')) {
+            fetch('/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(() => {
+                window.location.href = '/login';
+            }).catch(error => {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+            });
+        }
     }
 }
 
