@@ -963,14 +963,21 @@ class ModernVideoPlayerBrowser {
                             item.classList.remove('active');
                             item.style.backgroundColor = '';
                             item.style.borderColor = '';
+                            item.style.boxShadow = '';
                         });
                         // Add active class and custom selection styling to clicked item
                         playlistItem.classList.add('active');
-                        playlistItem.style.backgroundColor = '#0d6efd';
-                        playlistItem.style.borderColor = '#0d6efd';
+                        playlistItem.style.backgroundColor = '#28a745'; // Green background
+                        playlistItem.style.borderColor = '#28a745'; // Green border
+                        playlistItem.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.5)'; // Green glow
+                        playlistItem.style.transform = 'scale(1.02)'; // Slight scale up
                         this.selectedPlaylistId = playlist.id;
                         console.log('Selected playlist ID:', this.selectedPlaylistId);
-                        console.log('Playlist item classes:', playlistItem.className);
+                        console.log('Applied styles:', {
+                            backgroundColor: playlistItem.style.backgroundColor,
+                            borderColor: playlistItem.style.borderColor,
+                            boxShadow: playlistItem.style.boxShadow
+                        });
                     });
                     
                     existingPlaylistsList.appendChild(playlistItem);
@@ -1025,6 +1032,8 @@ class ModernVideoPlayerBrowser {
                 item.classList.remove('active');
                 item.style.backgroundColor = '';
                 item.style.borderColor = '';
+                item.style.boxShadow = '';
+                item.style.transform = '';
             });
         }
     }
