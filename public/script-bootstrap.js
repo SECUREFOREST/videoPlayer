@@ -725,6 +725,8 @@ class ModernVideoPlayerBrowser {
             
             const div = document.createElement('div');
             div.className = 'playlist-item p-3 d-flex align-items-center';
+            div.style.cursor = 'pointer';
+            div.style.transition = 'background-color 0.2s ease';
             
             div.innerHTML = `
                 <div class="playlist-info flex-grow-1">
@@ -732,18 +734,184 @@ class ModernVideoPlayerBrowser {
                     <div class="playlist-count text-muted small">${playlist.videos.length} videos</div>
                 </div>
                 <div class="playlist-actions">
-                    <button class="btn btn-sm btn-outline-primary me-2" onclick="app.playPlaylist('${playlist.id}')">
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="event.stopPropagation(); app.playPlaylist('${playlist.id}')">
                         <i class="fas fa-play me-1"></i>Play
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="app.deletePlaylist('${playlist.id}')">
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); app.deletePlaylist('${playlist.id}')">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             `;
             
+            // Add hover effect
+            div.addEventListener('mouseenter', () => {
+                div.style.backgroundColor = '#495057';
+            });
+            
+            div.addEventListener('mouseleave', () => {
+                div.style.backgroundColor = '';
+            });
+            
+            // Add click handler to show playlist videos
+            div.addEventListener('click', () => {
+                this.showPlaylistVideos(playlist);
+            });
+            
             col.appendChild(div);
             this.playlistList.appendChild(col);
         });
+    }
+    
+    showPlaylistVideos(playlist) {
+        // Store the current playlist for navigation
+        this.currentPlaylist = playlist;
+        this.currentPlaylistIndex = 0;
+        
+        // Update the playlist list to show videos
+        this.renderPlaylistVideos(playlist);
+    }
+    
+    renderPlaylistVideos(playlist) {
+        this.playlistList.innerHTML = '';
+        
+        // Add back button
+        const backCol = document.createElement('div');
+        backCol.className = 'col-12 mb-3';
+        backCol.innerHTML = `
+            <button class="btn btn-outline-secondary" onclick="app.showPlaylistList()">
+                <i class="fas fa-arrow-left me-2"></i>Back to Playlists
+            </button>
+        `;
+        this.playlistList.appendChild(backCol);
+        
+        // Add playlist header
+        const headerCol = document.createElement('div');
+        headerCol.className = 'col-12 mb-3';
+        headerCol.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-list me-2"></i>${playlist.name}
+                </h4>
+                <div>
+                    <button class="btn btn-primary me-2" onclick="app.playPlaylist('${playlist.id}')">
+                        <i class="fas fa-play me-1"></i>Play All
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="app.deletePlaylist('${playlist.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="text-muted mb-0">${playlist.videos.length} videos in this playlist</p>
+        `;
+        this.playlistList.appendChild(headerCol);
+        
+        if (playlist.videos.length === 0) {
+            const emptyCol = document.createElement('div');
+            emptyCol.className = 'col-12';
+            emptyCol.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-video fa-2x mb-2"></i>
+                    <p>No videos in this playlist yet</p>
+                </div>
+            `;
+            this.playlistList.appendChild(emptyCol);
+            return;
+        }
+        
+        // Render videos
+        playlist.videos.forEach((video, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6 col-lg-4 mb-3';
+            
+            const div = document.createElement('div');
+            div.className = 'video-item p-3 bg-dark border border-secondary rounded';
+            div.style.cursor = 'pointer';
+            div.style.transition = 'all 0.2s ease';
+            
+            div.innerHTML = `
+                <div class="video-thumbnail mb-2 position-relative">
+                    <img src="/api/thumbnail?path=${encodeURIComponent(video.path)}" 
+                         alt="${video.name}" 
+                         class="img-fluid rounded" 
+                         style="width: 100%; height: 120px; object-fit: cover;"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjMzQzYTQwIi8+CjxwYXRoIGQ9Ik04MCA0MEwxMjAgNjBMMTgwIDQwVjgwSDEyMFY2MEw4MCA4MFY0MFoiIGZpbGw9IiM2Yzc1N2QiLz4KPC9zdmc+'">
+                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
+                            onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
+                            title="Remove from playlist">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="video-info">
+                    <h6 class="video-name mb-1" title="${video.name}">${video.name}</h6>
+                    <small class="text-muted">${this.formatFileSize(video.size)}</small>
+                </div>
+            `;
+            
+            // Add hover effect
+            div.addEventListener('mouseenter', () => {
+                div.style.backgroundColor = '#495057';
+                div.style.transform = 'translateY(-2px)';
+                div.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+            });
+            
+            div.addEventListener('mouseleave', () => {
+                div.style.backgroundColor = '';
+                div.style.transform = '';
+                div.style.boxShadow = '';
+            });
+            
+            // Add click handler to play video
+            div.addEventListener('click', () => {
+                this.currentPlaylistIndex = index;
+                this.playVideo(video);
+            });
+            
+            col.appendChild(div);
+            this.playlistList.appendChild(col);
+        });
+    }
+    
+    showPlaylistList() {
+        // Reset to show playlist list
+        this.currentPlaylist = null;
+        this.currentPlaylistIndex = 0;
+        this.renderPlaylists();
+    }
+    
+    async removeVideoFromPlaylist(playlistId, videoPath) {
+        if (!confirm('Are you sure you want to remove this video from the playlist?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/playlists/${playlistId}/videos/${encodeURIComponent(videoPath)}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Update the current playlist if we're viewing it
+                if (this.currentPlaylist && this.currentPlaylist.id === playlistId) {
+                    this.currentPlaylist = data.playlist;
+                    this.renderPlaylistVideos(this.currentPlaylist);
+                }
+                
+                // Update the playlists array
+                const playlistIndex = this.playlists.findIndex(p => p.id === playlistId);
+                if (playlistIndex !== -1) {
+                    this.playlists[playlistIndex] = data.playlist;
+                }
+                
+                this.showStatusMessage('Video removed from playlist', 'success');
+            } else {
+                const errorData = await response.json();
+                this.showStatusMessage('Failed to remove video: ' + errorData.error, 'error');
+            }
+        } catch (error) {
+            console.error('Error removing video from playlist:', error);
+            this.showStatusMessage('Error removing video: ' + error.message, 'error');
+        }
     }
     
     async loadFavorites() {
