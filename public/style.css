@@ -244,30 +244,31 @@
 
 /* Onesubmissive Act Color Theme */
 :root {
-    /* Primary Colors - Deep burgundy and crimson */
-    --color-primary: #8B1538;
-    --color-primary-hover: #A01E42;
-    --color-success: #2D5A27;
-    --color-warning: #B8860B;
-    --color-error: #DC143C;
-    --color-info: #4B0082;
+    /* Primary Colors - Deep crimson and sophisticated reds */
+    --color-primary: #B91C1C;        /* Deep crimson */
+    --color-primary-hover: #DC2626;  /* Brighter crimson */
+    --color-success: #059669;        /* Emerald green */
+    --color-warning: #D97706;        /* Amber */
+    --color-error: #DC2626;          /* Red */
+    --color-info: #7C3AED;           /* Purple */
     
     /* Dark Theme Colors - Rich blacks and deep grays */
-    --color-black: #0A0A0A;
-    --color-white: #F5F5F5;
-    --color-gray-900: #1A1A1A;
-    --color-gray-800: #2D2D2D;
-    --color-gray-700: #404040;
-    --color-gray-600: #5C5C5C;
-    --color-gray-500: #808080;
-    --color-gray-400: #A0A0A0;
-    --color-gray-300: #C0C0C0;
+    --color-black: #000000;          /* Pure black */
+    --color-white: #FFFFFF;          /* Pure white */
+    --color-gray-900: #111827;       /* Darkest gray */
+    --color-gray-800: #1F2937;       /* Dark gray */
+    --color-gray-700: #374151;       /* Medium dark gray */
+    --color-gray-600: #4B5563;       /* Medium gray */
+    --color-gray-500: #6B7280;       /* Light gray */
+    --color-gray-400: #9CA3AF;       /* Lighter gray */
+    --color-gray-300: #D1D5DB;       /* Very light gray */
     
-    /* Accent Colors - Deep purples and dark reds */
-    --color-accent-1: #4B0082;  /* Indigo */
-    --color-accent-2: #8B0000;  /* Dark red */
-    --color-accent-3: #2F1B69;  /* Deep purple */
-    --color-accent-4: #8B1538;  /* Burgundy */
+    /* Accent Colors - Sophisticated purples and deep reds */
+    --color-accent-1: #7C3AED;       /* Purple */
+    --color-accent-2: #B91C1C;       /* Crimson */
+    --color-accent-3: #581C87;       /* Deep purple */
+    --color-accent-4: #991B1B;       /* Dark red */
+    --color-accent-5: #4C1D95;       /* Indigo */
 }
 
 

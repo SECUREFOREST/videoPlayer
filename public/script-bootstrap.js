@@ -788,7 +788,7 @@ class ModernVideoPlayerBrowser {
             
             // Add hover effect
             div.addEventListener('mouseenter', () => {
-                div.style.backgroundColor = '#495057';
+                div.style.backgroundColor = '#374151';
             });
             
             div.addEventListener('mouseleave', () => {
@@ -872,7 +872,7 @@ class ModernVideoPlayerBrowser {
             div.style.transition = 'all 0.2s ease';
             
             div.innerHTML = `
-                <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #343a40; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
+                <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
                     <div class="spinner-border text-light" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
@@ -890,7 +890,7 @@ class ModernVideoPlayerBrowser {
             
             // Add hover effect
             div.addEventListener('mouseenter', () => {
-                div.style.backgroundColor = '#495057';
+                div.style.backgroundColor = '#374151';
                 div.style.transform = 'translateY(-2px)';
                 div.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
             });
