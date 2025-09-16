@@ -666,8 +666,9 @@ class ModernVideoPlayerBrowser {
         if (fileSize > 100 * 1024 * 1024) {
             console.log('Optimizing video for large file:', this.formatFileSize(fileSize));
             
-            // Set preload to metadata only to reduce initial requests
-            this.video.preload = 'metadata';
+            // Set preload to none to prevent any automatic loading
+            this.video.preload = 'none';
+            this.video.setAttribute('preload', 'none');
             
             // Disable autoplay for large files to prevent excessive requests
             this.video.autoplay = false;
@@ -679,34 +680,96 @@ class ModernVideoPlayerBrowser {
             // Set crossOrigin to anonymous for better caching
             this.video.crossOrigin = 'anonymous';
             
-            // Set additional attributes for better buffering control
-            this.video.setAttribute('preload', 'metadata');
-            
             // Disable automatic seeking to prevent range requests
             this.video.defaultMuted = true;
             this.video.muted = true;
             
-            // Add aggressive buffering control
-            this.video.addEventListener('seeking', (e) => {
-                console.log('Video seeking detected - this may trigger range requests');
-            });
+            // Completely disable automatic buffering
+            this.video.setAttribute('data-buffering-disabled', 'true');
             
-            // Override the video's load method to add throttling
-            const originalLoad = this.video.load.bind(this.video);
-            this.video.load = () => {
-                if (this.shouldBlockRequest(Date.now())) {
-                    console.warn('Video load blocked due to throttling');
-                    return;
-                }
-                originalLoad();
-            };
+            // Override video methods to prevent automatic loading
+            this.disableVideoAutoLoading();
             
-            console.log('Large file optimizations applied');
+            // Add manual play control
+            this.setupManualVideoControl();
+            
+            console.log('Large file optimizations applied - manual control enabled');
         } else {
             // For smaller files, use normal settings
             this.video.preload = 'auto';
             this.video.autoplay = true;
         }
+    }
+    
+    disableVideoAutoLoading() {
+        // Override the video's load method to prevent automatic loading
+        const originalLoad = this.video.load.bind(this.video);
+        this.video.load = () => {
+            console.log('Video load called - checking throttling');
+            if (this.shouldBlockRequest(Date.now())) {
+                console.warn('Video load blocked due to throttling');
+                return;
+            }
+            originalLoad();
+        };
+        
+        // Override play method to control when video actually loads
+        const originalPlay = this.video.play.bind(this.video);
+        this.video.play = () => {
+            console.log('Video play called - manual control');
+            if (this.video.preload === 'none') {
+                // Only load when user explicitly plays
+                this.video.preload = 'metadata';
+                this.video.load();
+            }
+            return originalPlay();
+        };
+        
+        // Prevent automatic seeking
+        this.video.addEventListener('seeking', (e) => {
+            console.log('Video seeking detected - blocking automatic seeking');
+            e.preventDefault();
+            e.stopPropagation();
+        }, true);
+        
+        // Prevent automatic progress events from triggering loads
+        this.video.addEventListener('progress', (e) => {
+            if (this.video.getAttribute('data-buffering-disabled') === 'true') {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+    }
+    
+    setupManualVideoControl() {
+        // Add a manual play button for large files
+        const playButton = document.createElement('button');
+        playButton.className = 'btn btn-primary btn-lg position-absolute top-50 start-50 translate-middle';
+        playButton.innerHTML = '<i class="fas fa-play"></i> Click to Load Video';
+        playButton.style.zIndex = '1000';
+        playButton.onclick = () => {
+            this.loadLargeVideo();
+            playButton.remove();
+        };
+        
+        // Add the button to the video container
+        const videoContainer = document.querySelector('.ratio');
+        if (videoContainer) {
+            videoContainer.style.position = 'relative';
+            videoContainer.appendChild(playButton);
+        }
+    }
+    
+    loadLargeVideo() {
+        console.log('Manually loading large video');
+        this.video.preload = 'metadata';
+        this.video.load();
+        
+        // Add event listeners after manual load
+        this.video.addEventListener('canplay', () => {
+            console.log('Video can play - enabling full functionality');
+            this.video.preload = 'auto';
+        });
     }
     
     logRequest(url, type = 'video') {
