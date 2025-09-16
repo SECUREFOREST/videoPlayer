@@ -208,6 +208,14 @@ app.get('/api/browse', (req, res) => {
             }
         }
 
+        // Filter out empty directories
+        result = result.filter(item => {
+            if (item.isDirectory) {
+                return item.fileCount > 0;
+            }
+            return true; // Keep all files
+        });
+
         // Apply sorting
         result.sort((a, b) => {
             let comparison = 0;
