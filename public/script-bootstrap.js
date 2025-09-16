@@ -443,6 +443,9 @@ class ModernVideoPlayerBrowser {
     
     async playVideo(item) {
         try {
+            // Show loading indicator for large files
+            this.showLoadingIndicator('Loading video info...');
+            
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
             
@@ -454,6 +457,9 @@ class ModernVideoPlayerBrowser {
                 this.videoSource.src = videoUrl;
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
+                
+                // Add loading event listeners for large files
+                this.addVideoLoadingListeners(videoData.size);
                 
                 this.video.load();
                 
@@ -471,9 +477,11 @@ class ModernVideoPlayerBrowser {
                     console.log('Autoplay failed:', error);
                 });
             } else {
+                this.hideLoadingIndicator();
                 this.showStatusMessage('Error loading video: ' + videoData.error, 'error');
             }
         } catch (error) {
+            this.hideLoadingIndicator();
             this.showStatusMessage('Error loading video: ' + error.message, 'error');
         }
     }
@@ -496,6 +504,75 @@ class ModernVideoPlayerBrowser {
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
         }
+    }
+    
+    showLoadingIndicator(message = 'Loading...') {
+        // Create loading overlay if it doesn't exist
+        if (!this.loadingOverlay) {
+            this.loadingOverlay = document.createElement('div');
+            this.loadingOverlay.className = 'loading-overlay position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+            this.loadingOverlay.style.cssText = `
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 9999;
+                color: white;
+            `;
+            this.loadingOverlay.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="loading-message">${message}</div>
+                </div>
+            `;
+            document.body.appendChild(this.loadingOverlay);
+        } else {
+            this.loadingOverlay.querySelector('.loading-message').textContent = message;
+            this.loadingOverlay.style.display = 'flex';
+        }
+    }
+    
+    hideLoadingIndicator() {
+        if (this.loadingOverlay) {
+            this.loadingOverlay.style.display = 'none';
+        }
+    }
+    
+    addVideoLoadingListeners(fileSize) {
+        // Remove existing listeners
+        this.video.removeEventListener('loadstart', this.handleVideoLoadStart);
+        this.video.removeEventListener('progress', this.handleVideoProgress);
+        this.video.removeEventListener('canplay', this.handleVideoCanPlay);
+        this.video.removeEventListener('error', this.handleVideoError);
+        
+        // Add new listeners
+        this.handleVideoLoadStart = () => {
+            this.showLoadingIndicator('Loading video...');
+        };
+        
+        this.handleVideoProgress = (e) => {
+            if (e.target.buffered.length > 0) {
+                const bufferedEnd = e.target.buffered.end(e.target.buffered.length - 1);
+                const duration = e.target.duration;
+                if (duration > 0) {
+                    const percent = (bufferedEnd / duration) * 100;
+                    this.showLoadingIndicator(`Buffering video... ${Math.round(percent)}%`);
+                }
+            }
+        };
+        
+        this.handleVideoCanPlay = () => {
+            this.hideLoadingIndicator();
+        };
+        
+        this.handleVideoError = (e) => {
+            this.hideLoadingIndicator();
+            this.showStatusMessage('Error loading video. The file might be corrupted or too large.', 'error');
+        };
+        
+        this.video.addEventListener('loadstart', this.handleVideoLoadStart);
+        this.video.addEventListener('progress', this.handleVideoProgress);
+        this.video.addEventListener('canplay', this.handleVideoCanPlay);
+        this.video.addEventListener('error', this.handleVideoError);
     }
     
     formatTime(seconds) {
