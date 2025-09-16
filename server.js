@@ -57,32 +57,17 @@ function resolveSafePath(requestedPath) {
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the public directory on root path
-app.use('/', express.static(path.join(__dirname, 'public'), {
-    setHeaders: (res, path) => {
-        if (path.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-        }
-        if (path.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-        }
-    }
-}));
-
-// Serve static files on root path
-app.use('/videos', express.static(path.join(__dirname, 'videos')));
-
-// Custom thumbnail serving with URL decoding (must come before static file serving)
-app.get('/thumbnails/:filename', (req, res) => {
+// Custom thumbnail serving with URL decoding (MUST come before static file serving)
+app.get('/thumbnails/*', (req, res) => {
     console.log('=== THUMBNAIL REQUEST RECEIVED ===');
     console.log('URL:', req.url);
     console.log('Params:', req.params);
     
     try {
-        const filename = decodeURIComponent(req.params.filename);
+        const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, 'thumbnails', filename);
         
-        console.log('Thumbnail request - Original:', req.params.filename);
+        console.log('Thumbnail request - Original:', req.params[0]);
         console.log('Thumbnail request - Decoded:', filename);
         console.log('Thumbnail request - Full path:', thumbnailPath);
         
@@ -107,6 +92,21 @@ app.get('/thumbnails/:filename', (req, res) => {
         res.status(500).send('Error serving thumbnail');
     }
 });
+
+// Serve static files from the public directory on root path (AFTER custom routes)
+app.use('/', express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+        if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        }
+    }
+}));
+
+// Serve static files on root path
+app.use('/videos', express.static(path.join(__dirname, 'videos')));
 
 // Helper function to check if file is video
 function isVideoFile(extension) {
