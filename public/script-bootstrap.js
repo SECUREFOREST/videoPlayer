@@ -624,15 +624,15 @@ class ModernVideoPlayerBrowser {
             // Disable autoplay for large files to prevent excessive requests
             this.video.autoplay = false;
             
-            // Set a reasonable buffer size
-            this.video.buffered = null;
-            
             // Add custom attributes for better streaming
             this.video.setAttribute('playsinline', 'true');
             this.video.setAttribute('webkit-playsinline', 'true');
             
             // Set crossOrigin to anonymous for better caching
             this.video.crossOrigin = 'anonymous';
+            
+            // Set additional attributes for better buffering control
+            this.video.setAttribute('preload', 'metadata');
             
             console.log('Large file optimizations applied');
         } else {
