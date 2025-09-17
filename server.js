@@ -146,7 +146,7 @@ app.get('/login', (req, res) => {
                     border: 1px solid #495057;
                 }
                 .login-header { 
-                    background: linear-gradient(135deg, #5d050e 0%, #5d050e 100%); 
+                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%); 
                     color: white; 
                     border-radius: 20px 20px 0 0; 
                     border: none;
@@ -167,7 +167,7 @@ app.get('/login', (req, res) => {
                     font-weight: 500;
                 }
                 .btn-primary {
-                    background: linear-gradient(135deg, #5d050e 0%, #5d050e 100%);
+                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
                     border: 1px solid #991B1B;
                     font-weight: 600;
                     padding: 12px;
