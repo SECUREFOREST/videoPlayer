@@ -924,12 +924,10 @@ class ModernVideoPlayerBrowser {
         // Render videos
         playlist.videos.forEach((video, index) => {
             const col = document.createElement('div');
-            col.className = 'col-12 col-md-6 col-lg-4 mb-3';
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
             const div = document.createElement('div');
-            div.className = 'video-item p-3 bg-dark border border-secondary rounded';
-            div.style.cursor = 'pointer';
-            div.style.transition = 'all 0.2s ease';
+            div.className = 'file-grid-item h-100 position-relative';
 
             // Create thumbnail HTML
             let thumbnailHtml = '';
@@ -938,9 +936,9 @@ class ModernVideoPlayerBrowser {
                     <img src="${video.thumbnailUrl}" 
                          alt="Thumbnail for ${video.name}" 
                          class="img-fluid rounded" 
-                         style="width: 100%; height: 100%; object-fit: cover;"
+                         style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'
                 `;
             } else if (video.isVideo) {
                 thumbnailHtml = `
@@ -957,32 +955,21 @@ class ModernVideoPlayerBrowser {
             }
 
             div.innerHTML = `
-                <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
+                <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
-                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
-                            onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
-                            title="Remove from playlist">
-                        <i class="fas fa-times"></i>
-                    </button>
                 </div>
-                <div class="video-info">
-                    <h6 class="video-name mb-1" title="${video.name}">${this.formatFileName(video.name, video.isVideo)}</h6>
-                    <small class="text-muted">${this.formatFileSize(video.size)}</small>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${video.name}">${this.formatFileName(video.name, video.isVideo)}</div>
+                <div class="file-details" style="font-size: 0.8rem; color: #9CA3AF;">
+                    ${this.formatFileSize(video.size)}
                 </div>
+                <button class="btn btn-sm btn-danger position-absolute" 
+                        style="top: 8px; right: 8px; z-index: 10;"
+                        onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
+                        title="Remove from playlist">
+                    <i class="fas fa-times"></i>
+                </button>
             `;
 
-            // Add hover effect
-            div.addEventListener('mouseenter', () => {
-                div.style.backgroundColor = '#374151';
-                div.style.transform = 'translateY(-2px)';
-                div.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-            });
-
-            div.addEventListener('mouseleave', () => {
-                div.style.backgroundColor = '';
-                div.style.transform = '';
-                div.style.boxShadow = '';
-            });
 
             // Add click handler to play video
             div.addEventListener('click', () => {
