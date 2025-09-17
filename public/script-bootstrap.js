@@ -310,7 +310,7 @@ class ModernVideoPlayerBrowser {
         div.innerHTML = `
             ${thumbnailHtml}
             <div class="file-info flex-grow-1">
-                <div class="file-name">${item.name}</div>
+                <div class="file-name">${this.formatFileName(item.name, item.isVideo)}</div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ?
                 `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` :
@@ -349,7 +349,7 @@ class ModernVideoPlayerBrowser {
 
         div.innerHTML = `
             <div class="file-icon">${icon}</div>
-            <div class="file-name">${item.name}</div>
+            <div class="file-name">${this.formatFileName(item.name, item.isVideo)}</div>
             <div class="file-details">
                 ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : size}
             </div>
@@ -456,6 +456,13 @@ class ModernVideoPlayerBrowser {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
+    formatFileName(name, isVideo = false) {
+        if (isVideo && name.toLowerCase().endsWith('.mp4')) {
+            return name.slice(0, -4); // Remove .mp4 extension
+        }
+        return name;
+    }
+
     formatDate(date) {
         return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
     }
@@ -502,7 +509,7 @@ class ModernVideoPlayerBrowser {
             const size = this.formatFileSize(videoData.size);
             const date = this.formatDate(videoData.modified);
             this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${videoData.name}<br>
+                <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo)}<br>
                 <strong>Size:</strong> ${size}<br>
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
@@ -510,7 +517,7 @@ class ModernVideoPlayerBrowser {
         } else if (this.currentVideo && this.video) {
             // Fallback for when called without videoData
             this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.currentVideo.name}<br>
+                <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}<br>
                 <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
@@ -728,7 +735,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (item.isVideo) {
                 thumbnailHtml = `
@@ -752,7 +759,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
                 </div>
-                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${item.name}</div>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
                     ${item.isVideo ? 'Video' : 'File'} • ${size}
                 </div>
@@ -834,7 +841,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 120px; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-list fa-2x\\"></i></div>'">
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-list fa-2x\\"></i></div>
                     `;
                 } else if (firstVideo.isVideo) {
                     thumbnailHtml = `
@@ -975,7 +982,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 100%; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (video.isVideo) {
                 thumbnailHtml = `
@@ -1001,7 +1008,7 @@ class ModernVideoPlayerBrowser {
                     </button>
                 </div>
                 <div class="video-info">
-                    <h6 class="video-name mb-1" title="${video.name}">${video.name}</h6>
+                    <h6 class="video-name mb-1" title="${video.name}">${this.formatFileName(video.name, video.isVideo)}</h6>
                     <small class="text-muted">${this.formatFileSize(video.size)}</small>
                 </div>
             `;
@@ -1119,7 +1126,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (favorite.isVideo) {
                 thumbnailHtml = `
@@ -1139,7 +1146,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
                 </div>
-                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${favorite.name}</div>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
                     ${favorite.isVideo ? 'Video' : 'File'}
                 </div>
