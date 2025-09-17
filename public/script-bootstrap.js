@@ -286,7 +286,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-name">${item.name}</div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ? 
-                        `<span class="file-size">${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` : 
+                        `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` : 
                         `<span class="file-size">${size}</span>`
                     }
                     <span class="file-date">${date}</span>
@@ -457,9 +457,6 @@ class ModernVideoPlayerBrowser {
                 this.videoSource.src = videoUrl;
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
-                
-                // Optimize video loading for large files
-                this.optimizeVideoForLargeFile(videoData.size);
                 
                 // Add loading event listeners for large files
                 this.addVideoLoadingListeners(videoData.size);
