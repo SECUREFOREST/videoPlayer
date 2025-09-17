@@ -396,28 +396,48 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
             console.log('Could not get video duration, using fallback timestamp:', middleTimestamp);
         }
 
-        // Generate thumbnail using ffmpeg from middle of video
-        const command = `ffmpeg -i "${videoPath}" -ss ${middleTimestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+        // Try multiple timestamps if the first attempt fails
+        const fallbackTimestamps = [middleTimestamp, '00:00:30', '00:00:20', '00:00:10'];
+        
+        for (let i = 0; i < fallbackTimestamps.length; i++) {
+            const timestamp = fallbackTimestamps[i];
+            const isRetry = i > 0;
+            
+            try {
+                if (isRetry) {
+                    console.log(`Retrying thumbnail generation for ${path.basename(videoPath)} at: ${timestamp}`);
+                }
+                
+                // Generate thumbnail using ffmpeg
+                const command = `ffmpeg -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+                await execAsync(command);
 
-        await execAsync(command);
-
-        // Validate that thumbnail was actually created and is a valid image
-        if (fs.existsSync(thumbnailPath)) {
-            const stats = fs.statSync(thumbnailPath);
-            if (stats.size > 0) {
-                console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)}`);
-                return true;
-            } else {
-                console.error(`Generated thumbnail is empty: ${path.basename(thumbnailPath)}`);
-                fs.unlinkSync(thumbnailPath); // Remove empty file
-                return false;
+                // Validate that thumbnail was actually created and is a valid image
+                if (fs.existsSync(thumbnailPath)) {
+                    const stats = fs.statSync(thumbnailPath);
+                    if (stats.size > 0) {
+                        console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)} at ${timestamp}`);
+                        return true;
+                    } else {
+                        console.error(`Generated thumbnail is empty at ${timestamp}: ${path.basename(thumbnailPath)}`);
+                        if (fs.existsSync(thumbnailPath)) {
+                            fs.unlinkSync(thumbnailPath); // Remove empty file
+                        }
+                    }
+                } else {
+                    console.error(`Thumbnail file was not created at ${timestamp}: ${path.basename(thumbnailPath)}`);
+                }
+            } catch (ffmpegError) {
+                console.error(`Failed to generate thumbnail at ${timestamp} for ${path.basename(videoPath)}:`, ffmpegError.message);
+                // Continue to next timestamp
             }
-        } else {
-            console.error(`Thumbnail file was not created: ${path.basename(thumbnailPath)}`);
-            return false;
         }
-    } catch (ffmpegError) {
-        console.error(`Failed to generate thumbnail for ${path.basename(videoPath)}:`, ffmpegError.message);
+        
+        // If all timestamps failed
+        console.error(`All thumbnail generation attempts failed for ${path.basename(videoPath)}`);
+        return false;
+    } catch (error) {
+        console.error(`Unexpected error generating thumbnail for ${path.basename(videoPath)}:`, error.message);
         return false;
     }
 }
