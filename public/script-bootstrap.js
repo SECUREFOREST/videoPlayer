@@ -926,7 +926,8 @@ class ModernVideoPlayerBrowser {
             div.innerHTML = `
                 <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
                     ${thumbnailHtml}
-                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
+                    <button class="btn btn-sm btn-danger position-absolute" 
+                            style="top: 8px; right: 8px; z-index: 10;"
                             onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
                             title="Remove from playlist">
                         <i class="fas fa-times"></i>
