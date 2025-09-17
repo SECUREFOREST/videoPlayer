@@ -358,7 +358,7 @@ class ModernVideoPlayerBrowser {
             <div class="file-icon">${icon}</div>
             <div class="file-name">${item.name}</div>
             <div class="file-details">
-                ${item.isDirectory ? 'Directory' : size}
+                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : size}
             </div>
         `;
 
