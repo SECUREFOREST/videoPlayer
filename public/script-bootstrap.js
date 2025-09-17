@@ -515,12 +515,12 @@ class ModernVideoPlayerBrowser {
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
             `;
         } else if (this.currentVideo && this.video) {
-            // Fallback for when called without videoData
-            this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}<br>
-                <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
-                <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
-            `;
+            // Fallback for when called without videoData 
+            //this.videoInfo.innerHTML = `
+            //    <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}<br>
+            //    <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
+            //    <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
+            //`;
         }
     }
 
