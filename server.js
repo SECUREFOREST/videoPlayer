@@ -841,7 +841,8 @@ app.get('/api/search', (req, res) => {
                             if (fileType === 'all' ||
                                 (fileType === 'videos' && isVideo) ||
                                 (fileType === 'files' && !isVideo)) {
-                                results.push({
+                                
+                                const resultItem = {
                                     name: item.name,
                                     path: path.relative(VIDEOS_ROOT, fullPath), // Return relative path
                                     isDirectory: false,
@@ -852,7 +853,14 @@ app.get('/api/search', (req, res) => {
                                     isVideo: isVideo,
                                     mimeType: isVideo ? getVideoMimeType(ext) : null,
                                     relativePath: path.relative(searchPath, fullPath)
-                                });
+                                };
+                                
+                                // Add thumbnail URL for videos
+                                if (isVideo) {
+                                    resultItem.thumbnailUrl = getThumbnailUrl(fullPath);
+                                }
+                                
+                                results.push(resultItem);
                             }
                         }
                     }
@@ -880,7 +888,28 @@ app.get('/api/playlists', (req, res) => {
         const playlistsFile = path.join(__dirname, 'playlists.json');
         if (fs.existsSync(playlistsFile)) {
             const data = fs.readFileSync(playlistsFile, 'utf8');
-            res.json(JSON.parse(data));
+            const playlists = JSON.parse(data);
+            
+            // Add thumbnail URLs for playlist videos
+            if (playlists.playlists) {
+                playlists.playlists.forEach(playlist => {
+                    if (playlist.videos) {
+                        playlist.videos.forEach(video => {
+                            if (video.path) {
+                                const ext = path.extname(video.path).toLowerCase();
+                                if (isVideoFile(ext)) {
+                                    video.thumbnailUrl = getThumbnailUrl(video.path);
+                                    video.isVideo = true;
+                                } else {
+                                    video.isVideo = false;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            res.json(playlists);
         } else {
             res.json({ playlists: [] });
         }
@@ -1169,7 +1198,24 @@ app.get('/api/favorites', (req, res) => {
         const favoritesFile = path.join(__dirname, 'favorites.json');
         if (fs.existsSync(favoritesFile)) {
             const data = fs.readFileSync(favoritesFile, 'utf8');
-            res.json(JSON.parse(data));
+            const favorites = JSON.parse(data);
+            
+            // Add thumbnail URLs for video favorites
+            if (favorites.favorites) {
+                favorites.favorites.forEach(favorite => {
+                    if (favorite.path) {
+                        const ext = path.extname(favorite.path).toLowerCase();
+                        if (isVideoFile(ext)) {
+                            favorite.thumbnailUrl = getThumbnailUrl(favorite.path);
+                            favorite.isVideo = true;
+                        } else {
+                            favorite.isVideo = false;
+                        }
+                    }
+                });
+            }
+            
+            res.json(favorites);
         } else {
             res.json({ favorites: [] });
         }

@@ -713,26 +713,62 @@ class ModernVideoPlayerBrowser {
 
         filteredResults.forEach(item => {
             const col = document.createElement('div');
-            col.className = 'col-12';
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
             const div = document.createElement('div');
-            div.className = 'search-item p-3 d-flex align-items-center';
+            div.className = 'file-grid-item h-100 position-relative';
+            div.style.cursor = 'pointer';
 
-            const icon = this.getFileIcon(item);
+            // Create thumbnail or icon
+            let thumbnailHtml = '';
+            if (item.isVideo && item.thumbnailUrl) {
+                thumbnailHtml = `
+                    <img src="${item.thumbnailUrl}" 
+                         alt="Thumbnail for ${item.name}" 
+                         class="img-fluid rounded" 
+                         style="width: 100%; height: 120px; object-fit: cover;"
+                         loading="lazy"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                `;
+            } else if (item.isVideo) {
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                        <i class="fas fa-video fa-2x"></i>
+                    </div>
+                `;
+            } else {
+                const icon = this.getFileIcon(item);
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        ${icon}
+                    </div>
+                `;
+            }
+
             const size = this.formatFileSize(item.size);
             const date = this.formatDate(item.modified);
 
             div.innerHTML = `
-                <div class="file-icon me-3">${icon}</div>
-                <div class="search-info flex-grow-1">
-                    <div class="search-name">${item.name}</div>
-                    <div class="search-path text-muted small">${item.relativePath}</div>
-                    <div class="file-details d-flex gap-3 small text-muted">
-                        <span class="file-size">${size}</span>
-                        <span class="file-date">${date}</span>
-                    </div>
+                <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                    ${thumbnailHtml}
+                </div>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${item.name}</div>
+                <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
+                    ${item.isVideo ? 'Video' : 'File'} • ${size}
+                </div>
+                <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath}">
+                    ${item.relativePath.length > 30 ? item.relativePath.substring(0, 30) + '...' : item.relativePath}
                 </div>
             `;
+
+            // Add hover effect
+            div.addEventListener('mouseenter', () => {
+                div.style.backgroundColor = '#374151';
+            });
+
+            div.addEventListener('mouseleave', () => {
+                div.style.backgroundColor = '';
+            });
 
             div.addEventListener('click', () => {
                 if (item.isVideo) {
@@ -778,23 +814,68 @@ class ModernVideoPlayerBrowser {
 
         this.playlists.forEach(playlist => {
             const col = document.createElement('div');
-            col.className = 'col-12';
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
             const div = document.createElement('div');
-            div.className = 'playlist-item p-3 d-flex align-items-center';
+            div.className = 'file-grid-item h-100 position-relative';
             div.style.cursor = 'pointer';
-            div.style.transition = 'background-color 0.2s ease';
+
+            // Get first few videos for thumbnail preview
+            const videoPreviews = playlist.videos.slice(0, 4);
+            let thumbnailHtml = '';
+            
+            if (videoPreviews.length > 0) {
+                // Show first video thumbnail as main preview
+                const firstVideo = videoPreviews[0];
+                if (firstVideo.isVideo && firstVideo.thumbnailUrl) {
+                    thumbnailHtml = `
+                        <img src="${firstVideo.thumbnailUrl}" 
+                             alt="Preview of ${playlist.name}" 
+                             class="img-fluid rounded" 
+                             style="width: 100%; height: 120px; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-list fa-2x\\"></i></div>'">
+                    `;
+                } else if (firstVideo.isVideo) {
+                    thumbnailHtml = `
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                            <i class="fas fa-video fa-2x"></i>
+                        </div>
+                    `;
+                } else {
+                    thumbnailHtml = `
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                            <i class="fas fa-file fa-2x"></i>
+                        </div>
+                    `;
+                }
+            } else {
+                // Empty playlist
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                `;
+            }
 
             div.innerHTML = `
-                <div class="playlist-info flex-grow-1">
-                    <div class="playlist-name">${playlist.name}</div>
-                    <div class="playlist-count text-muted small">${playlist.videos.length} videos</div>
+                <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; position: relative;">
+                    ${thumbnailHtml}
+                    ${videoPreviews.length > 1 ? `
+                        <div class="position-absolute top-0 end-0 m-1">
+                            <span class="badge bg-primary">+${playlist.videos.length - 1}</span>
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="playlist-actions">
-                    <button class="btn btn-sm btn-outline-primary me-2" onclick="event.stopPropagation(); app.playPlaylist('${playlist.id}')">
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${playlist.name}</div>
+                <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
+                    ${playlist.videos.length} video${playlist.videos.length !== 1 ? 's' : ''}
+                </div>
+                <div class="playlist-actions d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.stopPropagation(); app.playPlaylist('${playlist.id}')">
                         <i class="fas fa-play me-1"></i>Play
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); app.deletePlaylist('${playlist.id}')">
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); app.deletePlaylist('${playlist.id}')" title="Delete playlist">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -885,11 +966,34 @@ class ModernVideoPlayerBrowser {
             div.style.cursor = 'pointer';
             div.style.transition = 'all 0.2s ease';
 
+            // Create thumbnail HTML
+            let thumbnailHtml = '';
+            if (video.isVideo && video.thumbnailUrl) {
+                thumbnailHtml = `
+                    <img src="${video.thumbnailUrl}" 
+                         alt="Thumbnail for ${video.name}" 
+                         class="img-fluid rounded" 
+                         style="width: 100%; height: 100%; object-fit: cover;"
+                         loading="lazy"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                `;
+            } else if (video.isVideo) {
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                        <i class="fas fa-video fa-2x"></i>
+                    </div>
+                `;
+            } else {
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <i class="fas fa-file fa-2x"></i>
+                    </div>
+                `;
+            }
+
             div.innerHTML = `
                 <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
-                    <div class="spinner-border text-light" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
+                    ${thumbnailHtml}
                     <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
                             onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
                             title="Remove from playlist">
@@ -921,9 +1025,7 @@ class ModernVideoPlayerBrowser {
                 this.playVideo(video);
             });
 
-            // Load thumbnail for this video
-            const thumbnailContainer = div.querySelector('.video-thumbnail');
-            this.loadThumbnail(video, thumbnailContainer);
+            // Thumbnails are now handled directly in the HTML above
 
             col.appendChild(div);
             this.playlistList.appendChild(col);
@@ -1003,26 +1105,62 @@ class ModernVideoPlayerBrowser {
 
         this.favorites.forEach(favorite => {
             const col = document.createElement('div');
-            col.className = 'col-12';
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
             const div = document.createElement('div');
-            div.className = 'favorite-item p-3 d-flex align-items-center';
+            div.className = 'file-grid-item h-100 position-relative';
+
+            // Create thumbnail or icon
+            let thumbnailHtml = '';
+            if (favorite.isVideo && favorite.thumbnailUrl) {
+                thumbnailHtml = `
+                    <img src="${favorite.thumbnailUrl}" 
+                         alt="Thumbnail for ${favorite.name}" 
+                         class="img-fluid rounded" 
+                         style="width: 100%; height: 120px; object-fit: cover;"
+                         loading="lazy"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                `;
+            } else if (favorite.isVideo) {
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                        <i class="fas fa-video fa-2x"></i>
+                    </div>
+                `;
+            } else {
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <i class="fas fa-file fa-2x"></i>
+                    </div>
+                `;
+            }
 
             div.innerHTML = `
-                <div class="file-icon me-3">🎬</div>
-                <div class="favorite-info flex-grow-1">
-                    <div class="favorite-name">${favorite.name}</div>
-                    <div class="favorite-path text-muted small">${favorite.path}</div>
+                <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                    ${thumbnailHtml}
                 </div>
-                <div class="favorite-actions">
-                    <button class="btn btn-sm btn-outline-primary me-2" onclick="app.playVideo({path: '${favorite.path}', name: '${favorite.name}', isVideo: true})">
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${favorite.name}</div>
+                <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
+                    ${favorite.isVideo ? 'Video' : 'File'}
+                </div>
+                <div class="favorite-actions d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="app.playVideo({path: '${favorite.path}', name: '${favorite.name}', isVideo: ${favorite.isVideo || false}})">
                         <i class="fas fa-play me-1"></i>Play
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="app.removeFavorite('${favorite.id}')">
+                    <button class="btn btn-sm btn-outline-danger" onclick="app.removeFavorite('${favorite.id}')" title="Remove from favorites">
                         <i class="fas fa-heart-broken"></i>
                     </button>
                 </div>
             `;
+
+            // Add hover effect
+            div.addEventListener('mouseenter', () => {
+                div.style.backgroundColor = '#374151';
+            });
+
+            div.addEventListener('mouseleave', () => {
+                div.style.backgroundColor = '';
+            });
 
             col.appendChild(div);
             this.favoritesList.appendChild(col);
