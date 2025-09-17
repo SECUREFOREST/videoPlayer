@@ -718,6 +718,14 @@ app.get('/api/video-info', (req, res) => {
     }
 });
 
+// API endpoint to check server status
+app.get('/api/server-status', (req, res) => {
+    res.json({ 
+        generatingThumbnails: false, // This would be set to true during startup generation
+        serverReady: true 
+    });
+});
+
 // API endpoint to check thumbnail status
 app.get('/api/thumbnail-status', (req, res) => {
     const relativePath = req.query.path;

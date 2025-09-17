@@ -107,6 +107,7 @@ class ModernVideoPlayerBrowser {
     init() {
         this.bindEvents();
         this.initializeVideoPlayer();
+        this.checkServerStatus();
         this.loadDirectory();
         this.loadPlaylists();
         this.loadFavorites();
@@ -288,24 +289,29 @@ class ModernVideoPlayerBrowser {
         let thumbnailHtml = '';
         if (item.isVideo) {
             if (item.thumbnailUrl) {
-                // Thumbnail is already available
+                // Thumbnail is available
                 thumbnailHtml = `
-                    <div class="file-thumbnail me-3 position-relative" style="width: 80px; height: 60px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <img src="${item.thumbnailUrl}" alt="${item.name}" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div class="file-thumbnail me-2 me-md-3 position-relative" style="width: 60px; height: 45px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <img src="${item.thumbnailUrl}" 
+                             alt="Thumbnail for ${item.name}" 
+                             class="img-fluid rounded" 
+                             style="width: 100%; height: 100%; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-lg\\"></i></div>'">
                     </div>
                 `;
             } else {
-                // Thumbnail is being generated
+                // Thumbnail not available (should be generated on server startup)
                 thumbnailHtml = `
-                    <div class="file-thumbnail me-3 position-relative" style="width: 80px; height: 60px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <div class="spinner-border text-light" role="status" style="width: 1.5rem; height: 1.5rem;">
-                            <span class="visually-hidden">Loading...</span>
+                    <div class="file-thumbnail me-2 me-md-3 position-relative" style="width: 60px; height: 45px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                            <i class="fas fa-video fa-lg"></i>
                         </div>
                     </div>
                 `;
             }
         } else {
-            thumbnailHtml = `<div class="file-icon me-3">${icon}</div>`;
+            thumbnailHtml = `<div class="file-icon me-3" title="${item.isDirectory ? 'Directory' : 'File'}">${icon}</div>`;
         }
         
         div.innerHTML = `
@@ -340,7 +346,7 @@ class ModernVideoPlayerBrowser {
     
     createGridItem(item) {
         const col = document.createElement('div');
-        col.className = 'col-md-4 col-lg-3 col-xl-2';
+        col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
         
         const div = document.createElement('div');
         div.className = 'file-grid-item h-100';
@@ -358,11 +364,16 @@ class ModernVideoPlayerBrowser {
         
         if (item.isVideo) {
             if (item.thumbnailUrl) {
-                // Thumbnail is already available
+                // Thumbnail is available
                 const thumbnailContainer = div.querySelector('.file-icon');
                 if (thumbnailContainer) {
                     thumbnailContainer.innerHTML = `
-                        <img src="${item.thumbnailUrl}" alt="${item.name}" class="img-fluid rounded" style="width: 100%; height: 120px; object-fit: cover;">
+                        <img src="${item.thumbnailUrl}" 
+                             alt="Thumbnail for ${item.name}" 
+                             class="img-fluid rounded" 
+                             style="width: 100%; height: 120px; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
                     `;
                 }
             } else {
@@ -370,7 +381,7 @@ class ModernVideoPlayerBrowser {
                 const thumbnailContainer = div.querySelector('.file-icon');
                 if (thumbnailContainer) {
                     thumbnailContainer.innerHTML = `
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
                             <i class="fas fa-video fa-2x"></i>
                         </div>
                     `;
@@ -397,6 +408,40 @@ class ModernVideoPlayerBrowser {
         // Thumbnails are now generated on server startup, so no client-side processing needed
         const videoItems = items.filter(item => item.isVideo);
         console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
+    }
+    
+    async checkServerStatus() {
+        try {
+            // Check if server is still generating thumbnails
+            const response = await fetch('/api/server-status');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.generatingThumbnails) {
+                    this.showServerStatusMessage('🔄 Server is generating thumbnails, some may not be available yet...', 'info');
+                }
+            }
+        } catch (error) {
+            // Server status check failed, but that's okay
+            console.log('Server status check failed:', error.message);
+        }
+    }
+    
+    showServerStatusMessage(message, type = 'info') {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = `alert alert-${type === 'info' ? 'primary' : type} alert-dismissible fade show position-fixed`;
+        statusDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        statusDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(statusDiv);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (statusDiv.parentNode) {
+                statusDiv.remove();
+            }
+        }, 5000);
     }
     
     
@@ -1437,6 +1482,16 @@ class ModernVideoPlayerBrowser {
                 </div>
             </div>
         `;
+    }
+    
+    showThumbnailError(container, itemName) {
+        if (container) {
+            container.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail failed to load">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </div>
+            `;
+        }
     }
     
     // Video player initialization
