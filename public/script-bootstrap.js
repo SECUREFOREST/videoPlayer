@@ -290,10 +290,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 100%; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                    </div>
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                        <i class="fas fa-video fa-lg"></i>
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-lg\\"></i></div>'"
                     </div>
                 `;
             } else {
@@ -369,10 +366,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 120px; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                            <i class="fas fa-video fa-2x"></i>
-                        </div>
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
                     `;
                 }
             } else {
@@ -741,10 +735,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
-                    </div>
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
                 `;
             } else if (item.isVideo) {
                 thumbnailHtml = `
@@ -767,9 +758,6 @@ class ModernVideoPlayerBrowser {
             div.innerHTML = `
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
-                    </div>
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
@@ -952,10 +940,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 100%; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
-                    </div>
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
                 `;
             } else if (video.isVideo) {
                 thumbnailHtml = `
@@ -974,9 +959,6 @@ class ModernVideoPlayerBrowser {
             div.innerHTML = `
                 <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
                     ${thumbnailHtml}
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
-                    </div>
                     <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
                             onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
                             title="Remove from playlist">
@@ -1102,7 +1084,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
                 `;
             } else if (favorite.isVideo) {
                 thumbnailHtml = `
@@ -1121,9 +1103,6 @@ class ModernVideoPlayerBrowser {
             div.innerHTML = `
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="display: none;" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
-                    </div>
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
