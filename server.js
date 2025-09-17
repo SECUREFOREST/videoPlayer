@@ -262,27 +262,27 @@ app.use(requireAuth);
 // Debug route to catch all requests
 app.use((req, res, next) => {
     if (req.url.startsWith('/thumbnails/')) {
-        console.log('=== THUMBNAIL REQUEST INTERCEPTED ===');
-        console.log('URL:', req.url);
-        console.log('Method:', req.method);
+        // console.log('=== THUMBNAIL REQUEST INTERCEPTED ===');
+        // console.log('URL:', req.url);
+        // console.log('Method:', req.method);
     }
     next();
 });
 
 // Custom thumbnail serving with URL decoding (MUST come before static file serving)
 app.get('/thumbnails/*', (req, res) => {
-    console.log('=== THUMBNAIL REQUEST RECEIVED ===');
-    console.log('URL:', req.url);
-    console.log('Params:', req.params);
-    console.log('Original URL:', req.originalUrl);
+    // console.log('=== THUMBNAIL REQUEST RECEIVED ===');
+    // console.log('URL:', req.url);
+    // console.log('Params:', req.params);
+    // console.log('Original URL:', req.originalUrl);
 
     try {
         const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, 'thumbnails', filename);
 
-        console.log('Thumbnail request - Original:', req.params[0]);
-        console.log('Thumbnail request - Decoded:', filename);
-        console.log('Thumbnail request - Full path:', thumbnailPath);
+        // console.log('Thumbnail request - Original:', req.params[0]);
+        // console.log('Thumbnail request - Decoded:', filename);
+        // console.log('Thumbnail request - Full path:', thumbnailPath);
 
         if (fs.existsSync(thumbnailPath)) {
             res.sendFile(thumbnailPath);
