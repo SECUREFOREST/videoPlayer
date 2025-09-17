@@ -380,6 +380,23 @@ function getThumbnailUrl(videoPath) {
     }
 }
 
+// Get video duration using ffprobe
+async function getVideoDuration(videoPath) {
+    try {
+        const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+        const durationOutput = await execAsync(durationCommand);
+        const duration = parseFloat(durationOutput.trim());
+        
+        if (duration && duration > 0) {
+            return duration;
+        }
+        return null;
+    } catch (error) {
+        console.log('Could not get video duration for', path.basename(videoPath), ':', error.message);
+        return null;
+    }
+}
+
 // Async thumbnail generation function
 async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
@@ -615,7 +632,7 @@ async function generateAllMissingThumbnails() {
 }
 
 // API endpoint to get directory contents
-app.get('/api/browse', (req, res) => {
+app.get('/api/browse', async (req, res) => {
     const relativePath = req.query.path || '';
     let directoryPath;
     try {
@@ -632,9 +649,9 @@ app.get('/api/browse', (req, res) => {
     try {
         const items = fs.readdirSync(directoryPath, { withFileTypes: true });
 
-        let result = items
+        let result = await Promise.all(items
             .filter(item => !item.name.startsWith('._'))
-            .map(item => {
+            .map(async item => {
                 const fullPath = path.join(directoryPath, item.name);
                 const stats = fs.statSync(fullPath);
                 const extension = path.extname(item.name).toLowerCase();
@@ -662,13 +679,14 @@ app.get('/api/browse', (req, res) => {
                     fileCount: fileCount
                 };
 
-                // Add thumbnail URL for video files
+                // Add thumbnail URL and duration for video files
                 if (isVideoFile(extension)) {
                     result.thumbnailUrl = getThumbnailUrl(fullPath);
+                    result.duration = await getVideoDuration(fullPath);
                 }
 
                 return result;
-            });
+            }));
 
         // Apply search filter
         if (search) {
@@ -830,7 +848,7 @@ app.get('/api/thumbnail-status', (req, res) => {
 });
 
 // API endpoint to search files recursively
-app.get('/api/search', (req, res) => {
+app.get('/api/search', async (req, res) => {
     const searchTerm = req.query.q;
     const relativePath = req.query.path || '';
     let searchPath;
@@ -883,9 +901,10 @@ app.get('/api/search', (req, res) => {
                                     relativePath: path.relative(searchPath, fullPath)
                                 };
                                 
-                                // Add thumbnail URL for videos
+                                // Add thumbnail URL and duration for videos
                                 if (isVideo) {
                                     resultItem.thumbnailUrl = getThumbnailUrl(fullPath);
+                                    resultItem.duration = await getVideoDuration(fullPath);
                                 }
                                 
                                 results.push(resultItem);
@@ -911,32 +930,33 @@ app.get('/api/search', (req, res) => {
 });
 
 // API endpoint to manage playlists
-app.get('/api/playlists', (req, res) => {
+app.get('/api/playlists', async (req, res) => {
     try {
         const playlistsFile = path.join(__dirname, 'playlists.json');
         if (fs.existsSync(playlistsFile)) {
             const data = fs.readFileSync(playlistsFile, 'utf8');
             const playlists = JSON.parse(data);
             
-            // Add thumbnail URLs for playlist videos
+            // Add thumbnail URLs and duration for playlist videos
             if (playlists.playlists) {
-                playlists.playlists.forEach(playlist => {
+                await Promise.all(playlists.playlists.map(async playlist => {
                     if (playlist.videos) {
-                        playlist.videos.forEach(video => {
+                        await Promise.all(playlist.videos.map(async video => {
                             if (video.path) {
                                 const ext = path.extname(video.path).toLowerCase();
                                 if (isVideoFile(ext)) {
                                     // Convert relative path to absolute path for thumbnail generation
                                     const absolutePath = path.isAbsolute(video.path) ? video.path : path.join(VIDEOS_ROOT, video.path);
                                     video.thumbnailUrl = getThumbnailUrl(absolutePath);
+                                    video.duration = await getVideoDuration(absolutePath);
                                     video.isVideo = true;
                                 } else {
                                     video.isVideo = false;
                                 }
                             }
-                        });
+                        }));
                     }
-                });
+                }));
             }
             
             res.json(playlists);
@@ -1223,28 +1243,29 @@ app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
 });
 
 // API endpoint to manage favorites
-app.get('/api/favorites', (req, res) => {
+app.get('/api/favorites', async (req, res) => {
     try {
         const favoritesFile = path.join(__dirname, 'favorites.json');
         if (fs.existsSync(favoritesFile)) {
             const data = fs.readFileSync(favoritesFile, 'utf8');
             const favorites = JSON.parse(data);
             
-            // Add thumbnail URLs for video favorites
+            // Add thumbnail URLs and duration for video favorites
             if (favorites.favorites) {
-                favorites.favorites.forEach(favorite => {
+                await Promise.all(favorites.favorites.map(async favorite => {
                     if (favorite.path) {
                         const ext = path.extname(favorite.path).toLowerCase();
                         if (isVideoFile(ext)) {
                             // Convert relative path to absolute path for thumbnail generation
                             const absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
                             favorite.thumbnailUrl = getThumbnailUrl(absolutePath);
+                            favorite.duration = await getVideoDuration(absolutePath);
                             favorite.isVideo = true;
                         } else {
                             favorite.isVideo = false;
                         }
                     }
-                });
+                }));
             }
             
             res.json(favorites);
