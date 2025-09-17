@@ -1468,12 +1468,12 @@ class ModernVideoPlayerBrowser {
 
     updateFavoriteButton(isFavorited) {
         if (isFavorited) {
-            this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>';
+            this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Remove from Favorites';
             this.favoriteBtn.classList.remove('btn-outline-danger');
             this.favoriteBtn.classList.add('btn-danger');
             this.favoriteBtn.title = 'Remove from favorites';
         } else {
-            this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>';
+            this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Add to Favorites';
             this.favoriteBtn.classList.remove('btn-danger');
             this.favoriteBtn.classList.add('btn-outline-danger');
             this.favoriteBtn.title = 'Add to favorites';
