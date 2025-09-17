@@ -260,28 +260,14 @@ app.use(requireAuth);
 
 // Debug route to catch all requests
 app.use((req, res, next) => {
-    if (req.url.startsWith('/thumbnails/')) {
-        console.log('=== THUMBNAIL REQUEST INTERCEPTED ===');
-        console.log('URL:', req.url);
-        console.log('Method:', req.method);
-    }
     next();
 });
 
 // Custom thumbnail serving with URL decoding (MUST come before static file serving)
 app.get('/thumbnails/*', (req, res) => {
-    console.log('=== THUMBNAIL REQUEST RECEIVED ===');
-    console.log('URL:', req.url);
-    console.log('Params:', req.params);
-    console.log('Original URL:', req.originalUrl);
-
     try {
         const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, 'thumbnails', filename);
-
-        console.log('Thumbnail request - Original:', req.params[0]);
-        console.log('Thumbnail request - Decoded:', filename);
-        console.log('Thumbnail request - Full path:', thumbnailPath);
 
         if (fs.existsSync(thumbnailPath)) {
             res.sendFile(thumbnailPath);
@@ -289,13 +275,10 @@ app.get('/thumbnails/*', (req, res) => {
             // Try with quotes around the filename (ffmpeg sometimes adds quotes)
             const quotedFilename = `'${filename}'`;
             const quotedThumbnailPath = path.join(__dirname, 'thumbnails', quotedFilename);
-            console.log('Trying quoted filename:', quotedFilename);
-            console.log('Trying quoted path:', quotedThumbnailPath);
 
             if (fs.existsSync(quotedThumbnailPath)) {
                 res.sendFile(quotedThumbnailPath);
             } else {
-                console.log('Thumbnail file not found:', thumbnailPath);
                 res.status(404).send('Thumbnail not found');
             }
         }
@@ -347,7 +330,6 @@ function getThumbnailUrl(videoPath) {
     try {
         const ext = path.extname(videoPath).toLowerCase();
         if (!isVideoFile(ext)) {
-            console.log(`  Not a video file: ${ext}`);
             return null;
         }
 
@@ -397,10 +379,9 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                 const minutes = Math.floor((middleSeconds % 3600) / 60);
                 const seconds = middleSeconds % 60;
                 middleTimestamp = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                console.log(`Generating thumbnail for ${path.basename(videoPath)} at: ${middleTimestamp}`);
             }
         } catch (durationError) {
-            console.log('Could not get video duration, using fallback timestamp:', middleTimestamp);
+            // Could not get video duration, using fallback timestamp
         }
 
         // Try multiple timestamps if the first attempt fails
@@ -408,12 +389,9 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         
         for (let i = 0; i < fallbackTimestamps.length; i++) {
             const timestamp = fallbackTimestamps[i];
-            const isRetry = i > 0;
-            
-            try {
-                if (isRetry) {
-                    console.log(`Retrying thumbnail generation for ${path.basename(videoPath)} at: ${timestamp}`);
-                }
+                const isRetry = i > 0;
+                
+                try {
                 
                 // Generate thumbnail using ffmpeg
                 const command = `ffmpeg -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
@@ -423,25 +401,19 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                 if (fs.existsSync(thumbnailPath)) {
                     const stats = fs.statSync(thumbnailPath);
                     if (stats.size > 0) {
-                        console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)} at ${timestamp}`);
                         return true;
                     } else {
-                        console.error(`Generated thumbnail is empty at ${timestamp}: ${path.basename(thumbnailPath)}`);
                         if (fs.existsSync(thumbnailPath)) {
                             fs.unlinkSync(thumbnailPath); // Remove empty file
                         }
                     }
-                } else {
-                    console.error(`Thumbnail file was not created at ${timestamp}: ${path.basename(thumbnailPath)}`);
                 }
             } catch (ffmpegError) {
-                console.error(`Failed to generate thumbnail at ${timestamp} for ${path.basename(videoPath)}:`, ffmpegError.message);
                 // Continue to next timestamp
             }
         }
         
         // If all timestamps failed
-        console.error(`All thumbnail generation attempts failed for ${path.basename(videoPath)}`);
         return false;
     } catch (error) {
         console.error(`Unexpected error generating thumbnail for ${path.basename(videoPath)}:`, error.message);
@@ -454,7 +426,6 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
     try {
         // Prevent memory issues with very large collections
         if (videoList.length >= maxVideos) {
-            console.warn(`Reached maximum video limit (${maxVideos}), stopping scan`);
             return videoList;
         }
 
@@ -493,7 +464,7 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
             }
         });
     } catch (error) {
-        console.warn(`Could not scan directory ${dirPath}:`, error.message);
+        // Could not scan directory
     }
 
     return videoList;
@@ -501,25 +472,18 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
 
 // Function to generate all missing thumbnails on startup
 async function generateAllMissingThumbnails() {
-    console.log('🔍 Scanning for videos without thumbnails...');
-
     // Create thumbnails directory if it doesn't exist
     const thumbnailsDir = path.join(__dirname, 'thumbnails');
     if (!fs.existsSync(thumbnailsDir)) {
         fs.mkdirSync(thumbnailsDir, { recursive: true });
-        console.log('📁 Created thumbnails directory');
     }
 
     // Find all videos without thumbnails
     const videosWithoutThumbnails = findVideosWithoutThumbnails(VIDEOS_ROOT);
 
     if (videosWithoutThumbnails.length === 0) {
-        console.log('✅ All videos already have thumbnails!');
         return;
     }
-
-    console.log(`📹 Found ${videosWithoutThumbnails.length} videos without thumbnails`);
-    console.log('🚀 Starting thumbnail generation...');
 
     // Process thumbnails in batches to avoid overwhelming the system
     const batchSize = 3;
@@ -537,15 +501,12 @@ async function generateAllMissingThumbnails() {
                 processed++;
                 if (success) {
                     successful++;
-                    console.log(`✅ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath}`);
                 } else {
                     failed++;
-                    console.log(`❌ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath}`);
                 }
             } catch (error) {
                 processed++;
                 failed++;
-                console.log(`❌ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath} - ${error.message}`);
             }
         });
 
@@ -558,14 +519,10 @@ async function generateAllMissingThumbnails() {
         }
     }
 
-    console.log(`🎉 Thumbnail generation complete!`);
-    console.log(`   📊 Total processed: ${processed}`);
-    console.log(`   ✅ Successful: ${successful}`);
-    console.log(`   ❌ Failed: ${failed}`);
+    // Thumbnail generation complete
 
     // Cleanup: Remove any empty or corrupted thumbnail files
     if (failed > 0) {
-        console.log('🧹 Cleaning up failed thumbnail files...');
         try {
             const thumbnailsDir = path.join(__dirname, 'thumbnails');
             const files = fs.readdirSync(thumbnailsDir);
@@ -580,16 +537,12 @@ async function generateAllMissingThumbnails() {
                 }
             });
 
-            if (cleaned > 0) {
-                console.log(`🧹 Cleaned up ${cleaned} empty thumbnail files`);
-            }
         } catch (cleanupError) {
-            console.warn('⚠️  Error during cleanup:', cleanupError.message);
+            // Error during cleanup
         }
     }
 
     // Cleanup: Remove incorrectly named thumbnails (with .mp4 in filename)
-    console.log('🧹 Cleaning up incorrectly named thumbnails...');
     try {
         const thumbnailsDir = path.join(__dirname, 'thumbnails');
         const files = fs.readdirSync(thumbnailsDir);
@@ -601,16 +554,10 @@ async function generateAllMissingThumbnails() {
                 const filePath = path.join(thumbnailsDir, file);
                 fs.unlinkSync(filePath);
                 cleaned++;
-                console.log(`🗑️  Removed incorrectly named thumbnail: ${file}`);
             }
         });
-
-        if (cleaned > 0) {
-            console.log(`🧹 Cleaned up ${cleaned} incorrectly named thumbnail files`);
-            console.log('🔄 You may need to restart the server to regenerate these thumbnails with correct names');
-        }
     } catch (cleanupError) {
-        console.warn('⚠️  Error during cleanup:', cleanupError.message);
+        // Error during cleanup
     }
 }
 
@@ -621,7 +568,6 @@ app.get('/api/browse', (req, res) => {
     try {
         directoryPath = resolveSafePath(relativePath);
     } catch (err) {
-        console.log(err)
         return res.status(403).json({ error: 'Access denied' });
     }
     const search = req.query.search || '';
@@ -735,7 +681,6 @@ app.get('/api/browse', (req, res) => {
             totalItems: result.length
         });
     } catch (error) {
-        console.log(error)
         res.status(500).json({ error: 'Unable to read directory' });
     }
 });
@@ -1136,8 +1081,6 @@ app.post('/api/playlists/:id/remove-video', (req, res) => {
             return res.status(400).json({ error: 'Video path is required' });
         }
 
-        console.log('Remove video request - Playlist ID:', id);
-        console.log('Remove video request - Video path:', videoPath);
 
         let playlists = { playlists: [] };
         if (fs.existsSync(playlistsFile)) {
@@ -1150,8 +1093,6 @@ app.post('/api/playlists/:id/remove-video', (req, res) => {
             return res.status(404).json({ error: 'Playlist not found' });
         }
 
-        console.log('Playlist videos:', playlist.videos.map(v => v.path));
-        console.log('Looking for video with path:', videoPath);
 
         const initialLength = playlist.videos.length;
         playlist.videos = playlist.videos.filter(video => video.path !== videoPath);
@@ -1187,8 +1128,6 @@ app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
 
         // URL decode the video path
         const decodedVideoPath = decodeURIComponent(videoPath);
-        console.log('Remove video request - Original path:', videoPath);
-        console.log('Remove video request - Decoded path:', decodedVideoPath);
 
         let playlists = { playlists: [] };
         if (fs.existsSync(playlistsFile)) {
@@ -1201,8 +1140,6 @@ app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
             return res.status(404).json({ error: 'Playlist not found' });
         }
 
-        console.log('Playlist videos:', playlist.videos.map(v => v.path));
-        console.log('Looking for video with path:', decodedVideoPath);
 
         const initialLength = playlist.videos.length;
         playlist.videos = playlist.videos.filter(video => video.path !== decodedVideoPath);
@@ -1322,9 +1259,7 @@ app.listen(PORT, async () => {
     // Generate missing thumbnails on startup
     try {
         await generateAllMissingThumbnails();
-        console.log(`✨ Server ready! All thumbnails are up to date.`);
     } catch (error) {
         console.error('❌ Error during thumbnail generation:', error);
-        console.log(`⚠️  Server is running but some thumbnails may be missing.`);
     }
 });

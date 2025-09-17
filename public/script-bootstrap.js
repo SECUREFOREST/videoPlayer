@@ -50,12 +50,7 @@ class ModernVideoPlayerBrowser {
         this.videoInfo = document.getElementById('video-info');
 
         // Validate critical elements
-        if (!this.fileList) {
-            console.error('Critical element file-list not found');
-            return;
-        }
-        if (!this.video) {
-            console.error('Critical element video not found');
+        if (!this.fileList || !this.video) {
             return;
         }
 
@@ -201,7 +196,6 @@ class ModernVideoPlayerBrowser {
 
     async loadDirectory(path = '') {
         if (this.isLoading('loadDirectory')) {
-            console.log('Directory load already in progress, skipping...');
             return;
         }
 
@@ -399,8 +393,6 @@ class ModernVideoPlayerBrowser {
 
     preloadThumbnails(items) {
         // Thumbnails are now generated on server startup, so no client-side processing needed
-        const videoItems = items.filter(item => item.isVideo);
-        console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
     }
 
     async checkServerStatus() {
@@ -415,7 +407,6 @@ class ModernVideoPlayerBrowser {
             }
         } catch (error) {
             // Server status check failed, but that's okay
-            console.log('Server status check failed:', error.message);
         }
     }
 
@@ -493,9 +484,7 @@ class ModernVideoPlayerBrowser {
                 this.restoreProgress(item.path);
 
                 // Autoplay the video
-                this.video.play().catch(error => {
-                    console.log('Autoplay failed:', error);
-                });
+                this.video.play().catch(() => {});
             } else {
                 this.showStatusMessage('Error loading video: ' + videoData.error, 'error');
             }
@@ -546,8 +535,7 @@ class ModernVideoPlayerBrowser {
         if (this.videoState.isPlaying) {
             this.video.pause();
         } else {
-            this.video.play().catch(error => {
-                console.error('Play failed:', error);
+            this.video.play().catch(() => {
                 this.showStatusMessage('Failed to play video', 'error');
             });
         }
@@ -562,16 +550,13 @@ class ModernVideoPlayerBrowser {
     toggleFullscreen() {
         if (!this.isFullscreen) {
             if (this.video.requestFullscreen) {
-                this.video.requestFullscreen().catch(err => {
-                    console.error('Fullscreen request failed:', err);
+                this.video.requestFullscreen().catch(() => {
                     this.showStatusMessage('Failed to enter fullscreen mode', 'error');
                 });
             }
         } else {
             if (document.exitFullscreen) {
-                document.exitFullscreen().catch(err => {
-                    console.error('Exit fullscreen failed:', err);
-                });
+                document.exitFullscreen().catch(() => {});
             }
         }
     }
@@ -642,8 +627,6 @@ class ModernVideoPlayerBrowser {
     // Grid view only - toggleView method removed
 
     switchTab(tabName) {
-        console.log('Switching to tab:', tabName);
-
         // Update tab buttons
         this.tabBtns.forEach(btn => {
             const isActive = btn.id === tabName + '-tab';
@@ -668,21 +651,16 @@ class ModernVideoPlayerBrowser {
 
     async performSearch() {
         if (this.isLoading('search')) {
-            console.log('Search already in progress, skipping...');
             return;
         }
 
         const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
 
-        console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
-
         return this.safeAsyncOperation(async () => {
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
 
             const data = await response.json();
-
-            console.log('Search API response:', data);
 
             if (response.ok) {
                 this.searchResults = data.results;
@@ -696,7 +674,6 @@ class ModernVideoPlayerBrowser {
     }
 
     renderSearchResults() {
-        console.log('Rendering search results:', this.searchResults.length, 'items');
         this.searchList.innerHTML = '';
 
         if (this.searchResults.length === 0) {
@@ -710,8 +687,6 @@ class ModernVideoPlayerBrowser {
                 !item.name.startsWith('.DS_Store') &&
                 !item.name.startsWith('Thumbs.db');
         });
-
-        console.log('Filtered results:', filteredResults.length, 'items');
 
         if (filteredResults.length === 0) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found (filtered out system files)</p></div></div>';
@@ -787,10 +762,7 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
-            console.log('Added search result item:', item.name);
         });
-
-        console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
     }
 
     async loadPlaylists() {
@@ -802,11 +774,9 @@ class ModernVideoPlayerBrowser {
                 this.playlists = data.playlists || [];
                 this.renderPlaylists();
             } else {
-                console.error('Failed to load playlists:', data.error);
                 this.showStatusMessage('Failed to load playlists: ' + data.error, 'error');
             }
         } catch (error) {
-            console.error('Failed to load playlists:', error);
             this.showStatusMessage('Failed to load playlists: ' + error.message, 'error');
         }
     }
@@ -1010,8 +980,6 @@ class ModernVideoPlayerBrowser {
         }
 
         try {
-            console.log('Removing video with path:', videoPath);
-
             const response = await fetch(`/api/playlists/${playlistId}/remove-video`, {
                 method: 'POST',
                 headers: {
@@ -1041,7 +1009,6 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('Failed to remove video: ' + errorData.error, 'error');
             }
         } catch (error) {
-            console.error('Error removing video from playlist:', error);
             this.showStatusMessage('Error removing video: ' + error.message, 'error');
         }
     }
@@ -1056,7 +1023,7 @@ class ModernVideoPlayerBrowser {
                 this.renderFavorites();
             }
         } catch (error) {
-            console.error('Failed to load favorites:', error);
+            // Failed to load favorites
         }
     }
 
@@ -1279,7 +1246,6 @@ class ModernVideoPlayerBrowser {
                     `;
 
                     playlistItem.addEventListener('click', () => {
-                        console.log('Playlist clicked:', playlist.name);
                         // Remove active class and custom selection styling from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                             item.classList.remove('active', 'playlist-item-selected');
@@ -1287,8 +1253,6 @@ class ModernVideoPlayerBrowser {
                         // Add active class and custom selection styling to clicked item
                         playlistItem.classList.add('active', 'playlist-item-selected');
                         this.selectedPlaylistId = playlist.id;
-                        console.log('Selected playlist ID:', this.selectedPlaylistId);
-                        console.log('Playlist item classes:', playlistItem.className);
                     });
 
                     existingPlaylistsList.appendChild(playlistItem);
@@ -1298,7 +1262,6 @@ class ModernVideoPlayerBrowser {
                 noPlaylistsMessage.style.display = 'block';
             }
         } catch (error) {
-            console.error('Error loading playlists:', error);
             this.showStatusMessage('Error loading playlists', 'error');
         }
     }
@@ -1588,11 +1551,8 @@ class ModernVideoPlayerBrowser {
     // Video player initialization
     initializeVideoPlayer() {
         if (!this.video || !this.videoSource) {
-            console.error('Video elements not found during initialization');
             return;
         }
-
-        console.log('Initializing video player...');
 
         this.videoState.isInitialized = true;
         this.videoState.volume = this.video.volume || 1.0;
@@ -1600,7 +1560,6 @@ class ModernVideoPlayerBrowser {
         this.videoState.playbackRate = this.video.playbackRate || 1.0;
 
         this.setupVideoEventListeners();
-        console.log('Video player initialized successfully');
     }
 
     setupVideoEventListeners() {
@@ -1622,22 +1581,19 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoLoadStart() {
-        console.log('Video load started');
         this.videoState.isSeeking = false;
     }
 
     handleVideoLoadedMetadata() {
-        console.log('Video metadata loaded, duration:', this.video.duration);
         this.videoState.duration = this.video.duration;
         this.updateVideoInfo();
     }
 
     handleVideoLoadedData() {
-        console.log('Video data loaded');
+        // Video data loaded
     }
 
     handleVideoCanPlay() {
-        console.log('Video can play');
         this.videoState.isInitialized = true;
     }
 
@@ -1671,7 +1627,6 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoError(e) {
-        console.error('Video error:', e);
         this.showStatusMessage('Video playback error occurred', 'error');
         this.videoState.isPlaying = false;
     }
@@ -1846,7 +1801,6 @@ class ModernVideoPlayerBrowser {
             const result = await operation();
             return result;
         } catch (error) {
-            console.error(`Error in ${context}:`, error);
             this.handleError(error, context);
             throw error;
         } finally {
@@ -1868,7 +1822,6 @@ class ModernVideoPlayerBrowser {
     }
 
     handleError(error, context = '') {
-        console.error(`Error in ${context}:`, error);
         this.showStatusMessage(`Error: ${error.message || 'Something went wrong'}`, 'error');
         this.announceToScreenReader(`Error: ${error.message || 'Something went wrong'}`);
     }
@@ -1925,12 +1878,10 @@ class ModernVideoPlayerBrowser {
     }
 
     showError(message) {
-        console.error(message);
         // You could implement a toast notification here
     }
 
     showStatusMessage(message, type = 'info') {
-        console.log(`${type.toUpperCase()}: ${message}`);
         // You could implement a toast notification here
     }
 
@@ -1979,7 +1930,7 @@ class ModernVideoPlayerBrowser {
         try {
             localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
         } catch (error) {
-            console.warn('Failed to save progress:', error);
+            // Failed to save progress
         }
     }
 
@@ -1991,7 +1942,7 @@ class ModernVideoPlayerBrowser {
                 this.playbackProgress = JSON.parse(saved);
             }
         } catch (error) {
-            console.warn('Failed to load progress:', error);
+            // Failed to load progress
         }
     }
 
@@ -2026,8 +1977,7 @@ class ModernVideoPlayerBrowser {
                 }
             }).then(() => {
                 window.location.href = '/login';
-            }).catch(error => {
-                console.error('Logout error:', error);
+            }).catch(() => {
                 window.location.href = '/login';
             });
         }
