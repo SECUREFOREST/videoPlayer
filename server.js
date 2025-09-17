@@ -352,7 +352,10 @@ function getThumbnailUrl(videoPath) {
 
         const videoName = path.basename(videoPath, ext);
         const cleanVideoName = videoName.replace(/['"]/g, '');
-        const thumbnailPath = path.join(__dirname, 'thumbnails', `${cleanVideoName}_thumb.jpg`);
+        // Use relative path to avoid filename collisions
+        const relativePath = path.relative(VIDEOS_ROOT, videoPath);
+        const safeThumbnailName = relativePath.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+        const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
 
         // Check if thumbnail exists
         if (fs.existsSync(thumbnailPath)) {
@@ -395,8 +398,22 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         const command = `ffmpeg -i "${videoPath}" -ss ${middleTimestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
         
         await execAsync(command);
-        console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)}`);
-        return true;
+        
+        // Validate that thumbnail was actually created and is a valid image
+        if (fs.existsSync(thumbnailPath)) {
+            const stats = fs.statSync(thumbnailPath);
+            if (stats.size > 0) {
+                console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)}`);
+                return true;
+            } else {
+                console.error(`Generated thumbnail is empty: ${path.basename(thumbnailPath)}`);
+                fs.unlinkSync(thumbnailPath); // Remove empty file
+                return false;
+            }
+        } else {
+            console.error(`Thumbnail file was not created: ${path.basename(thumbnailPath)}`);
+            return false;
+        }
     } catch (ffmpegError) {
         console.error(`Failed to generate thumbnail for ${path.basename(videoPath)}:`, ffmpegError.message);
         return false;
@@ -404,23 +421,35 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
 }
 
 // Function to scan all directories and find videos without thumbnails
-function findVideosWithoutThumbnails(dirPath, videoList = []) {
+function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000) {
     try {
+        // Prevent memory issues with very large collections
+        if (videoList.length >= maxVideos) {
+            console.warn(`Reached maximum video limit (${maxVideos}), stopping scan`);
+            return videoList;
+        }
+
         const items = fs.readdirSync(dirPath, { withFileTypes: true });
         
         items.forEach(item => {
+            // Check memory limit on each iteration
+            if (videoList.length >= maxVideos) return;
+            
             const fullPath = path.join(dirPath, item.name);
             
             if (item.isDirectory()) {
                 // Recursively scan subdirectories
-                findVideosWithoutThumbnails(fullPath, videoList);
+                findVideosWithoutThumbnails(fullPath, videoList, maxVideos);
             } else if (item.isFile()) {
                 const ext = path.extname(item.name).toLowerCase();
                 if (isVideoFile(ext)) {
                     // Check if thumbnail exists
                     const videoName = path.basename(fullPath, ext);
                     const cleanVideoName = videoName.replace(/['"]/g, '');
-                    const thumbnailPath = path.join(__dirname, 'thumbnails', `${cleanVideoName}_thumb.jpg`);
+                    // Use relative path to avoid filename collisions
+                    const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+                    const safeThumbnailName = relativePath.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+                    const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
                     
                     if (!fs.existsSync(thumbnailPath)) {
                         videoList.push({
@@ -502,6 +531,31 @@ async function generateAllMissingThumbnails() {
     console.log(`   📊 Total processed: ${processed}`);
     console.log(`   ✅ Successful: ${successful}`);
     console.log(`   ❌ Failed: ${failed}`);
+    
+    // Cleanup: Remove any empty or corrupted thumbnail files
+    if (failed > 0) {
+        console.log('🧹 Cleaning up failed thumbnail files...');
+        try {
+            const thumbnailsDir = path.join(__dirname, 'thumbnails');
+            const files = fs.readdirSync(thumbnailsDir);
+            let cleaned = 0;
+            
+            files.forEach(file => {
+                const filePath = path.join(thumbnailsDir, file);
+                const stats = fs.statSync(filePath);
+                if (stats.size === 0) {
+                    fs.unlinkSync(filePath);
+                    cleaned++;
+                }
+            });
+            
+            if (cleaned > 0) {
+                console.log(`🧹 Cleaned up ${cleaned} empty thumbnail files`);
+            }
+        } catch (cleanupError) {
+            console.warn('⚠️  Error during cleanup:', cleanupError.message);
+        }
+    }
 }
 
 // API endpoint to get directory contents
@@ -682,7 +736,10 @@ app.get('/api/thumbnail-status', (req, res) => {
 
         const videoName = path.basename(videoPath, ext);
         const cleanVideoName = videoName.replace(/['"]/g, '');
-        const thumbnailPath = path.join(__dirname, 'thumbnails', `${cleanVideoName}_thumb.jpg`);
+        // Use relative path to avoid filename collisions
+        const relativePath = path.relative(VIDEOS_ROOT, videoPath);
+        const safeThumbnailName = relativePath.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+        const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
 
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailFilename = path.basename(thumbnailPath);
