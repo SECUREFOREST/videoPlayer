@@ -942,14 +942,22 @@ class ModernVideoPlayerBrowser {
             // Add hover effect
             div.addEventListener('mouseenter', () => {
                 div.style.backgroundColor = '#374151';
-                div.style.transform = 'translateY(-2px)';
                 div.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                // Apply transform only to the thumbnail container, not the button
+                const thumbnailContainer = div.querySelector('.video-thumbnail');
+                if (thumbnailContainer) {
+                    thumbnailContainer.style.transform = 'translateY(-2px)';
+                }
             });
 
             div.addEventListener('mouseleave', () => {
                 div.style.backgroundColor = '';
-                div.style.transform = '';
                 div.style.boxShadow = '';
+                // Reset transform on the thumbnail container
+                const thumbnailContainer = div.querySelector('.video-thumbnail');
+                if (thumbnailContainer) {
+                    thumbnailContainer.style.transform = '';
+                }
             });
 
             // Add click handler to play video
