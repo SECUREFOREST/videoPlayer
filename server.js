@@ -763,7 +763,8 @@ app.get('/api/video-info', (req, res) => {
             modified: stats.mtime,
             name: path.basename(videoPath),
             extension: ext,
-            mimeType: getVideoMimeType(ext)
+            mimeType: getVideoMimeType(ext),
+            isVideo: true
         });
     } catch (error) {
         console.error('Video info error:', error);
