@@ -354,7 +354,9 @@ function getThumbnailUrl(videoPath) {
         const cleanVideoName = videoName.replace(/['"]/g, '');
         // Use relative path to avoid filename collisions
         const relativePath = path.relative(VIDEOS_ROOT, videoPath);
-        const safeThumbnailName = relativePath.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+        // Remove file extension before creating safe name
+        const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
+        const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
         const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
 
         // Check if thumbnail exists
@@ -448,7 +450,9 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
                     const cleanVideoName = videoName.replace(/['"]/g, '');
                     // Use relative path to avoid filename collisions
                     const relativePath = path.relative(VIDEOS_ROOT, fullPath);
-                    const safeThumbnailName = relativePath.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+                    // Remove file extension before creating safe name
+        const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
+        const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
                     const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
                     
                     if (!fs.existsSync(thumbnailPath)) {
@@ -555,6 +559,31 @@ async function generateAllMissingThumbnails() {
         } catch (cleanupError) {
             console.warn('⚠️  Error during cleanup:', cleanupError.message);
         }
+    }
+    
+    // Cleanup: Remove incorrectly named thumbnails (with .mp4 in filename)
+    console.log('🧹 Cleaning up incorrectly named thumbnails...');
+    try {
+        const thumbnailsDir = path.join(__dirname, 'thumbnails');
+        const files = fs.readdirSync(thumbnailsDir);
+        let cleaned = 0;
+        
+        files.forEach(file => {
+            // Check if filename contains .mp4 (incorrect naming)
+            if (file.includes('.mp4_thumb.jpg')) {
+                const filePath = path.join(thumbnailsDir, file);
+                fs.unlinkSync(filePath);
+                cleaned++;
+                console.log(`🗑️  Removed incorrectly named thumbnail: ${file}`);
+            }
+        });
+        
+        if (cleaned > 0) {
+            console.log(`🧹 Cleaned up ${cleaned} incorrectly named thumbnail files`);
+            console.log('🔄 You may need to restart the server to regenerate these thumbnails with correct names');
+        }
+    } catch (cleanupError) {
+        console.warn('⚠️  Error during cleanup:', cleanupError.message);
     }
 }
 
@@ -746,7 +775,9 @@ app.get('/api/thumbnail-status', (req, res) => {
         const cleanVideoName = videoName.replace(/['"]/g, '');
         // Use relative path to avoid filename collisions
         const relativePath = path.relative(VIDEOS_ROOT, videoPath);
-        const safeThumbnailName = relativePath.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+        // Remove file extension before creating safe name
+        const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
+        const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
         const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
 
         if (fs.existsSync(thumbnailPath)) {
