@@ -10,6 +10,7 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 4000;
 const VIDEOS_ROOT = path.join(__dirname, 'videos');
+const DURATIONS_CACHE_FILE = path.join(__dirname, 'video-durations.json');
 
 // Supported video formats
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
@@ -380,29 +381,163 @@ function getThumbnailUrl(videoPath) {
     }
 }
 
-// Get video duration using ffprobe
+// Duration cache management
+let durationCache = {};
+
+// Load duration cache from file
+function loadDurationCache() {
+    try {
+        if (fs.existsSync(DURATIONS_CACHE_FILE)) {
+            const data = fs.readFileSync(DURATIONS_CACHE_FILE, 'utf8');
+            durationCache = JSON.parse(data);
+            console.log(`📊 Loaded ${Object.keys(durationCache).length} video durations from cache`);
+        } else {
+            durationCache = {};
+            console.log('📊 No duration cache found, starting fresh');
+        }
+    } catch (error) {
+        console.error('Error loading duration cache:', error);
+        durationCache = {};
+    }
+}
+
+// Save duration cache to file
+function saveDurationCache() {
+    try {
+        fs.writeFileSync(DURATIONS_CACHE_FILE, JSON.stringify(durationCache, null, 2));
+        console.log(`💾 Saved ${Object.keys(durationCache).length} video durations to cache`);
+    } catch (error) {
+        console.error('Error saving duration cache:', error);
+    }
+}
+
+// Scan all videos and build duration cache
+async function buildDurationCache() {
+    console.log('🚀 Building video duration cache...');
+    const startTime = Date.now();
+    let processedCount = 0;
+    let cachedCount = 0;
+    let newCount = 0;
+
+    try {
+        function scanDirectory(dirPath) {
+            const items = fs.readdirSync(dirPath, { withFileTypes: true });
+            
+            for (const item of items) {
+                const fullPath = path.join(dirPath, item.name);
+                
+                if (item.isDirectory()) {
+                    scanDirectory(fullPath);
+                } else {
+                    const ext = path.extname(item.name).toLowerCase();
+                    if (isVideoFile(ext)) {
+                        const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+                        processedCount++;
+                        
+                        if (durationCache[relativePath]) {
+                            cachedCount++;
+                        } else {
+                            newCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        // First pass: count videos
+        scanDirectory(VIDEOS_ROOT);
+        console.log(`📊 Found ${processedCount} videos (${cachedCount} cached, ${newCount} need calculation)`);
+
+        if (newCount === 0) {
+            console.log('✅ All video durations are already cached!');
+            return;
+        }
+
+        // Second pass: calculate missing durations
+        let calculatedCount = 0;
+        function calculateMissingDurations(dirPath) {
+            const items = fs.readdirSync(dirPath, { withFileTypes: true });
+            
+            for (const item of items) {
+                const fullPath = path.join(dirPath, item.name);
+                
+                if (item.isDirectory()) {
+                    calculateMissingDurations(fullPath);
+                } else {
+                    const ext = path.extname(item.name).toLowerCase();
+                    if (isVideoFile(ext)) {
+                        const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+                        
+                        if (!durationCache[relativePath]) {
+                            // Calculate duration synchronously for startup
+                            try {
+                                const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${fullPath}"`;
+                                const durationOutput = require('child_process').execSync(durationCommand, { encoding: 'utf8' });
+                                const duration = parseFloat(durationOutput.trim());
+                                
+                                if (duration && duration > 0) {
+                                    durationCache[relativePath] = duration;
+                                    calculatedCount++;
+                                    console.log(`✅ Cached duration for ${path.basename(fullPath)}: ${Math.floor(duration/60)}:${Math.floor(duration%60).toString().padStart(2, '0')}`);
+                                }
+                            } catch (error) {
+                                console.log(`❌ Could not get duration for ${path.basename(fullPath)}: ${error.message}`);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        calculateMissingDurations(VIDEOS_ROOT);
+        
+        // Save the updated cache
+        saveDurationCache();
+        
+        const endTime = Date.now();
+        const duration = Math.round((endTime - startTime) / 1000);
+        console.log(`🎉 Duration cache build complete!`);
+        console.log(`   📊 Total videos: ${processedCount}`);
+        console.log(`   ✅ Already cached: ${cachedCount}`);
+        console.log(`   🔍 Newly calculated: ${calculatedCount}`);
+        console.log(`   ⏱️  Time taken: ${duration}s`);
+        
+    } catch (error) {
+        console.error('Error building duration cache:', error);
+    }
+}
+
+// Get video duration using cache first, then ffprobe if needed
 async function getVideoDuration(videoPath) {
+    // Check cache first
+    const relativePath = path.relative(VIDEOS_ROOT, videoPath);
+    if (durationCache[relativePath]) {
+        console.log('📋 Using cached duration for:', path.basename(videoPath), ':', durationCache[relativePath], 'seconds');
+        return durationCache[relativePath];
+    }
+
+    // Not in cache, calculate using ffprobe
     try {
         const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
-        console.log('Getting duration for:', path.basename(videoPath));
-        console.log('Command:', durationCommand);
+        console.log('🔍 Calculating duration for:', path.basename(videoPath));
         
         const durationOutput = await execAsync(durationCommand);
-        console.log('Raw output:', durationOutput);
         
         // execAsync returns { stdout, stderr }, we need stdout
         const stdout = durationOutput.stdout || durationOutput;
         const duration = parseFloat(stdout.trim());
-        console.log('Parsed duration:', duration);
         
         if (duration && duration > 0) {
-            console.log('Duration found:', duration, 'seconds');
+            // Cache the result
+            durationCache[relativePath] = duration;
+            saveDurationCache(); // Save cache immediately
+            console.log('✅ Duration found and cached:', duration, 'seconds for', path.basename(videoPath));
             return duration;
         }
-        console.log('No valid duration found for', path.basename(videoPath));
+        console.log('❌ No valid duration found for', path.basename(videoPath));
         return null;
     } catch (error) {
-        console.log('Could not get video duration for', path.basename(videoPath), ':', error.message);
+        console.log('❌ Could not get video duration for', path.basename(videoPath), ':', error.message);
         return null;
     }
 }
@@ -1351,12 +1486,21 @@ app.listen(PORT, async () => {
     console.log(`📁 Video directory: ${VIDEOS_ROOT}`);
     console.log(`🎬 Browse files and watch videos!`);
 
-    // Generate missing thumbnails on startup
+    // Load duration cache
+    loadDurationCache();
+
+    // Generate missing thumbnails and build duration cache on startup
     try {
         await generateAllMissingThumbnails();
-        console.log(`✨ Server ready! All thumbnails are up to date.`);
+        console.log(`✨ Thumbnails are up to date.`);
+        
+        // Build duration cache
+        await buildDurationCache();
+        console.log(`✨ Duration cache is ready.`);
+        
+        console.log(`🎉 Server ready! All thumbnails and durations are up to date.`);
     } catch (error) {
-        console.error('❌ Error during thumbnail generation:', error);
-        console.log(`⚠️  Server is running but some thumbnails may be missing.`);
+        console.error('❌ Error during startup processing:', error);
+        console.log(`⚠️  Server is running but some thumbnails or durations may be missing.`);
     }
 });
