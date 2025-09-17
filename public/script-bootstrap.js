@@ -1406,7 +1406,7 @@ class ModernVideoPlayerBrowser {
                 const name = this.validatePlaylistName(this.playlistName.value);
                 if (!name) return;
 
-                const videos = this.currentVideo ? [this.currentVideo] : [];
+                const videos = []; // Create empty playlist by default
 
                 try {
                     const response = await fetch('/api/playlists', {
