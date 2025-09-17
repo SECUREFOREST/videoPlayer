@@ -377,7 +377,7 @@ function getThumbnailUrl(videoPath) {
 async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
         // Get video duration to calculate middle timestamp
-        let middleTimestamp = '00:00:05'; // fallback
+        let middleTimestamp = '00:00:30'; // fallback
         try {
             const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
             const durationOutput = await execAsync(durationCommand);
