@@ -30,7 +30,13 @@
   "engines": {
     "node": ">=14.0.0"
   },
-  "keywords": ["video", "player", "file", "browser", "mp4"],
+  "keywords": [
+    "video",
+    "player",
+    "file",
+    "browser",
+    "mp4"
+  ],
   "author": "",
   "license": "MIT"
 }

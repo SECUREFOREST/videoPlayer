@@ -19,38 +19,38 @@ function resolveSafePath(requestedPath) {
     if (!requestedPath || requestedPath === '') {
         return VIDEOS_ROOT;
     }
-    
+
     // Normalize the requested path to prevent directory traversal
     let normalizedPath = path.normalize(requestedPath);
-    
+
     // Remove leading slash if present to make it relative
     if (normalizedPath.startsWith('/')) {
         normalizedPath = normalizedPath.substring(1);
     }
-    
+
     // Check for directory traversal attempts - reject any path with '..'
     if (normalizedPath.includes('..')) {
         throw new Error('Access denied: Invalid path');
     }
-    
+
     // Check if path tries to go above the videos directory
     if (normalizedPath.startsWith('..') || normalizedPath.includes('/..') || normalizedPath.includes('\\..')) {
         throw new Error('Access denied: Cannot browse above main folder');
     }
-    
+
     // Resolve the absolute path
     const fullPath = path.resolve(VIDEOS_ROOT, normalizedPath);
-    
+
     // Ensure the resolved path is inside VIDEOS_ROOT and not the same as VIDEOS_ROOT parent
     if (!fullPath.startsWith(VIDEOS_ROOT) || fullPath === path.dirname(VIDEOS_ROOT)) {
         throw new Error('Access denied: Path outside video directory');
     }
-    
+
     // Additional check: ensure we're not at the exact VIDEOS_ROOT level trying to go up
     if (path.dirname(fullPath) === path.dirname(VIDEOS_ROOT)) {
         throw new Error('Access denied: Cannot browse above main folder');
     }
-    
+
     return fullPath;
 }
 
@@ -64,7 +64,7 @@ app.use(session({
     secret: 'video-player-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
+    cookie: {
         secure: false, // Set to true if using HTTPS
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -79,22 +79,22 @@ function requireAuth(req, res, next) {
     if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/static/')) {
         return next();
     }
-    
+
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Basic ')) {
         const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString('ascii');
         const [username, password] = credentials.split(':');
-        
+
         if (password === PASSWORD) {
             return next();
         }
     }
-    
+
     // Check for session-based auth
     if (req.session && req.session.authenticated) {
         return next();
     }
-    
+
     // Return 401 for API requests, redirect for page requests
     if (req.path.startsWith('/api/')) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -240,7 +240,7 @@ app.get('/login', (req, res) => {
 // Login API endpoint
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
-    
+
     if (password === PASSWORD) {
         req.session.authenticated = true;
         res.redirect('/');
@@ -274,15 +274,15 @@ app.get('/thumbnails/*', (req, res) => {
     console.log('URL:', req.url);
     console.log('Params:', req.params);
     console.log('Original URL:', req.originalUrl);
-    
+
     try {
         const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, 'thumbnails', filename);
-        
+
         console.log('Thumbnail request - Original:', req.params[0]);
         console.log('Thumbnail request - Decoded:', filename);
         console.log('Thumbnail request - Full path:', thumbnailPath);
-        
+
         if (fs.existsSync(thumbnailPath)) {
             res.sendFile(thumbnailPath);
         } else {
@@ -291,7 +291,7 @@ app.get('/thumbnails/*', (req, res) => {
             const quotedThumbnailPath = path.join(__dirname, 'thumbnails', quotedFilename);
             console.log('Trying quoted filename:', quotedFilename);
             console.log('Trying quoted path:', quotedThumbnailPath);
-            
+
             if (fs.existsSync(quotedThumbnailPath)) {
                 res.sendFile(quotedThumbnailPath);
             } else {
@@ -382,7 +382,7 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
             const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
             const durationOutput = await execAsync(durationCommand);
             const duration = parseFloat(durationOutput.trim());
-            
+
             if (duration && duration > 0) {
                 // Calculate middle timestamp in seconds
                 const middleSeconds = Math.floor(duration / 2);
@@ -398,9 +398,9 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
 
         // Generate thumbnail using ffmpeg from middle of video
         const command = `ffmpeg -i "${videoPath}" -ss ${middleTimestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
-        
+
         await execAsync(command);
-        
+
         // Validate that thumbnail was actually created and is a valid image
         if (fs.existsSync(thumbnailPath)) {
             const stats = fs.statSync(thumbnailPath);
@@ -432,13 +432,13 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
         }
 
         const items = fs.readdirSync(dirPath, { withFileTypes: true });
-        
+
         items.forEach(item => {
             // Check memory limit on each iteration
             if (videoList.length >= maxVideos) return;
-            
+
             const fullPath = path.join(dirPath, item.name);
-            
+
             if (item.isDirectory()) {
                 // Recursively scan subdirectories
                 findVideosWithoutThumbnails(fullPath, videoList, maxVideos);
@@ -451,10 +451,10 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
                     // Use relative path to avoid filename collisions
                     const relativePath = path.relative(VIDEOS_ROOT, fullPath);
                     // Remove file extension before creating safe name
-        const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
-        const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
+                    const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
+                    const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
                     const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
-                    
+
                     if (!fs.existsSync(thumbnailPath)) {
                         videoList.push({
                             videoPath: fullPath,
@@ -468,41 +468,41 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
     } catch (error) {
         console.warn(`Could not scan directory ${dirPath}:`, error.message);
     }
-    
+
     return videoList;
 }
 
 // Function to generate all missing thumbnails on startup
 async function generateAllMissingThumbnails() {
     console.log('🔍 Scanning for videos without thumbnails...');
-    
+
     // Create thumbnails directory if it doesn't exist
     const thumbnailsDir = path.join(__dirname, 'thumbnails');
     if (!fs.existsSync(thumbnailsDir)) {
         fs.mkdirSync(thumbnailsDir, { recursive: true });
         console.log('📁 Created thumbnails directory');
     }
-    
+
     // Find all videos without thumbnails
     const videosWithoutThumbnails = findVideosWithoutThumbnails(VIDEOS_ROOT);
-    
+
     if (videosWithoutThumbnails.length === 0) {
         console.log('✅ All videos already have thumbnails!');
         return;
     }
-    
+
     console.log(`📹 Found ${videosWithoutThumbnails.length} videos without thumbnails`);
     console.log('🚀 Starting thumbnail generation...');
-    
+
     // Process thumbnails in batches to avoid overwhelming the system
     const batchSize = 3;
     let processed = 0;
     let successful = 0;
     let failed = 0;
-    
+
     for (let i = 0; i < videosWithoutThumbnails.length; i += batchSize) {
         const batch = videosWithoutThumbnails.slice(i, i + batchSize);
-        
+
         // Process batch concurrently
         const batchPromises = batch.map(async (video) => {
             try {
@@ -521,21 +521,21 @@ async function generateAllMissingThumbnails() {
                 console.log(`❌ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath} - ${error.message}`);
             }
         });
-        
+
         // Wait for current batch to complete before starting next batch
         await Promise.all(batchPromises);
-        
+
         // Small delay between batches to prevent system overload
         if (i + batchSize < videosWithoutThumbnails.length) {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
-    
+
     console.log(`🎉 Thumbnail generation complete!`);
     console.log(`   📊 Total processed: ${processed}`);
     console.log(`   ✅ Successful: ${successful}`);
     console.log(`   ❌ Failed: ${failed}`);
-    
+
     // Cleanup: Remove any empty or corrupted thumbnail files
     if (failed > 0) {
         console.log('🧹 Cleaning up failed thumbnail files...');
@@ -543,7 +543,7 @@ async function generateAllMissingThumbnails() {
             const thumbnailsDir = path.join(__dirname, 'thumbnails');
             const files = fs.readdirSync(thumbnailsDir);
             let cleaned = 0;
-            
+
             files.forEach(file => {
                 const filePath = path.join(thumbnailsDir, file);
                 const stats = fs.statSync(filePath);
@@ -552,7 +552,7 @@ async function generateAllMissingThumbnails() {
                     cleaned++;
                 }
             });
-            
+
             if (cleaned > 0) {
                 console.log(`🧹 Cleaned up ${cleaned} empty thumbnail files`);
             }
@@ -560,14 +560,14 @@ async function generateAllMissingThumbnails() {
             console.warn('⚠️  Error during cleanup:', cleanupError.message);
         }
     }
-    
+
     // Cleanup: Remove incorrectly named thumbnails (with .mp4 in filename)
     console.log('🧹 Cleaning up incorrectly named thumbnails...');
     try {
         const thumbnailsDir = path.join(__dirname, 'thumbnails');
         const files = fs.readdirSync(thumbnailsDir);
         let cleaned = 0;
-        
+
         files.forEach(file => {
             // Check if filename contains .mp4 (incorrect naming)
             if (file.includes('.mp4_thumb.jpg')) {
@@ -577,7 +577,7 @@ async function generateAllMissingThumbnails() {
                 console.log(`🗑️  Removed incorrectly named thumbnail: ${file}`);
             }
         });
-        
+
         if (cleaned > 0) {
             console.log(`🧹 Cleaned up ${cleaned} incorrectly named thumbnail files`);
             console.log('🔄 You may need to restart the server to regenerate these thumbnails with correct names');
@@ -608,40 +608,40 @@ app.get('/api/browse', (req, res) => {
         let result = items
             .filter(item => !item.name.startsWith('._'))
             .map(item => {
-            const fullPath = path.join(directoryPath, item.name);
-            const stats = fs.statSync(fullPath);
-            const extension = path.extname(item.name).toLowerCase();
-            
-            let fileCount = null;
-            if (item.isDirectory()) {
-                try {
-                    const dirContents = fs.readdirSync(fullPath, { withFileTypes: true });
-                    fileCount = dirContents.filter(dirItem => !dirItem.name.startsWith('._')).length;
-                } catch (err) {
-                    fileCount = 0; // Directory not accessible
+                const fullPath = path.join(directoryPath, item.name);
+                const stats = fs.statSync(fullPath);
+                const extension = path.extname(item.name).toLowerCase();
+
+                let fileCount = null;
+                if (item.isDirectory()) {
+                    try {
+                        const dirContents = fs.readdirSync(fullPath, { withFileTypes: true });
+                        fileCount = dirContents.filter(dirItem => !dirItem.name.startsWith('._')).length;
+                    } catch (err) {
+                        fileCount = 0; // Directory not accessible
+                    }
                 }
-            }
-            
-            const result = {
-                name: item.name,
-                path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
-                isDirectory: item.isDirectory(),
-                isFile: item.isFile(),
-                size: stats.size,
-                modified: stats.mtime,
-                extension: extension,
-                isVideo: isVideoFile(extension),
-                mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null,
-                fileCount: fileCount
-            };
 
-            // Add thumbnail URL for video files
-            if (isVideoFile(extension)) {
-                result.thumbnailUrl = getThumbnailUrl(fullPath);
-            }
+                const result = {
+                    name: item.name,
+                    path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
+                    isDirectory: item.isDirectory(),
+                    isFile: item.isFile(),
+                    size: stats.size,
+                    modified: stats.mtime,
+                    extension: extension,
+                    isVideo: isVideoFile(extension),
+                    mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null,
+                    fileCount: fileCount
+                };
 
-            return result;
-        });
+                // Add thumbnail URL for video files
+                if (isVideoFile(extension)) {
+                    result.thumbnailUrl = getThumbnailUrl(fullPath);
+                }
+
+                return result;
+            });
 
         // Apply search filter
         if (search) {
@@ -700,7 +700,7 @@ app.get('/api/browse', (req, res) => {
                 parentPath = ''; // We're one level down from root, parent is root
             }
         }
-        
+
         res.json({
             currentPath: path.relative(VIDEOS_ROOT, directoryPath),
             parentPath: parentPath,
@@ -749,9 +749,9 @@ app.get('/api/video-info', (req, res) => {
 
 // API endpoint to check server status
 app.get('/api/server-status', (req, res) => {
-    res.json({ 
+    res.json({
         generatingThumbnails: false, // This would be set to true during startup generation
-        serverReady: true 
+        serverReady: true
     });
 });
 
@@ -766,7 +766,7 @@ app.get('/api/thumbnail-status', (req, res) => {
     try {
         const videoPath = resolveSafePath(relativePath);
         const ext = path.extname(videoPath).toLowerCase();
-        
+
         if (!isVideoFile(ext)) {
             return res.status(400).json({ error: 'File is not a supported video format' });
         }
@@ -783,14 +783,14 @@ app.get('/api/thumbnail-status', (req, res) => {
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailFilename = path.basename(thumbnailPath);
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(thumbnailFilename)}`;
-            return res.json({ 
+            return res.json({
                 thumbnailUrl: thumbnailUrl,
-                exists: true 
+                exists: true
             });
         } else {
-            return res.json({ 
+            return res.json({
                 thumbnailUrl: null,
-                exists: false 
+                exists: false
             });
         }
     } catch (error) {
@@ -806,11 +806,11 @@ app.get('/api/search', (req, res) => {
     const searchTerm = req.query.q;
     const relativePath = req.query.path || '';
     let searchPath;
-  
+
     try {
-      searchPath = resolveSafePath(relativePath);
+        searchPath = resolveSafePath(relativePath);
     } catch (err) {
-      return res.status(403).json({ error: 'Access denied' });
+        return res.status(403).json({ error: 'Access denied' });
     }
     const fileType = req.query.type || 'all';
 
@@ -952,7 +952,7 @@ app.delete('/api/playlists/:id', (req, res) => {
 
         const initialLength = playlists.playlists.length;
         playlists.playlists = playlists.playlists.filter(playlist => playlist.id !== id);
-        
+
         if (playlists.playlists.length === initialLength) {
             return res.status(404).json({ error: 'Playlist not found' });
         }
@@ -1000,7 +1000,7 @@ app.put('/api/playlists/:id', (req, res) => {
         // Check for duplicate playlist names (excluding current playlist)
         if (name) {
             const trimmedName = name.trim();
-            const duplicateExists = playlists.playlists.some(p => 
+            const duplicateExists = playlists.playlists.some(p =>
                 p.id !== id && p.name.toLowerCase() === trimmedName.toLowerCase()
             );
             if (duplicateExists) {
@@ -1097,7 +1097,7 @@ app.post('/api/playlists/:id/remove-video', (req, res) => {
 
         const initialLength = playlist.videos.length;
         playlist.videos = playlist.videos.filter(video => video.path !== videoPath);
-        
+
         if (playlist.videos.length === initialLength) {
             return res.status(404).json({ error: 'Video not found in playlist' });
         }
@@ -1148,7 +1148,7 @@ app.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
 
         const initialLength = playlist.videos.length;
         playlist.videos = playlist.videos.filter(video => video.path !== decodedVideoPath);
-        
+
         if (playlist.videos.length === initialLength) {
             return res.status(404).json({ error: 'Video not found in playlist' });
         }
@@ -1241,7 +1241,7 @@ app.listen(PORT, async () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📁 Video directory: ${VIDEOS_ROOT}`);
     console.log(`🎬 Browse files and watch videos!`);
-    
+
     // Generate missing thumbnails on startup
     try {
         await generateAllMissingThumbnails();

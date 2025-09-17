@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Modern Video Player Browser with playlist management, favorites, and search capabilities">
+    <meta name="description"
+        content="Modern Video Player Browser with playlist management, favorites, and search capabilities">
     <meta name="theme-color" content="#000000">
     <title>Shibari Videos</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -17,10 +19,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style-bootstrap.css">
-    
+
     <style>
         .sr-only {
             position: absolute;
@@ -33,7 +35,7 @@
             white-space: nowrap;
             border: 0;
         }
-        
+
         /* Playlist selection styles */
         .playlist-item-selected {
             border-color: #059669 !important;
@@ -41,13 +43,14 @@
             transform: scale(1.02) !important;
             transition: all 0.2s ease !important;
         }
-        
+
         .playlist-item-hover:hover {
             background-color: #374151 !important;
             transition: all 0.2s ease !important;
         }
     </style>
 </head>
+
 <body class="bg-dark text-light">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
@@ -56,24 +59,21 @@
                 <i class="fas fa-play-circle me-2" style="color: #B91C1C;"></i>
                 <span class="fw-bold">Shibari Videos</span>
             </a>
-            
+
             <!-- Search Bar -->
             <div class="d-flex flex-grow-1 mx-4">
                 <div class="input-group">
                     <span class="input-group-text bg-secondary border-secondary">
                         <i class="fas fa-search"></i>
                     </span>
-                    <input type="text" 
-                           id="search-input" 
-                           class="form-control bg-dark text-light border-secondary" 
-                           placeholder="Search files and videos..."
-                           aria-label="Search files and videos">
+                    <input type="text" id="search-input" class="form-control bg-dark text-light border-secondary"
+                        placeholder="Search files and videos..." aria-label="Search files and videos">
                     <button id="search-btn" class="btn btn-primary" type="button">
                         <i class="fas fa-search me-1"></i>Search
                     </button>
                 </div>
             </div>
-            
+
             <!-- View Toggle -->
             <div class="btn-group me-3" role="group">
                 <input type="radio" class="btn-check" name="view-toggle" id="list-view" autocomplete="off" checked>
@@ -85,7 +85,7 @@
                     <i class="fas fa-th"></i>
                 </label>
             </div>
-            
+
             <!-- Filter Dropdown -->
             <div class="dropdown me-2">
                 <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -98,7 +98,7 @@
                     <li><a class="dropdown-item" href="#" data-filter="files">Files Only</a></li>
                 </ul>
             </div>
-            
+
             <!-- Sort Dropdown -->
             <div class="dropdown me-2">
                 <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -111,12 +111,12 @@
                     <li><a class="dropdown-item" href="#" data-sort="type">Type</a></li>
                 </ul>
             </div>
-            
+
             <!-- Refresh Button -->
             <button id="refresh-btn" class="btn btn-outline-secondary me-2" title="Refresh">
                 <i class="fas fa-sync-alt"></i>
             </button>
-            
+
             <!-- Logout Button 
             <button id="logout-btn" class="btn btn-outline-danger" title="Logout">
                 <i class="fas fa-sign-out-alt"></i>
@@ -132,42 +132,26 @@
                     <!-- Navigation Tabs -->
                     <ul class="nav nav-pills flex-column" id="main-tabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active w-100 text-start mb-2" 
-                                    id="browser-tab" 
-                                    data-bs-toggle="pill" 
-                                    data-bs-target="#browser-pane" 
-                                    type="button" 
-                                    role="tab">
+                            <button class="nav-link active w-100 text-start mb-2" id="browser-tab" data-bs-toggle="pill"
+                                data-bs-target="#browser-pane" type="button" role="tab">
                                 <i class="fas fa-folder me-2"></i>Browser
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link w-100 text-start mb-2" 
-                                    id="playlists-tab" 
-                                    data-bs-toggle="pill" 
-                                    data-bs-target="#playlists-pane" 
-                                    type="button" 
-                                    role="tab">
+                            <button class="nav-link w-100 text-start mb-2" id="playlists-tab" data-bs-toggle="pill"
+                                data-bs-target="#playlists-pane" type="button" role="tab">
                                 <i class="fas fa-list me-2"></i>Playlists
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link w-100 text-start mb-2" 
-                                    id="favorites-tab" 
-                                    data-bs-toggle="pill" 
-                                    data-bs-target="#favorites-pane" 
-                                    type="button" 
-                                    role="tab">
+                            <button class="nav-link w-100 text-start mb-2" id="favorites-tab" data-bs-toggle="pill"
+                                data-bs-target="#favorites-pane" type="button" role="tab">
                                 <i class="fas fa-heart me-2"></i>Favorites
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link w-100 text-start mb-2" 
-                                    id="search-results-tab" 
-                                    data-bs-toggle="pill" 
-                                    data-bs-target="#search-results-pane" 
-                                    type="button" 
-                                    role="tab">
+                            <button class="nav-link w-100 text-start mb-2" id="search-results-tab" data-bs-toggle="pill"
+                                data-bs-target="#search-results-pane" type="button" role="tab">
                                 <i class="fas fa-search me-2"></i>Search Results
                             </button>
                         </li>
@@ -185,18 +169,20 @@
                             <nav aria-label="breadcrumb" class="mb-3">
                                 <ol class="breadcrumb">
                                     <li class="breadcrumb-item">
-                                        <button id="back-btn" class="btn btn-link p-0 text-decoration-none" style="display: none;">
+                                        <button id="back-btn" class="btn btn-link p-0 text-decoration-none"
+                                            style="display: none;">
                                             <i class="fas fa-arrow-left me-1"></i>Back
                                         </button>
                                     </li>
                                     <li class="breadcrumb-item active" id="current-path">Root</li>
                                 </ol>
                             </nav>
-                            
+
                             <!-- File List -->
                             <div id="file-list" class="row g-3">
                                 <div class="col-12">
-                                    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                        style="height: 200px;">
                                         <div class="spinner-border text-primary" role="status">
                                             <span class="visually-hidden">Loading files...</span>
                                         </div>
@@ -270,7 +256,8 @@
     </div>
 
     <!-- Video Player Modal -->
-    <div class="modal fade" id="videoPlayerModal" tabindex="-1" aria-labelledby="videoPlayerModalLabel" aria-hidden="true">
+    <div class="modal fade" id="videoPlayerModal" tabindex="-1" aria-labelledby="videoPlayerModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
             <div class="modal-content bg-dark">
                 <div class="modal-header border-secondary">
@@ -284,7 +271,8 @@
                         <button id="favorite-btn" class="btn btn-sm btn-outline-danger" title="Add to Favorites">
                             <i class="fas fa-heart"></i>
                         </button>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
                 </div>
                 <div class="modal-body p-0">
@@ -308,18 +296,21 @@
             <div class="modal-content bg-dark">
                 <div class="modal-header border-secondary">
                     <h5 class="modal-title text-light" id="playlistModalLabel">Add to Playlist</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Playlist Selection Tabs -->
                     <ul class="nav nav-tabs nav-fill mb-3" id="playlist-tabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="existing-playlist-tab" data-bs-toggle="tab" data-bs-target="#existing-playlist-pane" type="button" role="tab">
+                            <button class="nav-link active" id="existing-playlist-tab" data-bs-toggle="tab"
+                                data-bs-target="#existing-playlist-pane" type="button" role="tab">
                                 <i class="fas fa-list me-1"></i>Existing Playlists
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="new-playlist-tab" data-bs-toggle="tab" data-bs-target="#new-playlist-pane" type="button" role="tab">
+                            <button class="nav-link" id="new-playlist-tab" data-bs-toggle="tab"
+                                data-bs-target="#new-playlist-pane" type="button" role="tab">
                                 <i class="fas fa-plus me-1"></i>Create New
                             </button>
                         </li>
@@ -334,7 +325,8 @@
                                 <div id="existing-playlists-list" class="list-group">
                                     <!-- Existing playlists will be loaded here -->
                                 </div>
-                                <div id="no-playlists-message" class="text-center text-muted py-3" style="display: none;">
+                                <div id="no-playlists-message" class="text-center text-muted py-3"
+                                    style="display: none;">
                                     <i class="fas fa-list fa-2x mb-2"></i>
                                     <p>No playlists available. Create a new one!</p>
                                 </div>
@@ -345,7 +337,8 @@
                         <div class="tab-pane fade" id="new-playlist-pane" role="tabpanel">
                             <div class="mb-3">
                                 <label for="playlist-name" class="form-label">Playlist Name</label>
-                                <input type="text" class="form-control bg-dark text-light border-secondary" id="playlist-name" placeholder="Enter playlist name...">
+                                <input type="text" class="form-control bg-dark text-light border-secondary"
+                                    id="playlist-name" placeholder="Enter playlist name...">
                             </div>
                         </div>
                     </div>
@@ -366,6 +359,7 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-    <script src="script-bootstrap.js?v=39"></script>
+    <script src="script-bootstrap.js?v=40"></script>
 </body>
+
 </html>

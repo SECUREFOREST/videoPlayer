@@ -1,24 +1,41 @@
 /* Custom Bootstrap Dark Theme Enhancements */
 :root {
-    --bs-primary: #B91C1C;        /* Deep crimson */
-    --bs-secondary: #6B7280;       /* Medium gray */
-    --bs-success: #059669;         /* Emerald green */
-    --bs-warning: #D97706;         /* Amber */
-    --bs-danger: #DC2626;          /* Red */
-    --bs-info: #7C3AED;            /* Purple */
-    --bs-dark: #000000;            /* Pure black */
-    --bs-light: #FFFFFF;           /* Pure white */
-    
+    --bs-primary: #B91C1C;
+    /* Deep crimson */
+    --bs-secondary: #6B7280;
+    /* Medium gray */
+    --bs-success: #059669;
+    /* Emerald green */
+    --bs-warning: #D97706;
+    /* Amber */
+    --bs-danger: #DC2626;
+    /* Red */
+    --bs-info: #7C3AED;
+    /* Purple */
+    --bs-dark: #000000;
+    /* Pure black */
+    --bs-light: #FFFFFF;
+    /* Pure white */
+
     /* Custom colors for enhanced dark theme */
-    --custom-gray-900: #111827;    /* Darkest gray */
-    --custom-gray-800: #1F2937;    /* Dark gray */
-    --custom-gray-700: #374151;    /* Medium dark gray */
-    --custom-gray-600: #4B5563;    /* Medium gray */
-    --custom-gray-500: #6B7280;    /* Light gray */
-    --custom-gray-400: #9CA3AF;    /* Lighter gray */
-    --custom-gray-300: #D1D5DB;    /* Very light gray */
-    --custom-gray-200: #E5E7EB;    /* Light gray */
-    --custom-gray-100: #F3F4F6;    /* Very light gray */
+    --custom-gray-900: #111827;
+    /* Darkest gray */
+    --custom-gray-800: #1F2937;
+    /* Dark gray */
+    --custom-gray-700: #374151;
+    /* Medium dark gray */
+    --custom-gray-600: #4B5563;
+    /* Medium gray */
+    --custom-gray-500: #6B7280;
+    /* Light gray */
+    --custom-gray-400: #9CA3AF;
+    /* Lighter gray */
+    --custom-gray-300: #D1D5DB;
+    /* Very light gray */
+    --custom-gray-200: #E5E7EB;
+    /* Light gray */
+    --custom-gray-100: #F3F4F6;
+    /* Very light gray */
 }
 
 /* Override Bootstrap dark theme colors */
@@ -113,7 +130,9 @@
 }
 
 /* Playlist, Favorite, and Search item styles */
-.playlist-item, .favorite-item, .search-item {
+.playlist-item,
+.favorite-item,
+.search-item {
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
     background: var(--bs-secondary-bg);
@@ -121,34 +140,38 @@
     margin-bottom: 0.75rem;
 }
 
-.playlist-item:hover, .favorite-item:hover, .search-item:hover {
+.playlist-item:hover,
+.favorite-item:hover,
+.search-item:hover {
     transform: translateX(5px);
     border-left: 3px solid var(--bs-primary);
     box-shadow: 0 4px 15px rgba(139, 21, 56, 0.1);
 }
 
-.playlist-item .playlist-info, 
-.favorite-item .favorite-info, 
+.playlist-item .playlist-info,
+.favorite-item .favorite-info,
 .search-item .search-info {
     flex: 1;
 }
 
-.playlist-item .playlist-name, 
-.favorite-item .favorite-name, 
+.playlist-item .playlist-name,
+.favorite-item .favorite-name,
 .search-item .search-name {
     font-weight: 600;
     margin-bottom: 0.25rem;
     color: var(--bs-light);
 }
 
-.playlist-item .playlist-count, 
-.favorite-item .favorite-path, 
+.playlist-item .playlist-count,
+.favorite-item .favorite-path,
 .search-item .search-path {
     font-size: 0.75rem;
     color: var(--custom-gray-500);
 }
 
-.playlist-actions, .favorite-actions, .search-actions {
+.playlist-actions,
+.favorite-actions,
+.search-actions {
     display: flex;
     gap: 0.5rem;
 }
@@ -260,7 +283,7 @@
     padding: 0;
 }
 
-.breadcrumb-item + .breadcrumb-item::before {
+.breadcrumb-item+.breadcrumb-item::before {
     color: var(--custom-gray-500);
 }
 
@@ -348,6 +371,7 @@
     0% {
         background-position: 200% 0;
     }
+
     100% {
         background-position: -200% 0;
     }
@@ -355,23 +379,28 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .file-item, .playlist-item, .favorite-item, .search-item {
+
+    .file-item,
+    .playlist-item,
+    .favorite-item,
+    .search-item {
         padding: 0.75rem;
         margin-bottom: 0.5rem;
     }
-    
-    .file-item .file-icon, .file-grid-item .file-icon {
+
+    .file-item .file-icon,
+    .file-grid-item .file-icon {
         font-size: 1.5rem;
     }
-    
+
     .file-grid-item .file-icon {
         font-size: 2rem;
     }
-    
+
     .navbar .d-flex.flex-grow-1 {
         margin: 0.5rem 0;
     }
-    
+
     .navbar .input-group {
         width: 100%;
     }

@@ -14,7 +14,7 @@ class ModernVideoPlayerBrowser {
         this.focusedElement = null;
         this.keyboardNavigation = true;
         this.selectedPlaylistId = null;
-        
+
         // Video player state management
         this.videoState = {
             isInitialized: false,
@@ -26,20 +26,20 @@ class ModernVideoPlayerBrowser {
             duration: 0,
             isSeeking: false
         };
-        
+
         // Performance optimization
         this.debounceTimeout = null;
         this.animationFrame = null;
-        
+
         // Async operation tracking
         this.activeRequests = new Set();
         this.loadingStates = new Map();
-        
+
         // DOM elements
         this.initializeElements();
         this.init();
     }
-    
+
     initializeElements() {
         // Main elements
         this.fileList = document.getElementById('file-list');
@@ -48,7 +48,7 @@ class ModernVideoPlayerBrowser {
         this.videoSource = document.getElementById('video-source');
         this.videoTitle = document.getElementById('videoPlayerModalLabel');
         this.videoInfo = document.getElementById('video-info');
-        
+
         // Validate critical elements
         if (!this.fileList) {
             console.error('Critical element file-list not found');
@@ -58,13 +58,13 @@ class ModernVideoPlayerBrowser {
             console.error('Critical element video not found');
             return;
         }
-        
+
         // Navigation
         this.backBtn = document.getElementById('back-btn');
         this.refreshBtn = document.getElementById('refresh-btn');
         this.gridViewRadio = document.getElementById('grid-view');
         this.listViewRadio = document.getElementById('list-view');
-        
+
         // Search and filters
         this.searchInput = document.getElementById('search-input');
         this.searchBtn = document.getElementById('search-btn');
@@ -73,37 +73,37 @@ class ModernVideoPlayerBrowser {
         this.sortOrder = { value: 'asc' }; // Default sort order
         this.filterDropdown = document.querySelector('[data-bs-toggle="dropdown"]');
         this.sortDropdown = document.querySelectorAll('[data-bs-toggle="dropdown"]')[1];
-        
+
         // Tabs
         this.tabBtns = document.querySelectorAll('#main-tabs button[data-bs-toggle="pill"]');
         this.tabPanes = document.querySelectorAll('#main-tab-content .tab-pane');
-        
+
         // Video controls
         this.videoPlayerModal = new bootstrap.Modal(document.getElementById('videoPlayerModal'));
         this.playlistAddBtn = document.getElementById('playlist-add-btn');
         this.favoriteBtn = document.getElementById('favorite-btn');
-        
+
         // Add event listener for modal close
         if (this.videoPlayerModal) {
             this.videoPlayerModal._element.addEventListener('hidden.bs.modal', () => {
                 this.pauseVideo();
             });
         }
-        
+
         // Playlist and favorites
         this.createPlaylistBtn = document.getElementById('create-playlist-btn');
         this.playlistList = document.getElementById('playlist-list');
         this.favoritesList = document.getElementById('favorites-list');
         this.searchList = document.getElementById('search-list');
         this.searchCount = document.getElementById('search-count');
-        
+
         // Modals
         this.playlistModal = new bootstrap.Modal(document.getElementById('playlistModal'));
         this.playlistName = document.getElementById('playlist-name');
         this.playlistVideos = document.getElementById('playlist-videos');
         this.savePlaylistBtn = document.getElementById('save-playlist-btn');
     }
-    
+
     init() {
         this.bindEvents();
         this.initializeVideoPlayer();
@@ -113,20 +113,20 @@ class ModernVideoPlayerBrowser {
         this.loadFavorites();
         this.loadProgressFromStorage();
     }
-    
+
     bindEvents() {
         // Navigation
         if (this.backBtn) this.backBtn.addEventListener('click', () => this.goBack());
         if (this.refreshBtn) this.refreshBtn.addEventListener('click', () => this.loadDirectory());
-        
+
         // Logout button
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) logoutBtn.addEventListener('click', () => this.logout());
-        
+
         // View toggle
         if (this.gridViewRadio) this.gridViewRadio.addEventListener('change', () => this.toggleView(true));
         if (this.listViewRadio) this.listViewRadio.addEventListener('change', () => this.toggleView(false));
-        
+
         // Search and filters
         if (this.searchInput) {
             this.searchInput.addEventListener('input', (e) => {
@@ -137,7 +137,7 @@ class ModernVideoPlayerBrowser {
             });
         }
         if (this.searchBtn) this.searchBtn.addEventListener('click', () => this.performSearch());
-        
+
         // Filter dropdown
         document.querySelectorAll('[data-filter]').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -147,13 +147,13 @@ class ModernVideoPlayerBrowser {
                 this.loadDirectory();
             });
         });
-        
+
         // Sort dropdown
         document.querySelectorAll('[data-sort]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 const sortValue = e.target.dataset.sort;
-                
+
                 // Toggle sort order if clicking the same sort option
                 if (this.sortBy.value === sortValue) {
                     this.sortOrder.value = this.sortOrder.value === 'asc' ? 'desc' : 'asc';
@@ -161,53 +161,53 @@ class ModernVideoPlayerBrowser {
                     this.sortBy.value = sortValue;
                     this.sortOrder.value = 'asc'; // Reset to ascending for new sort
                 }
-                
+
                 const orderIcon = this.sortOrder.value === 'asc' ? '↑' : '↓';
                 this.updateSortDropdownText(`${e.target.textContent.trim()} ${orderIcon}`);
                 this.loadDirectory();
             });
         });
-        
+
         // Tabs
         this.tabBtns.forEach(btn => {
             btn.addEventListener('click', () => this.switchTab(btn.id.replace('-tab', '')));
         });
-        
+
         // Video controls
         if (this.playlistAddBtn) this.playlistAddBtn.addEventListener('click', () => this.addToPlaylist());
         if (this.favoriteBtn) this.favoriteBtn.addEventListener('click', () => this.toggleFavorite());
-        
+
         // Playlist and favorites
         if (this.createPlaylistBtn) this.createPlaylistBtn.addEventListener('click', () => this.showCreatePlaylistModal());
         if (this.savePlaylistBtn) this.savePlaylistBtn.addEventListener('click', () => this.savePlaylist());
-        
+
         // Enhanced keyboard navigation and accessibility
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
         document.addEventListener('keyup', (e) => this.handleKeyboardUp(e));
-        
+
         // Focus management
         document.addEventListener('focusin', (e) => this.handleFocusIn(e));
         document.addEventListener('focusout', (e) => this.handleFocusOut(e));
-        
+
         // ARIA live region for announcements
         this.setupAriaLiveRegion();
-        
+
         // Fullscreen events
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
         document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
         document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
         document.addEventListener('MSFullscreenChange', () => this.handleFullscreenChange());
-        
+
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => this.cleanup());
     }
-    
+
     async loadDirectory(path = '') {
         if (this.isLoading('loadDirectory')) {
             console.log('Directory load already in progress, skipping...');
             return;
         }
-        
+
         return this.safeAsyncOperation(async () => {
             this.showLoading();
             const params = new URLSearchParams({
@@ -217,10 +217,10 @@ class ModernVideoPlayerBrowser {
                 sortOrder: this.sortOrder.value || 'asc',
                 filterType: this.filterType.value || 'all'
             });
-            
+
             const response = await fetch(`/api/browse?${params}`);
             const data = await response.json();
-            
+
             if (response.ok) {
                 this.currentPath = data.currentPath;
                 this.renderFileList(data.items, data.parentPath);
@@ -230,11 +230,11 @@ class ModernVideoPlayerBrowser {
             }
         }, 'loadDirectory');
     }
-    
+
     renderFileList(items, parentPath) {
         this.fileList.innerHTML = '';
-        
-        
+
+
         // Only show parent directory option if we're not at the root level
         if (parentPath && parentPath !== this.currentPath && parentPath !== '') {
             const parentItem = this.createFileItem({
@@ -249,42 +249,42 @@ class ModernVideoPlayerBrowser {
             });
             this.fileList.appendChild(parentItem);
         }
-        
+
         if (this.isGridView) {
             this.renderGridView(items);
         } else {
             this.renderListView(items);
         }
-        
+
         // Start background thumbnail generation for all videos
         this.preloadThumbnails(items);
     }
-    
+
     renderListView(items) {
         items.forEach(item => {
             const fileItem = this.createFileItem(item);
             this.fileList.appendChild(fileItem);
         });
     }
-    
+
     renderGridView(items) {
         items.forEach(item => {
             const gridItem = this.createGridItem(item);
             this.fileList.appendChild(gridItem);
         });
     }
-    
+
     createFileItem(item) {
         const col = document.createElement('div');
         col.className = 'col-12';
-        
+
         const div = document.createElement('div');
         div.className = 'file-item p-3 d-flex align-items-center';
-        
+
         const icon = this.getFileIcon(item);
         const size = this.formatFileSize(item.size);
         const date = this.formatDate(item.modified);
-        
+
         // Create thumbnail container for videos
         let thumbnailHtml = '';
         if (item.isVideo) {
@@ -297,7 +297,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 100%; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-lg\\"></i></div>'">
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-lg\\"></i></div>
                     </div>
                 `;
             } else {
@@ -313,21 +313,21 @@ class ModernVideoPlayerBrowser {
         } else {
             thumbnailHtml = `<div class="file-icon me-3" title="${item.isDirectory ? 'Directory' : 'File'}">${icon}</div>`;
         }
-        
+
         div.innerHTML = `
             ${thumbnailHtml}
             <div class="file-info flex-grow-1">
                 <div class="file-name">${item.name}</div>
                 <div class="file-details d-flex gap-3">
-                    ${item.isDirectory ? 
-                        `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` : 
-                        `<span class="file-size">${size}</span>`
-                    }
+                    ${item.isDirectory ?
+                `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` :
+                `<span class="file-size">${size}</span>`
+            }
                     <span class="file-date">${date}</span>
                 </div>
             </div>
         `;
-        
+
         div.addEventListener('click', () => {
             if (item.isDirectory) {
                 this.loadDirectory(item.path);
@@ -337,23 +337,23 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('This file type is not supported. Only video files can be played.', 'warning');
             }
         });
-        
+
         // No need to poll since thumbnails are generated on server startup
-        
+
         col.appendChild(div);
         return col;
     }
-    
+
     createGridItem(item) {
         const col = document.createElement('div');
         col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
-        
+
         const div = document.createElement('div');
         div.className = 'file-grid-item h-100';
-        
+
         const icon = this.getFileIcon(item);
         const size = this.formatFileSize(item.size);
-        
+
         div.innerHTML = `
             <div class="file-icon">${icon}</div>
             <div class="file-name">${item.name}</div>
@@ -361,7 +361,7 @@ class ModernVideoPlayerBrowser {
                 ${item.isDirectory ? 'Directory' : size}
             </div>
         `;
-        
+
         if (item.isVideo) {
             if (item.thumbnailUrl) {
                 // Thumbnail is available
@@ -373,7 +373,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 120px; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'">
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                     `;
                 }
             } else {
@@ -388,7 +388,7 @@ class ModernVideoPlayerBrowser {
                 }
             }
         }
-        
+
         div.addEventListener('click', () => {
             if (item.isDirectory) {
                 this.loadDirectory(item.path);
@@ -398,18 +398,18 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('This file type is not supported. Only video files can be played.', 'warning');
             }
         });
-        
+
         col.appendChild(div);
         return col;
     }
-    
-    
+
+
     preloadThumbnails(items) {
         // Thumbnails are now generated on server startup, so no client-side processing needed
         const videoItems = items.filter(item => item.isVideo);
         console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
     }
-    
+
     async checkServerStatus() {
         try {
             // Check if server is still generating thumbnails
@@ -425,7 +425,7 @@ class ModernVideoPlayerBrowser {
             console.log('Server status check failed:', error.message);
         }
     }
-    
+
     showServerStatusMessage(message, type = 'info') {
         const statusDiv = document.createElement('div');
         statusDiv.className = `alert alert-${type === 'info' ? 'primary' : type} alert-dismissible fade show position-fixed`;
@@ -435,7 +435,7 @@ class ModernVideoPlayerBrowser {
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
         document.body.appendChild(statusDiv);
-        
+
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
             if (statusDiv.parentNode) {
@@ -443,8 +443,8 @@ class ModernVideoPlayerBrowser {
             }
         }, 5000);
     }
-    
-    
+
+
     getFileIcon(item) {
         if (item.isDirectory) {
             return '📁';
@@ -454,7 +454,7 @@ class ModernVideoPlayerBrowser {
             return '📄';
         }
     }
-    
+
     formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -462,36 +462,36 @@ class ModernVideoPlayerBrowser {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
-    
+
     formatDate(date) {
         return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
     }
-    
+
     async playVideo(item) {
         try {
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
-            
+
             if (response.ok) {
                 this.currentVideo = item;
                 this.videoTitle.innerHTML = `<i class="fas fa-play-circle me-2"></i>${videoData.name}`;
-                
+
                 const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                 this.videoSource.src = videoUrl;
                 this.videoSource.type = videoData.mimeType;
                 this.video.src = videoUrl;
-                
+
                 this.video.load();
-                
+
                 // Update video info
                 this.updateVideoInfo(videoData);
-                
+
                 // Show modal
                 this.videoPlayerModal.show();
-                
+
                 // Restore progress if available
                 this.restoreProgress(item.path);
-                
+
                 // Autoplay the video
                 this.video.play().catch(error => {
                     console.log('Autoplay failed:', error);
@@ -503,7 +503,7 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error loading video: ' + error.message, 'error');
         }
     }
-    
+
     updateVideoInfo(videoData = null) {
         if (videoData) {
             const size = this.formatFileSize(videoData.size);
@@ -523,26 +523,26 @@ class ModernVideoPlayerBrowser {
             `;
         }
     }
-    
+
     formatTime(seconds) {
         if (!seconds || isNaN(seconds)) return '0:00';
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
         const secs = Math.floor(seconds % 60);
-        
+
         if (hours > 0) {
             return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         } else {
             return `${minutes}:${secs.toString().padStart(2, '0')}`;
         }
     }
-    
+
     togglePlayPause() {
         if (!this.video || !this.videoState.isInitialized) {
             this.showStatusMessage('Video not ready', 'warning');
             return;
         }
-        
+
         if (this.videoState.isPlaying) {
             this.video.pause();
         } else {
@@ -552,13 +552,13 @@ class ModernVideoPlayerBrowser {
             });
         }
     }
-    
+
     updateProgress() {
         if (this.video.duration && this.currentVideo) {
             this.saveProgress(this.currentVideo.path, this.video.currentTime);
         }
     }
-    
+
     toggleFullscreen() {
         if (!this.isFullscreen) {
             if (this.video.requestFullscreen) {
@@ -575,28 +575,28 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     handleFullscreenChange() {
         this.isFullscreen = !!document.fullscreenElement;
     }
-    
+
     pauseVideo() {
         if (this.video && !this.video.paused) {
             this.video.pause();
         }
     }
-    
+
     closeVideo() {
         this.videoPlayerModal.hide();
         this.video.pause();
         this.video.currentTime = 0;
         this.currentVideo = null;
     }
-    
+
     onVideoEnded() {
         this.playNextInPlaylist();
     }
-    
+
     playNextInPlaylist() {
         if (this.currentPlaylist && this.currentPlaylist.videos.length > 0) {
             this.currentPlaylistIndex++;
@@ -611,14 +611,14 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     goBack() {
         const pathParts = this.currentPath.split('/').filter(part => part !== '');
-        
+
         if (pathParts.length > 0) {
             pathParts.pop();
             const parentPath = pathParts.join('/');
-            
+
             if (parentPath !== this.currentPath) {
                 this.loadDirectory(parentPath);
             } else {
@@ -626,43 +626,43 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     updateBackButton(parentPath) {
         const canGoBack = this.currentPath && this.currentPath !== '';
-        
+
         if (this.backBtn) {
             this.backBtn.style.display = canGoBack ? 'inline-block' : 'none';
         }
-        
+
         if (this.currentPathDisplay) {
             this.currentPathDisplay.textContent = this.currentPath || 'Root';
         }
     }
-    
+
     toggleView(isGrid) {
         this.isGridView = isGrid;
         this.gridViewRadio.checked = isGrid;
         this.listViewRadio.checked = !isGrid;
         this.loadDirectory();
     }
-    
+
     switchTab(tabName) {
         console.log('Switching to tab:', tabName);
-        
+
         // Update tab buttons
         this.tabBtns.forEach(btn => {
             const isActive = btn.id === tabName + '-tab';
             btn.classList.toggle('active', isActive);
             btn.setAttribute('aria-selected', isActive);
         });
-        
+
         // Show/hide tab content
         this.tabPanes.forEach(pane => {
             const isTargetPane = pane.id === tabName + '-pane';
             pane.classList.toggle('show', isTargetPane);
             pane.classList.toggle('active', isTargetPane);
         });
-        
+
         // Load content for specific tabs
         if (tabName === 'playlists') {
             this.loadPlaylists();
@@ -670,25 +670,25 @@ class ModernVideoPlayerBrowser {
             this.loadFavorites();
         }
     }
-    
+
     async performSearch() {
         if (this.isLoading('search')) {
             console.log('Search already in progress, skipping...');
             return;
         }
-        
+
         const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
-        
+
         console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
-        
+
         return this.safeAsyncOperation(async () => {
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
-            
+
             const data = await response.json();
-            
+
             console.log('Search API response:', data);
-            
+
             if (response.ok) {
                 this.searchResults = data.results;
                 this.renderSearchResults();
@@ -699,41 +699,41 @@ class ModernVideoPlayerBrowser {
             }
         }, 'search');
     }
-    
+
     renderSearchResults() {
         console.log('Rendering search results:', this.searchResults.length, 'items');
         this.searchList.innerHTML = '';
-        
+
         if (this.searchResults.length === 0) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found</p></div></div>';
             return;
         }
-        
+
         // Filter out system/metadata files
         const filteredResults = this.searchResults.filter(item => {
-            return !item.name.startsWith('._') && 
-                   !item.name.startsWith('.DS_Store') && 
-                   !item.name.startsWith('Thumbs.db');
+            return !item.name.startsWith('._') &&
+                !item.name.startsWith('.DS_Store') &&
+                !item.name.startsWith('Thumbs.db');
         });
-        
+
         console.log('Filtered results:', filteredResults.length, 'items');
-        
+
         if (filteredResults.length === 0) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found (filtered out system files)</p></div></div>';
             return;
         }
-        
+
         filteredResults.forEach(item => {
             const col = document.createElement('div');
             col.className = 'col-12';
-            
+
             const div = document.createElement('div');
             div.className = 'search-item p-3 d-flex align-items-center';
-            
+
             const icon = this.getFileIcon(item);
             const size = this.formatFileSize(item.size);
             const date = this.formatDate(item.modified);
-            
+
             div.innerHTML = `
                 <div class="file-icon me-3">${icon}</div>
                 <div class="search-info flex-grow-1">
@@ -745,7 +745,7 @@ class ModernVideoPlayerBrowser {
                     </div>
                 </div>
             `;
-            
+
             div.addEventListener('click', () => {
                 if (item.isVideo) {
                     this.playVideo(item);
@@ -753,20 +753,20 @@ class ModernVideoPlayerBrowser {
                     this.loadDirectory(item.path);
                 }
             });
-            
+
             col.appendChild(div);
             this.searchList.appendChild(col);
             console.log('Added search result item:', item.name);
         });
-        
+
         console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
     }
-    
+
     async loadPlaylists() {
         try {
             const response = await fetch('/api/playlists');
             const data = await response.json();
-            
+
             if (response.ok) {
                 this.playlists = data.playlists || [];
                 this.renderPlaylists();
@@ -779,24 +779,24 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Failed to load playlists: ' + error.message, 'error');
         }
     }
-    
+
     renderPlaylists() {
         this.playlistList.innerHTML = '';
-        
+
         if (this.playlists.length === 0) {
             this.playlistList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-list fa-2x mb-2"></i><p>No playlists created yet</p></div></div>';
             return;
         }
-        
+
         this.playlists.forEach(playlist => {
             const col = document.createElement('div');
             col.className = 'col-12';
-            
+
             const div = document.createElement('div');
             div.className = 'playlist-item p-3 d-flex align-items-center';
             div.style.cursor = 'pointer';
             div.style.transition = 'background-color 0.2s ease';
-            
+
             div.innerHTML = `
                 <div class="playlist-info flex-grow-1">
                     <div class="playlist-name">${playlist.name}</div>
@@ -811,38 +811,38 @@ class ModernVideoPlayerBrowser {
                     </button>
                 </div>
             `;
-            
+
             // Add hover effect
             div.addEventListener('mouseenter', () => {
                 div.style.backgroundColor = '#374151';
             });
-            
+
             div.addEventListener('mouseleave', () => {
                 div.style.backgroundColor = '';
             });
-            
+
             // Add click handler to show playlist videos
             div.addEventListener('click', () => {
                 this.showPlaylistVideos(playlist);
             });
-            
+
             col.appendChild(div);
             this.playlistList.appendChild(col);
         });
     }
-    
+
     showPlaylistVideos(playlist) {
         // Store the current playlist for navigation
         this.currentPlaylist = playlist;
         this.currentPlaylistIndex = 0;
-        
+
         // Update the playlist list to show videos
         this.renderPlaylistVideos(playlist);
     }
-    
+
     renderPlaylistVideos(playlist) {
         this.playlistList.innerHTML = '';
-        
+
         // Add back button
         const backCol = document.createElement('div');
         backCol.className = 'col-12 mb-3';
@@ -852,7 +852,7 @@ class ModernVideoPlayerBrowser {
             </button>
         `;
         this.playlistList.appendChild(backCol);
-        
+
         // Add playlist header
         const headerCol = document.createElement('div');
         headerCol.className = 'col-12 mb-3';
@@ -873,7 +873,7 @@ class ModernVideoPlayerBrowser {
             <p class="text-muted mb-0">${playlist.videos.length} videos in this playlist</p>
         `;
         this.playlistList.appendChild(headerCol);
-        
+
         if (playlist.videos.length === 0) {
             const emptyCol = document.createElement('div');
             emptyCol.className = 'col-12';
@@ -886,17 +886,17 @@ class ModernVideoPlayerBrowser {
             this.playlistList.appendChild(emptyCol);
             return;
         }
-        
+
         // Render videos
         playlist.videos.forEach((video, index) => {
             const col = document.createElement('div');
             col.className = 'col-12 col-md-6 col-lg-4 mb-3';
-            
+
             const div = document.createElement('div');
             div.className = 'video-item p-3 bg-dark border border-secondary rounded';
             div.style.cursor = 'pointer';
             div.style.transition = 'all 0.2s ease';
-            
+
             div.innerHTML = `
                 <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
                     <div class="spinner-border text-light" role="status">
@@ -913,50 +913,50 @@ class ModernVideoPlayerBrowser {
                     <small class="text-muted">${this.formatFileSize(video.size)}</small>
                 </div>
             `;
-            
+
             // Add hover effect
             div.addEventListener('mouseenter', () => {
                 div.style.backgroundColor = '#374151';
                 div.style.transform = 'translateY(-2px)';
                 div.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
             });
-            
+
             div.addEventListener('mouseleave', () => {
                 div.style.backgroundColor = '';
                 div.style.transform = '';
                 div.style.boxShadow = '';
             });
-            
+
             // Add click handler to play video
             div.addEventListener('click', () => {
                 this.currentPlaylistIndex = index;
                 this.playVideo(video);
             });
-            
+
             // Load thumbnail for this video
             const thumbnailContainer = div.querySelector('.video-thumbnail');
             this.loadThumbnail(video, thumbnailContainer);
-            
+
             col.appendChild(div);
             this.playlistList.appendChild(col);
         });
     }
-    
+
     showPlaylistList() {
         // Reset to show playlist list
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
         this.renderPlaylists();
     }
-    
+
     async removeVideoFromPlaylist(playlistId, videoPath) {
         if (!confirm('Are you sure you want to remove this video from the playlist?')) {
             return;
         }
-        
+
         try {
             console.log('Removing video with path:', videoPath);
-            
+
             const response = await fetch(`/api/playlists/${playlistId}/remove-video`, {
                 method: 'POST',
                 headers: {
@@ -964,22 +964,22 @@ class ModernVideoPlayerBrowser {
                 },
                 body: JSON.stringify({ videoPath: videoPath })
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
-                
+
                 // Update the current playlist if we're viewing it
                 if (this.currentPlaylist && this.currentPlaylist.id === playlistId) {
                     this.currentPlaylist = data.playlist;
                     this.renderPlaylistVideos(this.currentPlaylist);
                 }
-                
+
                 // Update the playlists array
                 const playlistIndex = this.playlists.findIndex(p => p.id === playlistId);
                 if (playlistIndex !== -1) {
                     this.playlists[playlistIndex] = data.playlist;
                 }
-                
+
                 this.showStatusMessage('Video removed from playlist', 'success');
             } else {
                 const errorData = await response.json();
@@ -990,12 +990,12 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error removing video: ' + error.message, 'error');
         }
     }
-    
+
     async loadFavorites() {
         try {
             const response = await fetch('/api/favorites');
             const data = await response.json();
-            
+
             if (response.ok) {
                 this.favorites = data.favorites || [];
                 this.renderFavorites();
@@ -1004,22 +1004,22 @@ class ModernVideoPlayerBrowser {
             console.error('Failed to load favorites:', error);
         }
     }
-    
+
     renderFavorites() {
         this.favoritesList.innerHTML = '';
-        
+
         if (this.favorites.length === 0) {
             this.favoritesList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-heart fa-2x mb-2"></i><p>No favorites added yet</p></div></div>';
             return;
         }
-        
+
         this.favorites.forEach(favorite => {
             const col = document.createElement('div');
             col.className = 'col-12';
-            
+
             const div = document.createElement('div');
             div.className = 'favorite-item p-3 d-flex align-items-center';
-            
+
             div.innerHTML = `
                 <div class="file-icon me-3">🎬</div>
                 <div class="favorite-info flex-grow-1">
@@ -1035,72 +1035,72 @@ class ModernVideoPlayerBrowser {
                     </button>
                 </div>
             `;
-            
+
             col.appendChild(div);
             this.favoritesList.appendChild(col);
         });
     }
-    
+
     async addToPlaylist() {
         if (!this.currentVideo) return;
-        
+
         // Update modal title
         const modalTitle = document.getElementById('playlistModalLabel');
         if (modalTitle) {
             modalTitle.textContent = 'Add to Playlist';
         }
-        
+
         this.showPlaylistModal();
         this.playlistVideos.innerHTML = `
             <div class="alert alert-info">
                 <i class="fas fa-video me-2"></i>${this.currentVideo.name}
             </div>
         `;
-        
+
         // Load existing playlists
         await this.loadExistingPlaylists();
-        
+
         // Add tab switching event listeners
         this.setupPlaylistModalTabs();
     }
-    
+
     setupPlaylistModalTabs() {
         const existingTab = document.getElementById('existing-playlist-tab');
         const newTab = document.getElementById('new-playlist-tab');
-        
+
         if (existingTab && newTab) {
             // Remove existing listeners to avoid duplicates
             existingTab.replaceWith(existingTab.cloneNode(true));
             newTab.replaceWith(newTab.cloneNode(true));
-            
+
             // Get fresh references
             const freshExistingTab = document.getElementById('existing-playlist-tab');
             const freshNewTab = document.getElementById('new-playlist-tab');
-            
+
             freshExistingTab.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.switchToExistingPlaylistsTab();
             });
-            
+
             freshNewTab.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.switchToNewPlaylistTab();
             });
         }
     }
-    
+
     switchToExistingPlaylistsTab() {
         const existingTab = document.getElementById('existing-playlist-tab');
         const newTab = document.getElementById('new-playlist-tab');
         const existingPane = document.getElementById('existing-playlist-pane');
         const newPane = document.getElementById('new-playlist-pane');
-        
+
         if (existingTab && newTab && existingPane && newPane) {
             existingTab.classList.add('active');
             newTab.classList.remove('active');
             existingPane.classList.add('show', 'active');
             newPane.classList.remove('show', 'active');
-            
+
             // Don't reset selectedPlaylistId when switching to existing playlists tab
             // Only clear visual selection if no playlist is actually selected
             if (!this.selectedPlaylistId) {
@@ -1108,73 +1108,73 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     switchToNewPlaylistTab() {
         const existingTab = document.getElementById('existing-playlist-tab');
         const newTab = document.getElementById('new-playlist-tab');
         const existingPane = document.getElementById('existing-playlist-pane');
         const newPane = document.getElementById('new-playlist-pane');
-        
+
         if (existingTab && newTab && existingPane && newPane) {
             newTab.classList.add('active');
             existingTab.classList.remove('active');
             newPane.classList.add('show', 'active');
             existingPane.classList.remove('show', 'active');
-            
+
             // Reset selection when switching to new playlist tab
             this.selectedPlaylistId = null;
             this.clearPlaylistSelection();
         }
     }
-    
+
     showPlaylistModal() {
         this.playlistModal.show();
     }
-    
+
     showCreatePlaylistModal() {
         // Clear any previous state
         this.selectedPlaylistId = null;
         this.playlistName.value = '';
         this.playlistVideos.innerHTML = '';
-        
+
         // Update modal title
         const modalTitle = document.getElementById('playlistModalLabel');
         if (modalTitle) {
             modalTitle.textContent = 'Create New Playlist';
         }
-        
+
         // Switch to "Create New" tab
         this.switchToNewPlaylistTab();
-        
+
         // Show the modal
         this.playlistModal.show();
     }
-    
+
     async loadExistingPlaylists() {
         try {
             const response = await fetch('/api/playlists');
             const data = await response.json();
-            
+
             const existingPlaylistsList = document.getElementById('existing-playlists-list');
             const noPlaylistsMessage = document.getElementById('no-playlists-message');
-            
+
             // Ensure the existing playlists tab is active
             const existingTab = document.getElementById('existing-playlist-tab');
             const newTab = document.getElementById('new-playlist-tab');
             const existingPane = document.getElementById('existing-playlist-pane');
             const newPane = document.getElementById('new-playlist-pane');
-            
+
             if (existingTab && newTab && existingPane && newPane) {
                 existingTab.classList.add('active');
                 newTab.classList.remove('active');
                 existingPane.classList.add('show', 'active');
                 newPane.classList.remove('show', 'active');
             }
-            
+
             if (data.playlists && data.playlists.length > 0) {
                 existingPlaylistsList.innerHTML = '';
                 noPlaylistsMessage.style.display = 'none';
-                
+
                 data.playlists.forEach(playlist => {
                     const playlistItem = document.createElement('div');
                     playlistItem.className = 'list-group-item list-group-item-action bg-dark text-light border-secondary playlist-item-hover';
@@ -1186,7 +1186,7 @@ class ModernVideoPlayerBrowser {
                         </div>
                         <small class="text-muted">Created: ${new Date(playlist.created).toLocaleDateString()}</small>
                     `;
-                    
+
                     playlistItem.addEventListener('click', () => {
                         console.log('Playlist clicked:', playlist.name);
                         // Remove active class and custom selection styling from all items
@@ -1199,7 +1199,7 @@ class ModernVideoPlayerBrowser {
                         console.log('Selected playlist ID:', this.selectedPlaylistId);
                         console.log('Playlist item classes:', playlistItem.className);
                     });
-                    
+
                     existingPlaylistsList.appendChild(playlistItem);
                 });
             } else {
@@ -1211,32 +1211,32 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error loading playlists', 'error');
         }
     }
-    
+
     hidePlaylistModal() {
         this.playlistModal.hide();
         this.playlistName.value = '';
         this.playlistVideos.innerHTML = '';
         this.selectedPlaylistId = null;
-        
+
         // Reset modal title
         const modalTitle = document.getElementById('playlistModalLabel');
         if (modalTitle) {
             modalTitle.textContent = 'Add to Playlist';
         }
-        
+
         // Reset tab to existing playlists
         this.resetPlaylistModalTabs();
-        
+
         // Clear selected playlist
         this.clearPlaylistSelection();
     }
-    
+
     resetPlaylistModalTabs() {
         const existingTab = document.getElementById('existing-playlist-tab');
         const newTab = document.getElementById('new-playlist-tab');
         const existingPane = document.getElementById('existing-playlist-pane');
         const newPane = document.getElementById('new-playlist-pane');
-        
+
         if (existingTab && newTab && existingPane && newPane) {
             existingTab.classList.add('active');
             newTab.classList.remove('active');
@@ -1244,7 +1244,7 @@ class ModernVideoPlayerBrowser {
             newPane.classList.remove('show', 'active');
         }
     }
-    
+
     clearPlaylistSelection() {
         const existingPlaylistsList = document.getElementById('existing-playlists-list');
         if (existingPlaylistsList) {
@@ -1253,7 +1253,7 @@ class ModernVideoPlayerBrowser {
             });
         }
     }
-    
+
     async savePlaylist() {
         // Check if we're adding to an existing playlist
         if (this.selectedPlaylistId) {
@@ -1265,23 +1265,23 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('Please select a playlist to add the video to', 'warning');
                 return;
             }
-            
+
             // Check if we're on the new playlist tab
             const newPlaylistPane = document.getElementById('new-playlist-pane');
             if (newPlaylistPane && newPlaylistPane.classList.contains('active')) {
                 // Create new playlist
                 const name = this.validatePlaylistName(this.playlistName.value);
                 if (!name) return;
-                
+
                 const videos = this.currentVideo ? [this.currentVideo] : [];
-                
+
                 try {
                     const response = await fetch('/api/playlists', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name, videos })
                     });
-                    
+
                     if (response.ok) {
                         this.hidePlaylistModal();
                         this.loadPlaylists();
@@ -1298,19 +1298,19 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     async addVideoToExistingPlaylist() {
         if (!this.selectedPlaylistId || !this.currentVideo) {
             return;
         }
-        
+
         try {
             const response = await fetch(`/api/playlists/${this.selectedPlaylistId}/add-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ video: this.currentVideo })
             });
-            
+
             if (response.ok) {
                 this.hidePlaylistModal();
                 this.loadPlaylists();
@@ -1323,10 +1323,10 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error adding video to playlist: ' + error.message, 'error');
         }
     }
-    
+
     async toggleFavorite() {
         if (!this.currentVideo) return;
-        
+
         try {
             const response = await fetch('/api/favorites', {
                 method: 'POST',
@@ -1336,7 +1336,7 @@ class ModernVideoPlayerBrowser {
                     name: this.currentVideo.name
                 })
             });
-            
+
             if (response.ok) {
                 this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Favorited';
                 this.favoriteBtn.classList.remove('btn-outline-danger');
@@ -1355,11 +1355,11 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error adding to favorites: ' + error.message, 'error');
         }
     }
-    
+
     async removeFavorite(id) {
         try {
             const response = await fetch(`/api/favorites/${id}`, { method: 'DELETE' });
-            
+
             if (response.ok) {
                 this.loadFavorites();
             } else {
@@ -1369,7 +1369,7 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error removing from favorites: ' + error.message, 'error');
         }
     }
-    
+
     async playPlaylist(playlistId) {
         try {
             const playlist = this.playlists.find(p => p.id === playlistId);
@@ -1377,25 +1377,25 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('Playlist is empty', 'warning');
                 return;
             }
-            
+
             const firstVideo = playlist.videos[0];
             this.playVideo(firstVideo);
-            
+
             this.currentPlaylist = playlist;
             this.currentPlaylistIndex = 0;
         } catch (error) {
             this.showStatusMessage('Error playing playlist: ' + error.message, 'error');
         }
     }
-    
+
     async deletePlaylist(playlistId) {
         if (!await this.showConfirmDialog('Are you sure you want to delete this playlist?')) {
             return;
         }
-        
+
         try {
             const response = await fetch(`/api/playlists/${playlistId}`, { method: 'DELETE' });
-            
+
             if (response.ok) {
                 this.loadPlaylists();
                 this.showStatusMessage('Playlist deleted successfully', 'success');
@@ -1407,7 +1407,7 @@ class ModernVideoPlayerBrowser {
             this.showStatusMessage('Error deleting playlist: ' + error.message, 'error');
         }
     }
-    
+
     playNextInPlaylist() {
         if (this.currentPlaylist && this.currentPlaylistIndex < this.currentPlaylist.videos.length - 1) {
             this.currentPlaylistIndex++;
@@ -1415,30 +1415,30 @@ class ModernVideoPlayerBrowser {
             this.playVideo(nextVideo);
         }
     }
-    
+
     // Progress tracking
     saveProgress(videoPath, currentTime) {
         this.playbackProgress[videoPath] = currentTime;
         localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
     }
-    
+
     loadProgressFromStorage() {
         const saved = localStorage.getItem('videoPlayerProgress');
         if (saved) {
             this.playbackProgress = JSON.parse(saved);
         }
     }
-    
+
     restoreProgress(videoPath) {
         if (this.playbackProgress[videoPath]) {
             this.video.currentTime = this.playbackProgress[videoPath];
         }
     }
-    
+
     // Keyboard shortcuts
     handleKeyboard(e) {
         if (this.videoPlayerModal._isShown) {
-            switch(e.key) {
+            switch (e.key) {
                 case 'Escape':
                     this.closeVideo();
                     break;
@@ -1461,7 +1461,7 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     showLoading() {
         this.fileList.innerHTML = `
             <div class="col-12">
@@ -1473,7 +1473,7 @@ class ModernVideoPlayerBrowser {
             </div>
         `;
     }
-    
+
     showError(message) {
         this.fileList.innerHTML = `
             <div class="col-12">
@@ -1483,7 +1483,7 @@ class ModernVideoPlayerBrowser {
             </div>
         `;
     }
-    
+
     showThumbnailError(container, itemName) {
         if (container) {
             container.innerHTML = `
@@ -1493,28 +1493,28 @@ class ModernVideoPlayerBrowser {
             `;
         }
     }
-    
+
     // Video player initialization
     initializeVideoPlayer() {
         if (!this.video || !this.videoSource) {
             console.error('Video elements not found during initialization');
             return;
         }
-        
+
         console.log('Initializing video player...');
-        
+
         this.videoState.isInitialized = true;
         this.videoState.volume = this.video.volume || 1.0;
         this.videoState.isMuted = this.video.muted || false;
         this.videoState.playbackRate = this.video.playbackRate || 1.0;
-        
+
         this.setupVideoEventListeners();
         console.log('Video player initialized successfully');
     }
-    
+
     setupVideoEventListeners() {
         if (!this.video) return;
-        
+
         this.video.addEventListener('loadstart', () => this.handleVideoLoadStart());
         this.video.addEventListener('loadedmetadata', () => this.handleVideoLoadedMetadata());
         this.video.addEventListener('loadeddata', () => this.handleVideoLoadedData());
@@ -1529,71 +1529,71 @@ class ModernVideoPlayerBrowser {
         this.video.addEventListener('seeking', () => this.handleVideoSeeking());
         this.video.addEventListener('seeked', () => this.handleVideoSeeked());
     }
-    
+
     handleVideoLoadStart() {
         console.log('Video load started');
         this.videoState.isSeeking = false;
     }
-    
+
     handleVideoLoadedMetadata() {
         console.log('Video metadata loaded, duration:', this.video.duration);
         this.videoState.duration = this.video.duration;
         this.updateVideoInfo();
     }
-    
+
     handleVideoLoadedData() {
         console.log('Video data loaded');
     }
-    
+
     handleVideoCanPlay() {
         console.log('Video can play');
         this.videoState.isInitialized = true;
     }
-    
+
     handleVideoPlay() {
         this.videoState.isPlaying = true;
     }
-    
+
     handleVideoPause() {
         this.videoState.isPlaying = false;
     }
-    
+
     handleVideoEnded() {
         this.videoState.isPlaying = false;
         this.onVideoEnded();
     }
-    
+
     handleVideoTimeUpdate() {
         if (!this.videoState.isSeeking) {
             this.videoState.currentTime = this.video.currentTime;
             this.updateProgress();
         }
     }
-    
+
     handleVideoVolumeChange() {
         this.videoState.volume = this.video.volume;
         this.videoState.isMuted = this.video.muted;
     }
-    
+
     handleVideoRateChange() {
         this.videoState.playbackRate = this.video.playbackRate;
     }
-    
+
     handleVideoError(e) {
         console.error('Video error:', e);
         this.showStatusMessage('Video playback error occurred', 'error');
         this.videoState.isPlaying = false;
     }
-    
+
     handleVideoSeeking() {
         this.videoState.isSeeking = true;
     }
-    
+
     handleVideoSeeked() {
         this.videoState.isSeeking = false;
         this.videoState.currentTime = this.video.currentTime;
     }
-    
+
     // Accessibility and UX methods
     setupAriaLiveRegion() {
         const liveRegion = document.createElement('div');
@@ -1604,29 +1604,29 @@ class ModernVideoPlayerBrowser {
         document.body.appendChild(liveRegion);
         this.liveRegion = liveRegion;
     }
-    
+
     announceToScreenReader(message) {
         if (this.liveRegion) {
             this.liveRegion.textContent = message;
         }
     }
-    
+
     handleFocusIn(e) {
         this.focusedElement = e.target;
         e.target.classList.add('focus-visible');
     }
-    
+
     handleFocusOut(e) {
         e.target.classList.remove('focus-visible');
     }
-    
+
     handleKeyboardUp(e) {
         if (e.key === 'Tab') {
             this.keyboardNavigation = true;
             document.body.classList.add('keyboard-navigation');
         }
     }
-    
+
     // Status messages
     showStatusMessage(message, type = 'info', duration = 3000) {
         const statusMessage = document.createElement('div');
@@ -1634,13 +1634,13 @@ class ModernVideoPlayerBrowser {
         statusMessage.textContent = message;
         statusMessage.setAttribute('role', 'status');
         statusMessage.setAttribute('aria-live', 'polite');
-        
+
         document.body.appendChild(statusMessage);
-        
+
         requestAnimationFrame(() => {
             statusMessage.classList.add('status-message--show');
         });
-        
+
         setTimeout(() => {
             statusMessage.classList.remove('status-message--show');
             setTimeout(() => {
@@ -1650,7 +1650,7 @@ class ModernVideoPlayerBrowser {
             }, 300);
         }, duration);
     }
-    
+
     // Confirmation dialog
     showConfirmDialog(message) {
         return new Promise((resolve) => {
@@ -1673,32 +1673,32 @@ class ModernVideoPlayerBrowser {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
             const bootstrapModal = new bootstrap.Modal(modal);
             bootstrapModal.show();
-            
+
             modal.querySelector('#confirm-yes').addEventListener('click', () => {
                 bootstrapModal.hide();
                 document.body.removeChild(modal);
                 resolve(true);
             });
-            
+
             modal.addEventListener('hidden.bs.modal', () => {
                 document.body.removeChild(modal);
                 resolve(false);
             });
         });
     }
-    
+
     // Input validation
     validateInput(input, type = 'string', options = {}) {
         if (input === null || input === undefined) {
             return { isValid: false, error: 'Input is required' };
         }
-        
+
         const trimmedInput = typeof input === 'string' ? input.trim() : input;
-        
+
         switch (type) {
             case 'string':
                 if (typeof trimmedInput !== 'string') {
@@ -1712,46 +1712,46 @@ class ModernVideoPlayerBrowser {
                 }
                 break;
         }
-        
+
         return { isValid: true, value: trimmedInput };
     }
-    
+
     validateSearchQuery(query) {
         const validation = this.validateInput(query, 'string', {
             minLength: 1,
             maxLength: 100
         });
-        
+
         if (!validation.isValid) {
             this.showStatusMessage(validation.error, 'warning');
             return null;
         }
-        
+
         return validation.value;
     }
-    
+
     validatePlaylistName(name) {
         const validation = this.validateInput(name, 'string', {
             minLength: 1,
             maxLength: 50
         });
-        
+
         if (!validation.isValid) {
             this.showStatusMessage(validation.error, 'warning');
             return null;
         }
-        
+
         return validation.value;
     }
-    
+
     // Async operation management
     async safeAsyncOperation(operation, context = '') {
         const operationId = `${context}_${Date.now()}_${Math.random()}`;
-        
+
         try {
             this.activeRequests.add(operationId);
             this.setLoadingState(context, true);
-            
+
             const result = await operation();
             return result;
         } catch (error) {
@@ -1763,7 +1763,7 @@ class ModernVideoPlayerBrowser {
             this.setLoadingState(context, false);
         }
     }
-    
+
     setLoadingState(context, isLoading) {
         if (isLoading) {
             this.loadingStates.set(context, true);
@@ -1771,17 +1771,17 @@ class ModernVideoPlayerBrowser {
             this.loadingStates.delete(context);
         }
     }
-    
+
     isLoading(context) {
         return this.loadingStates.has(context);
     }
-    
+
     handleError(error, context = '') {
         console.error(`Error in ${context}:`, error);
         this.showStatusMessage(`Error: ${error.message || 'Something went wrong'}`, 'error');
         this.announceToScreenReader(`Error: ${error.message || 'Something went wrong'}`);
     }
-    
+
     debounceSearch(query) {
         clearTimeout(this.debounceTimeout);
         this.debounceTimeout = setTimeout(() => {
@@ -1792,13 +1792,13 @@ class ModernVideoPlayerBrowser {
             }
         }, 300);
     }
-    
+
     clearSearch() {
         this.searchResults = [];
         this.switchTab('browser');
         this.loadDirectory();
     }
-    
+
     updateFilterDropdownText(text) {
         const filterDropdown = document.querySelector('[data-bs-toggle="dropdown"]');
         if (filterDropdown) {
@@ -1808,7 +1808,7 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     updateSortDropdownText(text) {
         const sortDropdowns = document.querySelectorAll('[data-bs-toggle="dropdown"]');
         if (sortDropdowns.length > 1) {
@@ -1819,30 +1819,30 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     // Utility methods - validateInput is defined above in the Input validation section
-    
+
     showLoading() {
         // Simple loading indicator
         const loadingEl = document.querySelector('.loading');
         if (loadingEl) loadingEl.style.display = 'block';
     }
-    
+
     hideLoading() {
         const loadingEl = document.querySelector('.loading');
         if (loadingEl) loadingEl.style.display = 'none';
     }
-    
+
     showError(message) {
         console.error(message);
         // You could implement a toast notification here
     }
-    
+
     showStatusMessage(message, type = 'info') {
         console.log(`${type.toUpperCase()}: ${message}`);
         // You could implement a toast notification here
     }
-    
+
     handleKeyboard(e) {
         // Basic keyboard navigation
         if (e.key === 'Escape') {
@@ -1851,19 +1851,19 @@ class ModernVideoPlayerBrowser {
             }
         }
     }
-    
+
     handleKeyboardUp(e) {
         // Handle key up events if needed
     }
-    
+
     handleFocusIn(e) {
         this.focusedElement = e.target;
     }
-    
+
     handleFocusOut(e) {
         // Handle focus out if needed
     }
-    
+
     setupAriaLiveRegion() {
         // Create ARIA live region for screen readers
         if (!document.getElementById('aria-live-region')) {
@@ -1875,14 +1875,14 @@ class ModernVideoPlayerBrowser {
             document.body.appendChild(liveRegion);
         }
     }
-    
+
     handleFullscreenChange() {
-        this.isFullscreen = !!(document.fullscreenElement || 
-                              document.webkitFullscreenElement || 
-                              document.mozFullScreenElement || 
-                              document.msFullscreenElement);
+        this.isFullscreen = !!(document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement);
     }
-    
+
     saveAllProgress() {
         // Save current progress to localStorage
         try {
@@ -1891,7 +1891,7 @@ class ModernVideoPlayerBrowser {
             console.warn('Failed to save progress:', error);
         }
     }
-    
+
     loadProgress() {
         // Load progress from localStorage
         try {
@@ -1903,29 +1903,29 @@ class ModernVideoPlayerBrowser {
             console.warn('Failed to load progress:', error);
         }
     }
-    
+
     cleanup() {
         this.cancelActiveRequests();
-        
+
         if (this.debounceTimeout) {
             clearTimeout(this.debounceTimeout);
             this.debounceTimeout = null;
         }
-        
+
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
         }
-        
+
         this.loadingStates.clear();
         this.saveAllProgress();
     }
-    
+
     cancelActiveRequests() {
         this.activeRequests.clear();
         this.loadingStates.clear();
     }
-    
+
     logout() {
         if (confirm('Are you sure you want to logout?')) {
             fetch('/api/logout', {
