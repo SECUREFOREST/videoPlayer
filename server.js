@@ -512,7 +512,7 @@ async function getVideoDuration(videoPath) {
     // Check cache first
     const relativePath = path.relative(VIDEOS_ROOT, videoPath);
     if (durationCache[relativePath]) {
-        console.log('📋 Using cached duration for:', path.basename(videoPath), ':', durationCache[relativePath], 'seconds');
+        // console.log('📋 Using cached duration for:', path.basename(videoPath), ':', durationCache[relativePath], 'seconds');
         return durationCache[relativePath];
     }
 
