@@ -384,12 +384,22 @@ function getThumbnailUrl(videoPath) {
 async function getVideoDuration(videoPath) {
     try {
         const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+        console.log('Getting duration for:', path.basename(videoPath));
+        console.log('Command:', durationCommand);
+        
         const durationOutput = await execAsync(durationCommand);
-        const duration = parseFloat(durationOutput.trim());
+        console.log('Raw output:', durationOutput);
+        
+        // execAsync returns { stdout, stderr }, we need stdout
+        const stdout = durationOutput.stdout || durationOutput;
+        const duration = parseFloat(stdout.trim());
+        console.log('Parsed duration:', duration);
         
         if (duration && duration > 0) {
+            console.log('Duration found:', duration, 'seconds');
             return duration;
         }
+        console.log('No valid duration found for', path.basename(videoPath));
         return null;
     } catch (error) {
         console.log('Could not get video duration for', path.basename(videoPath), ':', error.message);
