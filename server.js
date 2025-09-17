@@ -867,15 +867,15 @@ app.get('/api/search', async (req, res) => {
     try {
         const results = [];
 
-        function searchDirectory(dirPath) {
+        async function searchDirectory(dirPath) {
             try {
                 const items = fs.readdirSync(dirPath, { withFileTypes: true });
 
-                items.forEach(item => {
+                for (const item of items) {
                     const fullPath = path.join(dirPath, item.name);
 
                     if (item.isDirectory()) {
-                        searchDirectory(fullPath);
+                        await searchDirectory(fullPath);
                     } else {
                         const ext = path.extname(item.name).toLowerCase();
                         const stats = fs.statSync(fullPath);
@@ -911,13 +911,13 @@ app.get('/api/search', async (req, res) => {
                             }
                         }
                     }
-                });
+                }
             } catch (error) {
                 // Skip directories we can't read
             }
         }
 
-        searchDirectory(searchPath);
+        await searchDirectory(searchPath);
 
         res.json({
             results: results,
