@@ -369,7 +369,6 @@ class ModernVideoPlayerBrowser {
                 if (thumbnailContainer) {
                     thumbnailContainer.innerHTML = `
                         <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
-                            <i class="fas fa-video fa-2x"></i>
                         </div>
                     `;
                 }
@@ -715,7 +714,6 @@ class ModernVideoPlayerBrowser {
             } else if (item.isVideo) {
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
                     </div>
                 `;
             } else {
@@ -915,7 +913,6 @@ class ModernVideoPlayerBrowser {
             } else if (video.isVideo) {
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
                     </div>
                 `;
             } else {
@@ -1056,7 +1053,6 @@ class ModernVideoPlayerBrowser {
             } else if (favorite.isVideo) {
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
-                        <i class="fas fa-video fa-2x"></i>
                     </div>
                 `;
             } else {
