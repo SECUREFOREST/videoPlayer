@@ -827,40 +827,24 @@ class ModernVideoPlayerBrowser {
             div.className = 'file-grid-item h-100 position-relative';
             div.style.cursor = 'pointer';
 
-            // Get first few videos for thumbnail preview
-            const videoPreviews = playlist.videos.slice(0, 4);
+            // Show folder icon for playlists
             let thumbnailHtml = '';
-
-            if (videoPreviews.length > 0) {
-                // Show first video thumbnail as main preview
-                const firstVideo = videoPreviews[0];
-                if (firstVideo.isVideo && firstVideo.thumbnailUrl) {
-                    thumbnailHtml = `
-                        <img src="${firstVideo.thumbnailUrl}" 
-                             alt="Preview of ${playlist.name}" 
-                             class="img-fluid rounded" 
-                             style="width: 100%; height: 120px; object-fit: cover;"
-                             loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-list fa-2x\\"></i></div>'"
-                    `;
-                } else if (firstVideo.isVideo) {
-                    thumbnailHtml = `
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
-                            <i class="fas fa-video fa-2x"></i>
+            
+            if (playlist.videos.length > 0) {
+                // Playlist with videos - show folder icon with video count
+                thumbnailHtml = `
+                    <div class="d-flex align-items-center justify-content-center h-100 text-muted position-relative">
+                        <i class="fas fa-folder fa-3x"></i>
+                        <div class="position-absolute top-0 end-0 m-1">
+                            <span class="badge bg-primary">${playlist.videos.length}</span>
                         </div>
-                    `;
-                } else {
-                    thumbnailHtml = `
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                            <i class="fas fa-file fa-2x"></i>
-                        </div>
-                    `;
-                }
+                    </div>
+                `;
             } else {
-                // Empty playlist
+                // Empty playlist - show empty folder icon
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                        <i class="fas fa-list fa-2x"></i>
+                        <i class="fas fa-folder-open fa-3x"></i>
                     </div>
                 `;
             }
@@ -868,11 +852,6 @@ class ModernVideoPlayerBrowser {
             div.innerHTML = `
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; position: relative;">
                     ${thumbnailHtml}
-                    ${videoPreviews.length > 1 ? `
-                        <div class="position-absolute top-0 end-0 m-1">
-                            <span class="badge bg-primary">+${playlist.videos.length - 1}</span>
-                        </div>
-                    ` : ''}
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${playlist.name}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
