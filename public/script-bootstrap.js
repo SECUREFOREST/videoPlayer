@@ -351,7 +351,7 @@ class ModernVideoPlayerBrowser {
             <div class="file-icon">${icon}</div>
             <div class="file-name">${this.formatFileName(item.name, item.isVideo)}</div>
             <div class="file-details">
-                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo && item.duration ? this.formatTime(item.duration) : size)}
+                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo && item.duration ? `<strong>Duration:</strong> ${this.formatTime(item.duration)}` : size)}
             </div>
         `;
 
@@ -761,7 +761,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? this.formatTime(item.duration) : size}
+                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `<strong>Duration:</strong> ${this.formatTime(item.duration)}` : size}
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath}">
                     ${item.relativePath.length > 30 ? item.relativePath.substring(0, 30) + '...' : item.relativePath}
@@ -960,7 +960,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${video.name}">${this.formatFileName(video.name, video.isVideo)}</div>
                 <div class="file-details" style="font-size: 0.8rem; color: #9CA3AF;">
-                    ${video.isVideo && video.duration ? this.formatTime(video.duration) : this.formatFileSize(video.size)}
+                    ${video.isVideo && video.duration ? `<strong>Duration:</strong> ${this.formatTime(video.duration)}` : this.formatFileSize(video.size)}
                 </div>
                 <button class="btn btn-sm btn-danger position-absolute" 
                         style="top: 8px; right: 8px; z-index: 10;"
@@ -1093,7 +1093,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • ${this.formatTime(favorite.duration)}` : ''}
+                    ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • <strong>Duration:</strong> ${this.formatTime(favorite.duration)}` : ''}
                 </div>
                 <div class="favorite-actions d-flex gap-1">
                     <button class="btn btn-sm btn-outline-primary flex-fill" onclick="app.playVideo({path: '${favorite.path}', name: '${favorite.name}', isVideo: ${favorite.isVideo || false}})">
