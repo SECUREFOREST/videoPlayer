@@ -233,6 +233,7 @@ class ModernVideoPlayerBrowser {
     renderFileList(items, parentPath) {
         this.fileList.innerHTML = '';
         
+        
         // Only show parent directory option if we're not at the root level
         if (parentPath && parentPath !== this.currentPath && parentPath !== '') {
             const parentItem = this.createFileItem({
@@ -253,6 +254,9 @@ class ModernVideoPlayerBrowser {
         } else {
             this.renderListView(items);
         }
+        
+        // Start background thumbnail generation for all videos
+        this.preloadThumbnails(items);
     }
     
     renderListView(items) {
@@ -280,8 +284,32 @@ class ModernVideoPlayerBrowser {
         const size = this.formatFileSize(item.size);
         const date = this.formatDate(item.modified);
         
+        // Create thumbnail container for videos
+        let thumbnailHtml = '';
+        if (item.isVideo) {
+            if (item.thumbnailUrl) {
+                // Thumbnail is already available
+                thumbnailHtml = `
+                    <div class="file-thumbnail me-3 position-relative" style="width: 80px; height: 60px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <img src="${item.thumbnailUrl}" alt="${item.name}" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                `;
+            } else {
+                // Thumbnail is being generated
+                thumbnailHtml = `
+                    <div class="file-thumbnail me-3 position-relative" style="width: 80px; height: 60px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <div class="spinner-border text-light" role="status" style="width: 1.5rem; height: 1.5rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            thumbnailHtml = `<div class="file-icon me-3">${icon}</div>`;
+        }
+        
         div.innerHTML = `
-            <div class="file-icon me-3">${icon}</div>
+            ${thumbnailHtml}
             <div class="file-info flex-grow-1">
                 <div class="file-name">${item.name}</div>
                 <div class="file-details d-flex gap-3">
@@ -303,6 +331,8 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('This file type is not supported. Only video files can be played.', 'warning');
             }
         });
+        
+        // No need to poll since thumbnails are generated on server startup
         
         col.appendChild(div);
         return col;
@@ -327,7 +357,25 @@ class ModernVideoPlayerBrowser {
         `;
         
         if (item.isVideo) {
-            this.loadThumbnail(item, div);
+            if (item.thumbnailUrl) {
+                // Thumbnail is already available
+                const thumbnailContainer = div.querySelector('.file-icon');
+                if (thumbnailContainer) {
+                    thumbnailContainer.innerHTML = `
+                        <img src="${item.thumbnailUrl}" alt="${item.name}" class="img-fluid rounded" style="width: 100%; height: 120px; object-fit: cover;">
+                    `;
+                }
+            } else {
+                // Thumbnail not available (should be generated on server startup)
+                const thumbnailContainer = div.querySelector('.file-icon');
+                if (thumbnailContainer) {
+                    thumbnailContainer.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                            <i class="fas fa-video fa-2x"></i>
+                        </div>
+                    `;
+                }
+            }
         }
         
         div.addEventListener('click', () => {
@@ -344,80 +392,13 @@ class ModernVideoPlayerBrowser {
         return col;
     }
     
-    async loadThumbnail(item, container) {
-        if (!item || !container || !item.path) {
-            console.warn('Invalid parameters for thumbnail loading');
-            return;
-        }
-        
-        try {
-            console.log('Loading thumbnail for:', item.name, 'Path:', item.path);
-            const response = await fetch(`/api/thumbnail?path=${encodeURIComponent(item.path)}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Thumbnail API response:', data);
-            
-            if (data.thumbnailUrl) {
-                const img = document.createElement('img');
-                img.src = data.thumbnailUrl;
-                img.className = 'img-fluid rounded';
-                img.alt = item.name;
-                img.style.width = '100%';
-                img.style.height = '120px';
-                img.style.objectFit = 'cover';
-                img.onload = () => {
-                    console.log('Thumbnail loaded successfully:', data.thumbnailUrl);
-                    // Remove the spinner
-                    const spinner = container.querySelector('.spinner-border');
-                    if (spinner) {
-                        spinner.remove();
-                    }
-                };
-                img.onerror = (e) => {
-                    console.warn('Thumbnail failed to load:', data.thumbnailUrl, e);
-                    // Remove the spinner and show a placeholder
-                    const spinner = container.querySelector('.spinner-border');
-                    if (spinner) {
-                        spinner.remove();
-                    }
-                    container.innerHTML = `
-                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                            <i class="fas fa-video fa-2x"></i>
-                        </div>
-                    `;
-                };
-                container.insertBefore(img, container.firstChild);
-            } else {
-                console.log('No thumbnail URL returned for:', item.name);
-                // Remove the spinner and show a placeholder
-                const spinner = container.querySelector('.spinner-border');
-                if (spinner) {
-                    spinner.remove();
-                }
-                container.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                        <i class="fas fa-video fa-2x"></i>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.warn('Thumbnail generation failed for', item.name, ':', error.message);
-            // Remove the spinner and show a placeholder
-            const spinner = container.querySelector('.spinner-border');
-            if (spinner) {
-                spinner.remove();
-            }
-            container.innerHTML = `
-                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                    <i class="fas fa-video fa-2x"></i>
-                </div>
-            `;
-        }
+    
+    preloadThumbnails(items) {
+        // Thumbnails are now generated on server startup, so no client-side processing needed
+        const videoItems = items.filter(item => item.isVideo);
+        console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
     }
+    
     
     getFileIcon(item) {
         if (item.isDirectory) {

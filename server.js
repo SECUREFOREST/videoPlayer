@@ -342,6 +342,168 @@ function getVideoMimeType(extension) {
     return mimeTypes[extension.toLowerCase()] || 'video/mp4';
 }
 
+// Helper function to get thumbnail URL (only returns existing thumbnails)
+function getThumbnailUrl(videoPath) {
+    try {
+        const ext = path.extname(videoPath).toLowerCase();
+        if (!isVideoFile(ext)) {
+            return null;
+        }
+
+        const videoName = path.basename(videoPath, ext);
+        const cleanVideoName = videoName.replace(/['"]/g, '');
+        const thumbnailPath = path.join(__dirname, 'thumbnails', `${cleanVideoName}_thumb.jpg`);
+
+        // Check if thumbnail exists
+        if (fs.existsSync(thumbnailPath)) {
+            const thumbnailFilename = path.basename(thumbnailPath);
+            return `/thumbnails/${encodeURIComponent(thumbnailFilename)}`;
+        }
+
+        // Thumbnail doesn't exist (should have been generated on startup)
+        return null;
+    } catch (error) {
+        console.error('Error getting thumbnail URL:', error);
+        return null;
+    }
+}
+
+// Async thumbnail generation function
+async function generateThumbnailAsync(videoPath, thumbnailPath) {
+    try {
+        // Get video duration to calculate middle timestamp
+        let middleTimestamp = '00:00:05'; // fallback
+        try {
+            const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+            const durationOutput = await execAsync(durationCommand);
+            const duration = parseFloat(durationOutput.trim());
+            
+            if (duration && duration > 0) {
+                // Calculate middle timestamp in seconds
+                const middleSeconds = Math.floor(duration / 2);
+                const hours = Math.floor(middleSeconds / 3600);
+                const minutes = Math.floor((middleSeconds % 3600) / 60);
+                const seconds = middleSeconds % 60;
+                middleTimestamp = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                console.log(`Generating thumbnail for ${path.basename(videoPath)} at: ${middleTimestamp}`);
+            }
+        } catch (durationError) {
+            console.log('Could not get video duration, using fallback timestamp:', middleTimestamp);
+        }
+
+        // Generate thumbnail using ffmpeg from middle of video
+        const command = `ffmpeg -i "${videoPath}" -ss ${middleTimestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+        
+        await execAsync(command);
+        console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)}`);
+        return true;
+    } catch (ffmpegError) {
+        console.error(`Failed to generate thumbnail for ${path.basename(videoPath)}:`, ffmpegError.message);
+        return false;
+    }
+}
+
+// Function to scan all directories and find videos without thumbnails
+function findVideosWithoutThumbnails(dirPath, videoList = []) {
+    try {
+        const items = fs.readdirSync(dirPath, { withFileTypes: true });
+        
+        items.forEach(item => {
+            const fullPath = path.join(dirPath, item.name);
+            
+            if (item.isDirectory()) {
+                // Recursively scan subdirectories
+                findVideosWithoutThumbnails(fullPath, videoList);
+            } else if (item.isFile()) {
+                const ext = path.extname(item.name).toLowerCase();
+                if (isVideoFile(ext)) {
+                    // Check if thumbnail exists
+                    const videoName = path.basename(fullPath, ext);
+                    const cleanVideoName = videoName.replace(/['"]/g, '');
+                    const thumbnailPath = path.join(__dirname, 'thumbnails', `${cleanVideoName}_thumb.jpg`);
+                    
+                    if (!fs.existsSync(thumbnailPath)) {
+                        videoList.push({
+                            videoPath: fullPath,
+                            thumbnailPath: thumbnailPath,
+                            relativePath: path.relative(VIDEOS_ROOT, fullPath)
+                        });
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.warn(`Could not scan directory ${dirPath}:`, error.message);
+    }
+    
+    return videoList;
+}
+
+// Function to generate all missing thumbnails on startup
+async function generateAllMissingThumbnails() {
+    console.log('🔍 Scanning for videos without thumbnails...');
+    
+    // Create thumbnails directory if it doesn't exist
+    const thumbnailsDir = path.join(__dirname, 'thumbnails');
+    if (!fs.existsSync(thumbnailsDir)) {
+        fs.mkdirSync(thumbnailsDir, { recursive: true });
+        console.log('📁 Created thumbnails directory');
+    }
+    
+    // Find all videos without thumbnails
+    const videosWithoutThumbnails = findVideosWithoutThumbnails(VIDEOS_ROOT);
+    
+    if (videosWithoutThumbnails.length === 0) {
+        console.log('✅ All videos already have thumbnails!');
+        return;
+    }
+    
+    console.log(`📹 Found ${videosWithoutThumbnails.length} videos without thumbnails`);
+    console.log('🚀 Starting thumbnail generation...');
+    
+    // Process thumbnails in batches to avoid overwhelming the system
+    const batchSize = 3;
+    let processed = 0;
+    let successful = 0;
+    let failed = 0;
+    
+    for (let i = 0; i < videosWithoutThumbnails.length; i += batchSize) {
+        const batch = videosWithoutThumbnails.slice(i, i + batchSize);
+        
+        // Process batch concurrently
+        const batchPromises = batch.map(async (video) => {
+            try {
+                const success = await generateThumbnailAsync(video.videoPath, video.thumbnailPath);
+                processed++;
+                if (success) {
+                    successful++;
+                    console.log(`✅ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath}`);
+                } else {
+                    failed++;
+                    console.log(`❌ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath}`);
+                }
+            } catch (error) {
+                processed++;
+                failed++;
+                console.log(`❌ [${processed}/${videosWithoutThumbnails.length}] ${video.relativePath} - ${error.message}`);
+            }
+        });
+        
+        // Wait for current batch to complete before starting next batch
+        await Promise.all(batchPromises);
+        
+        // Small delay between batches to prevent system overload
+        if (i + batchSize < videosWithoutThumbnails.length) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+    
+    console.log(`🎉 Thumbnail generation complete!`);
+    console.log(`   📊 Total processed: ${processed}`);
+    console.log(`   ✅ Successful: ${successful}`);
+    console.log(`   ❌ Failed: ${failed}`);
+}
+
 // API endpoint to get directory contents
 app.get('/api/browse', (req, res) => {
     const relativePath = req.query.path || '';
@@ -377,7 +539,7 @@ app.get('/api/browse', (req, res) => {
                 }
             }
             
-            return {
+            const result = {
                 name: item.name,
                 path: path.relative(VIDEOS_ROOT, fullPath), // <-- RELATIVE path
                 isDirectory: item.isDirectory(),
@@ -389,6 +551,13 @@ app.get('/api/browse', (req, res) => {
                 mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null,
                 fileCount: fileCount
             };
+
+            // Add thumbnail URL for video files
+            if (isVideoFile(extension)) {
+                result.thumbnailUrl = getThumbnailUrl(fullPath);
+            }
+
+            return result;
         });
 
         // Apply search filter
@@ -495,17 +664,15 @@ app.get('/api/video-info', (req, res) => {
     }
 });
 
-// API endpoint to generate video thumbnail
-app.get('/api/thumbnail', async (req, res) => {
+// API endpoint to check thumbnail status
+app.get('/api/thumbnail-status', (req, res) => {
     const relativePath = req.query.path;
-    const timestamp = req.query.timestamp || '00:00:05';
 
     if (!relativePath) {
         return res.status(400).json({ error: 'Video path is required' });
     }
 
     try {
-        // Use secure path resolution
         const videoPath = resolveSafePath(relativePath);
         const ext = path.extname(videoPath).toLowerCase();
         
@@ -513,62 +680,28 @@ app.get('/api/thumbnail', async (req, res) => {
             return res.status(400).json({ error: 'File is not a supported video format' });
         }
 
-        // Create thumbnails directory if it doesn't exist
-        const thumbnailsDir = path.join(__dirname, 'thumbnails');
-        if (!fs.existsSync(thumbnailsDir)) {
-            fs.mkdirSync(thumbnailsDir, { recursive: true });
-        }
-
         const videoName = path.basename(videoPath, ext);
-        // Remove any quotes that might be in the filename
         const cleanVideoName = videoName.replace(/['"]/g, '');
-        const thumbnailPath = path.join(thumbnailsDir, `${cleanVideoName}_thumb.jpg`);
+        const thumbnailPath = path.join(__dirname, 'thumbnails', `${cleanVideoName}_thumb.jpg`);
 
-        // Check if thumbnail already exists
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailFilename = path.basename(thumbnailPath);
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(thumbnailFilename)}`;
-            console.log('Thumbnail exists - Filename:', thumbnailFilename);
-            console.log('Thumbnail exists - URL:', thumbnailUrl);
-            return res.json({ thumbnailUrl: thumbnailUrl });
-        }
-
-        // Get video duration to calculate middle timestamp
-        let middleTimestamp = timestamp; // fallback to provided timestamp
-        try {
-            const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
-            const durationOutput = await execAsync(durationCommand);
-            const duration = parseFloat(durationOutput.trim());
-            
-            if (duration && duration > 0) {
-                // Calculate middle timestamp in seconds
-                const middleSeconds = Math.floor(duration / 2);
-                const hours = Math.floor(middleSeconds / 3600);
-                const minutes = Math.floor((middleSeconds % 3600) / 60);
-                const seconds = middleSeconds % 60;
-                middleTimestamp = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                console.log(`Video duration: ${duration}s, generating thumbnail at: ${middleTimestamp}`);
-            }
-        } catch (durationError) {
-            console.log('Could not get video duration, using fallback timestamp:', timestamp);
-        }
-
-        // Generate thumbnail using ffmpeg from middle of video
-        const command = `ffmpeg -i "${videoPath}" -ss ${middleTimestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
-
-        try {
-            await execAsync(command);
-            const thumbnailFilename = path.basename(thumbnailPath);
-            res.json({ thumbnailUrl: `/thumbnails/${encodeURIComponent(thumbnailFilename)}` });
-        } catch (ffmpegError) {
-            // If ffmpeg fails, return a default thumbnail
-            res.json({ thumbnailUrl: null });
+            return res.json({ 
+                thumbnailUrl: thumbnailUrl,
+                exists: true 
+            });
+        } else {
+            return res.json({ 
+                thumbnailUrl: null,
+                exists: false 
+            });
         }
     } catch (error) {
         if (error.message.includes('Access denied')) {
             return res.status(403).json({ error: 'Access denied' });
         }
-        res.status(500).json({ error: 'Unable to generate thumbnail' });
+        res.status(500).json({ error: 'Unable to check thumbnail status' });
     }
 });
 
@@ -1007,7 +1140,18 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Browse files and watch MP4 videos!`);
+// Start the server
+app.listen(PORT, async () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📁 Video directory: ${VIDEOS_ROOT}`);
+    console.log(`🎬 Browse files and watch videos!`);
+    
+    // Generate missing thumbnails on startup
+    try {
+        await generateAllMissingThumbnails();
+        console.log(`✨ Server ready! All thumbnails are up to date.`);
+    } catch (error) {
+        console.error('❌ Error during thumbnail generation:', error);
+        console.log(`⚠️  Server is running but some thumbnails may be missing.`);
+    }
 });
