@@ -678,14 +678,14 @@ class ModernVideoPlayerBrowser {
         const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
 
-        console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
+        // console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
 
         return this.safeAsyncOperation(async () => {
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
 
             const data = await response.json();
 
-            console.log('Search API response:', data);
+            // console.log('Search API response:', data);
 
             if (response.ok) {
                 this.searchResults = data.results;
@@ -699,7 +699,7 @@ class ModernVideoPlayerBrowser {
     }
 
     renderSearchResults() {
-        console.log('Rendering search results:', this.searchResults.length, 'items');
+        // console.log('Rendering search results:', this.searchResults.length, 'items');
         this.searchList.innerHTML = '';
 
         if (this.searchResults.length === 0) {
@@ -714,7 +714,7 @@ class ModernVideoPlayerBrowser {
                 !item.name.startsWith('Thumbs.db');
         });
 
-        console.log('Filtered results:', filteredResults.length, 'items');
+        // console.log('Filtered results:', filteredResults.length, 'items');
 
         if (filteredResults.length === 0) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found (filtered out system files)</p></div></div>';
@@ -1655,22 +1655,22 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoLoadStart() {
-        console.log('Video load started');
+        // console.log('Video load started');
         this.videoState.isSeeking = false;
     }
 
     handleVideoLoadedMetadata() {
-        console.log('Video metadata loaded, duration:', this.video.duration);
+        // console.log('Video metadata loaded, duration:', this.video.duration);
         this.videoState.duration = this.video.duration;
         this.updateVideoInfo();
     }
 
     handleVideoLoadedData() {
-        console.log('Video data loaded');
+        // console.log('Video data loaded');
     }
 
     handleVideoCanPlay() {
-        console.log('Video can play');
+        // console.log('Video can play');
         this.videoState.isInitialized = true;
     }
 
