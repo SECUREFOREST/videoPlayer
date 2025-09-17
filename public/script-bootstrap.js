@@ -506,21 +506,7 @@ class ModernVideoPlayerBrowser {
 
     updateVideoInfo(videoData = null) {
         if (videoData) {
-            const size = this.formatFileSize(videoData.size);
-            const date = this.formatDate(videoData.modified);
-        //    this.videoInfo.innerHTML = `
-        //        <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo)}<br>
-        //        <strong>Size:</strong> ${size}<br>
-        //        <strong>Modified:</strong> ${date}<br>
-        //        <strong>Format:</strong> ${videoData.extension.toUpperCase()}
-        //    `;
-        } else if (this.currentVideo && this.video) {
-            // Fallback for when called without videoData 
-            //this.videoInfo.innerHTML = `
-            //    <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}<br>
-            //    <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
-            //    <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
-            //`;
+            this.videoInfo.innerHTML = `<strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>`;
         }
     }
 
@@ -829,7 +815,7 @@ class ModernVideoPlayerBrowser {
 
             // Use same styling as folders in browser
             const icon = '📁'; // Same as getFileIcon for directories
-            
+
             div.innerHTML = `
                 <div class="file-icon">${icon}</div>
                 <div class="file-name">${playlist.name}</div>
