@@ -827,37 +827,16 @@ class ModernVideoPlayerBrowser {
             div.className = 'file-grid-item h-100 position-relative';
             div.style.cursor = 'pointer';
 
-            // Show folder icon for playlists
-            let thumbnailHtml = '';
+            // Use same styling as folders in browser
+            const icon = '📁'; // Same as getFileIcon for directories
             
-            if (playlist.videos.length > 0) {
-                // Playlist with videos - show folder icon with video count
-                thumbnailHtml = `
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted position-relative">
-                        <i class="fas fa-folder fa-3x"></i>
-                        <div class="position-absolute top-0 end-0 m-1">
-                            <span class="badge bg-primary">${playlist.videos.length}</span>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Empty playlist - show empty folder icon
-                thumbnailHtml = `
-                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                        <i class="fas fa-folder-open fa-3x"></i>
-                    </div>
-                `;
-            }
-
             div.innerHTML = `
-                <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; position: relative;">
-                    ${thumbnailHtml}
+                <div class="file-icon">${icon}</div>
+                <div class="file-name">${playlist.name}</div>
+                <div class="file-details">
+                    Playlist${playlist.videos.length !== null ? ` (${playlist.videos.length} items)` : ''}
                 </div>
-                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${playlist.name}</div>
-                <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${playlist.videos.length} video${playlist.videos.length !== 1 ? 's' : ''}
-                </div>
-                <div class="playlist-actions d-flex gap-1">
+                <div class="playlist-actions d-flex gap-1 mt-2">
                     <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.stopPropagation(); app.playPlaylist('${playlist.id}')">
                         <i class="fas fa-play me-1"></i>Play
                     </button>
