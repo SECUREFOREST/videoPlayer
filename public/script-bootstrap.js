@@ -508,12 +508,12 @@ class ModernVideoPlayerBrowser {
         if (videoData) {
             const size = this.formatFileSize(videoData.size);
             const date = this.formatDate(videoData.modified);
-            this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo)}<br>
-                <strong>Size:</strong> ${size}<br>
-                <strong>Modified:</strong> ${date}<br>
-                <strong>Format:</strong> ${videoData.extension.toUpperCase()}
-            `;
+        //    this.videoInfo.innerHTML = `
+        //        <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo)}<br>
+        //        <strong>Size:</strong> ${size}<br>
+        //        <strong>Modified:</strong> ${date}<br>
+        //        <strong>Format:</strong> ${videoData.extension.toUpperCase()}
+        //    `;
         } else if (this.currentVideo && this.video) {
             // Fallback for when called without videoData 
             //this.videoInfo.innerHTML = `
