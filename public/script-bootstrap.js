@@ -351,7 +351,7 @@ class ModernVideoPlayerBrowser {
             <div class="file-icon">${icon}</div>
             <div class="file-name">${this.formatFileName(item.name, item.isVideo)}</div>
             <div class="file-details">
-                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo && item.duration ? `<strong>Duration:</strong> ${this.formatTime(item.duration)}` : size)}
+                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size)}
             </div>
         `;
 
@@ -485,6 +485,9 @@ class ModernVideoPlayerBrowser {
 
                 // Update video info
                 this.updateVideoInfo(videoData);
+
+                // Update favorite button state
+                this.updateFavoriteButtonState();
 
                 // Show modal
                 this.videoPlayerModal.show();
@@ -761,7 +764,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `<strong>Duration:</strong> ${this.formatTime(item.duration)}` : size}
+                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size}
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath}">
                     ${item.relativePath.length > 30 ? item.relativePath.substring(0, 30) + '...' : item.relativePath}
@@ -960,7 +963,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${video.name}">${this.formatFileName(video.name, video.isVideo)}</div>
                 <div class="file-details" style="font-size: 0.8rem; color: #9CA3AF;">
-                    ${video.isVideo && video.duration ? `<strong>Duration:</strong> ${this.formatTime(video.duration)}` : this.formatFileSize(video.size)}
+                    ${video.isVideo && video.duration ? `Duration: ${this.formatTime(video.duration)}` : this.formatFileSize(video.size)}
                 </div>
                 <button class="btn btn-sm btn-danger position-absolute" 
                         style="top: 8px; right: 8px; z-index: 10;"
@@ -1093,7 +1096,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • <strong>Duration:</strong> ${this.formatTime(favorite.duration)}` : ''}
+                    ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • Duration: ${this.formatTime(favorite.duration)}` : ''}
                 </div>
                 <div class="favorite-actions d-flex gap-1">
                     <button class="btn btn-sm btn-outline-primary flex-fill" onclick="app.playVideo({path: '${favorite.path}', name: '${favorite.name}', isVideo: ${favorite.isVideo || false}})">
@@ -1405,32 +1408,75 @@ class ModernVideoPlayerBrowser {
     async toggleFavorite() {
         if (!this.currentVideo) return;
 
-        try {
-            const response = await fetch('/api/favorites', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    path: this.currentVideo.path,
-                    name: this.currentVideo.name
-                })
-            });
+        // Check if video is already favorited
+        const isFavorited = this.favorites.some(fav => fav.path === this.currentVideo.path);
 
-            if (response.ok) {
-                this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Favorited';
-                this.favoriteBtn.classList.remove('btn-outline-danger');
-                this.favoriteBtn.classList.add('btn-danger');
-                this.loadFavorites();
-                this.showStatusMessage('Added to favorites!', 'success');
+        try {
+            if (isFavorited) {
+                // Remove from favorites
+                const favorite = this.favorites.find(fav => fav.path === this.currentVideo.path);
+                if (favorite) {
+                    const response = await fetch(`/api/favorites/${favorite.id}`, { 
+                        method: 'DELETE' 
+                    });
+
+                    if (response.ok) {
+                        this.updateFavoriteButton(false);
+                        this.loadFavorites();
+                        this.showStatusMessage('Removed from favorites!', 'success');
+                    } else {
+                        this.showStatusMessage('Failed to remove from favorites', 'error');
+                    }
+                }
             } else {
-                const data = await response.json();
-                if (data.error === 'Already in favorites') {
-                    this.showStatusMessage('Already in favorites', 'info');
+                // Add to favorites
+                const response = await fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: this.currentVideo.path,
+                        name: this.currentVideo.name
+                    })
+                });
+
+                if (response.ok) {
+                    this.updateFavoriteButton(true);
+                    this.loadFavorites();
+                    this.showStatusMessage('Added to favorites!', 'success');
                 } else {
-                    this.showStatusMessage('Failed to add to favorites: ' + data.error, 'error');
+                    const data = await response.json();
+                    if (data.error === 'Already in favorites') {
+                        this.updateFavoriteButton(true);
+                        this.showStatusMessage('Already in favorites', 'info');
+                    } else {
+                        this.showStatusMessage('Failed to add to favorites: ' + data.error, 'error');
+                    }
                 }
             }
         } catch (error) {
-            this.showStatusMessage('Error adding to favorites: ' + error.message, 'error');
+            this.showStatusMessage('Error toggling favorite: ' + error.message, 'error');
+        }
+    }
+
+    updateFavoriteButtonState() {
+        if (!this.currentVideo) return;
+        
+        // Check if current video is favorited
+        const isFavorited = this.favorites.some(fav => fav.path === this.currentVideo.path);
+        this.updateFavoriteButton(isFavorited);
+    }
+
+    updateFavoriteButton(isFavorited) {
+        if (isFavorited) {
+            this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Favorited';
+            this.favoriteBtn.classList.remove('btn-outline-danger');
+            this.favoriteBtn.classList.add('btn-danger');
+            this.favoriteBtn.title = 'Remove from favorites';
+        } else {
+            this.favoriteBtn.innerHTML = '<i class="fas fa-heart me-1"></i>Add to Favorites';
+            this.favoriteBtn.classList.remove('btn-danger');
+            this.favoriteBtn.classList.add('btn-outline-danger');
+            this.favoriteBtn.title = 'Add to favorites';
         }
     }
 
