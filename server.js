@@ -347,25 +347,52 @@ function getThumbnailUrl(videoPath) {
     try {
         const ext = path.extname(videoPath).toLowerCase();
         if (!isVideoFile(ext)) {
+            console.log(`  Not a video file: ${ext}`);
             return null;
         }
 
-        const videoName = path.basename(videoPath, ext);
-        const cleanVideoName = videoName.replace(/['"]/g, '');
-        // Use relative path to avoid filename collisions
-        const relativePath = path.relative(VIDEOS_ROOT, videoPath);
+        // Handle both absolute and relative paths
+        let relativePath;
+        if (path.isAbsolute(videoPath)) {
+            // Absolute path - convert to relative
+            relativePath = path.relative(VIDEOS_ROOT, videoPath);
+        } else {
+            // Already relative path - use as is
+            relativePath = videoPath;
+        }
+
+        console.log(`  Relative path: ${relativePath}`);
+
         // Remove file extension before creating safe name
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
         const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
         const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
 
+        console.log(`  Safe thumbnail name: ${safeThumbnailName}`);
+        console.log(`  Thumbnail path: ${thumbnailPath}`);
+        console.log(`  Thumbnail exists: ${fs.existsSync(thumbnailPath)}`);
+
+        // Debug: List some existing thumbnails to see the pattern
+        if (!fs.existsSync(thumbnailPath)) {
+            try {
+                const thumbnailsDir = path.join(__dirname, 'thumbnails');
+                const existingThumbnails = fs.readdirSync(thumbnailsDir).filter(f => f.endsWith('_thumb.jpg')).slice(0, 5);
+                console.log(`  Sample existing thumbnails: ${existingThumbnails.join(', ')}`);
+            } catch (e) {
+                console.log(`  Could not list thumbnails directory: ${e.message}`);
+            }
+        }
+
         // Check if thumbnail exists
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailFilename = path.basename(thumbnailPath);
-            return `/thumbnails/${encodeURIComponent(thumbnailFilename)}`;
+            const url = `/thumbnails/${encodeURIComponent(thumbnailFilename)}`;
+            console.log(`  Returning URL: ${url}`);
+            return url;
         }
 
         // Thumbnail doesn't exist (should have been generated on startup)
+        console.log(`  Thumbnail not found`);
         return null;
     } catch (error) {
         console.error('Error getting thumbnail URL:', error);
@@ -918,7 +945,13 @@ app.get('/api/playlists', (req, res) => {
                             if (video.path) {
                                 const ext = path.extname(video.path).toLowerCase();
                                 if (isVideoFile(ext)) {
-                                    video.thumbnailUrl = getThumbnailUrl(video.path);
+                                    // Convert relative path to absolute path for thumbnail generation
+                                    const absolutePath = path.isAbsolute(video.path) ? video.path : path.join(VIDEOS_ROOT, video.path);
+                                    console.log(`Playlist video: ${video.name}`);
+                                    console.log(`  Original path: ${video.path}`);
+                                    console.log(`  Absolute path: ${absolutePath}`);
+                                    video.thumbnailUrl = getThumbnailUrl(absolutePath);
+                                    console.log(`  Thumbnail URL: ${video.thumbnailUrl}`);
                                     video.isVideo = true;
                                 } else {
                                     video.isVideo = false;
@@ -1226,7 +1259,13 @@ app.get('/api/favorites', (req, res) => {
                     if (favorite.path) {
                         const ext = path.extname(favorite.path).toLowerCase();
                         if (isVideoFile(ext)) {
-                            favorite.thumbnailUrl = getThumbnailUrl(favorite.path);
+                            // Convert relative path to absolute path for thumbnail generation
+                            const absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
+                            console.log(`Favorite video: ${favorite.name}`);
+                            console.log(`  Original path: ${favorite.path}`);
+                            console.log(`  Absolute path: ${absolutePath}`);
+                            favorite.thumbnailUrl = getThumbnailUrl(absolutePath);
+                            console.log(`  Thumbnail URL: ${favorite.thumbnailUrl}`);
                             favorite.isVideo = true;
                         } else {
                             favorite.isVideo = false;

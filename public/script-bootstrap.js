@@ -830,7 +830,7 @@ class ModernVideoPlayerBrowser {
             // Get first few videos for thumbnail preview
             const videoPreviews = playlist.videos.slice(0, 4);
             let thumbnailHtml = '';
-            
+
             if (videoPreviews.length > 0) {
                 // Show first video thumbnail as main preview
                 const firstVideo = videoPreviews[0];
