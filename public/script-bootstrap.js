@@ -11,6 +11,7 @@ class ModernVideoPlayerBrowser {
         this.playbackProgress = {};
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
+        this.currentPlaylistId = null; // Track which playlist the current video belongs to
         this.focusedElement = null;
         this.keyboardNavigation = true;
         this.selectedPlaylistId = null;
@@ -76,6 +77,7 @@ class ModernVideoPlayerBrowser {
         this.videoPlayerModal = new bootstrap.Modal(document.getElementById('videoPlayerModal'));
         this.playlistAddBtn = document.getElementById('playlist-add-btn');
         this.favoriteBtn = document.getElementById('favorite-btn');
+        this.removeFromPlaylistBtn = document.getElementById('remove-from-playlist-btn');
 
         // Add event listener for modal close
         if (this.videoPlayerModal) {
@@ -168,6 +170,7 @@ class ModernVideoPlayerBrowser {
         // Video controls
         if (this.playlistAddBtn) this.playlistAddBtn.addEventListener('click', () => this.addToPlaylist());
         if (this.favoriteBtn) this.favoriteBtn.addEventListener('click', () => this.toggleFavorite());
+        if (this.removeFromPlaylistBtn) this.removeFromPlaylistBtn.addEventListener('click', () => this.removeCurrentVideoFromPlaylist());
 
         // Playlist and favorites
         if (this.createPlaylistBtn) this.createPlaylistBtn.addEventListener('click', () => this.showCreatePlaylistModal());
@@ -479,6 +482,13 @@ class ModernVideoPlayerBrowser {
                 // Show modal
                 this.videoPlayerModal.show();
 
+                // Show/hide remove button based on whether video is from a playlist
+                if (this.currentPlaylistId) {
+                    this.removeFromPlaylistBtn.classList.remove('d-none');
+                } else {
+                    this.removeFromPlaylistBtn.classList.add('d-none');
+                }
+
                 // Restore progress if available
                 this.restoreProgress(item.path);
 
@@ -575,6 +585,7 @@ class ModernVideoPlayerBrowser {
         this.video.pause();
         this.video.currentTime = 0;
         this.currentVideo = null;
+        this.currentPlaylistId = null; // Reset playlist context
     }
 
     onVideoEnded() {
@@ -837,6 +848,7 @@ class ModernVideoPlayerBrowser {
         // Store the current playlist for navigation
         this.currentPlaylist = playlist;
         this.currentPlaylistIndex = 0;
+        this.currentPlaylistId = playlist.id;
 
         // Update the playlist list to show videos
         this.renderPlaylistVideos(playlist);
@@ -1009,6 +1021,50 @@ class ModernVideoPlayerBrowser {
                     this.playlists[playlistIndex] = data.playlist;
                 }
 
+                this.showStatusMessage('Video removed from playlist', 'success');
+            } else {
+                const errorData = await response.json();
+                this.showStatusMessage('Failed to remove video: ' + errorData.error, 'error');
+            }
+        } catch (error) {
+            this.showStatusMessage('Error removing video: ' + error.message, 'error');
+        }
+    }
+
+    async removeCurrentVideoFromPlaylist() {
+        if (!this.currentPlaylistId || !this.currentVideo) {
+            this.showStatusMessage('No video to remove from playlist', 'warning');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to remove this video from the playlist?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/playlists/${this.currentPlaylistId}/remove-video`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ videoPath: this.currentVideo.path })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Update the current playlist
+                this.currentPlaylist = data.playlist;
+
+                // Update the playlists array
+                const playlistIndex = this.playlists.findIndex(p => p.id === this.currentPlaylistId);
+                if (playlistIndex !== -1) {
+                    this.playlists[playlistIndex] = data.playlist;
+                }
+
+                // Close the video player and go back to playlist
+                this.closeVideo();
+                this.showPlaylistVideos(this.currentPlaylist);
                 this.showStatusMessage('Video removed from playlist', 'success');
             } else {
                 const errorData = await response.json();
