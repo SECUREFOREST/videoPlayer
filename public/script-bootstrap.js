@@ -400,7 +400,7 @@ class ModernVideoPlayerBrowser {
     preloadThumbnails(items) {
         // Thumbnails are now generated on server startup, so no client-side processing needed
         const videoItems = items.filter(item => item.isVideo);
-        console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
+        // console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
     }
 
     async checkServerStatus() {
@@ -645,7 +645,7 @@ class ModernVideoPlayerBrowser {
     // Grid view only - toggleView method removed
 
     switchTab(tabName) {
-        console.log('Switching to tab:', tabName);
+        // console.log('Switching to tab:', tabName);
 
         // Update tab buttons
         this.tabBtns.forEach(btn => {
@@ -790,10 +790,10 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
-            console.log('Added search result item:', item.name);
+            // console.log('Added search result item:', item.name);
         });
 
-        console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
+        // console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
     }
 
     async loadPlaylists() {
