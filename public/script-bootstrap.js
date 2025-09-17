@@ -11,7 +11,6 @@ class ModernVideoPlayerBrowser {
         this.playbackProgress = {};
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
-        this.currentPlaylistId = null; // Track which playlist the current video belongs to
         this.focusedElement = null;
         this.keyboardNavigation = true;
         this.selectedPlaylistId = null;
@@ -51,7 +50,12 @@ class ModernVideoPlayerBrowser {
         this.videoInfo = document.getElementById('video-info');
 
         // Validate critical elements
-        if (!this.fileList || !this.video) {
+        if (!this.fileList) {
+            console.error('Critical element file-list not found');
+            return;
+        }
+        if (!this.video) {
+            console.error('Critical element video not found');
             return;
         }
 
@@ -77,7 +81,6 @@ class ModernVideoPlayerBrowser {
         this.videoPlayerModal = new bootstrap.Modal(document.getElementById('videoPlayerModal'));
         this.playlistAddBtn = document.getElementById('playlist-add-btn');
         this.favoriteBtn = document.getElementById('favorite-btn');
-        this.removeFromPlaylistBtn = document.getElementById('remove-from-playlist-btn');
 
         // Add event listener for modal close
         if (this.videoPlayerModal) {
@@ -170,7 +173,6 @@ class ModernVideoPlayerBrowser {
         // Video controls
         if (this.playlistAddBtn) this.playlistAddBtn.addEventListener('click', () => this.addToPlaylist());
         if (this.favoriteBtn) this.favoriteBtn.addEventListener('click', () => this.toggleFavorite());
-        if (this.removeFromPlaylistBtn) this.removeFromPlaylistBtn.addEventListener('click', () => this.removeCurrentVideoFromPlaylist());
 
         // Playlist and favorites
         if (this.createPlaylistBtn) this.createPlaylistBtn.addEventListener('click', () => this.showCreatePlaylistModal());
@@ -199,6 +201,7 @@ class ModernVideoPlayerBrowser {
 
     async loadDirectory(path = '') {
         if (this.isLoading('loadDirectory')) {
+            console.log('Directory load already in progress, skipping...');
             return;
         }
 
@@ -372,6 +375,7 @@ class ModernVideoPlayerBrowser {
                 if (thumbnailContainer) {
                     thumbnailContainer.innerHTML = `
                         <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                            <i class="fas fa-video fa-2x"></i>
                         </div>
                     `;
                 }
@@ -395,6 +399,8 @@ class ModernVideoPlayerBrowser {
 
     preloadThumbnails(items) {
         // Thumbnails are now generated on server startup, so no client-side processing needed
+        const videoItems = items.filter(item => item.isVideo);
+        console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
     }
 
     async checkServerStatus() {
@@ -409,6 +415,7 @@ class ModernVideoPlayerBrowser {
             }
         } catch (error) {
             // Server status check failed, but that's okay
+            console.log('Server status check failed:', error.message);
         }
     }
 
@@ -482,18 +489,13 @@ class ModernVideoPlayerBrowser {
                 // Show modal
                 this.videoPlayerModal.show();
 
-                // Show/hide remove button based on whether video is from a playlist
-                if (this.currentPlaylistId) {
-                    this.removeFromPlaylistBtn.classList.remove('d-none');
-                } else {
-                    this.removeFromPlaylistBtn.classList.add('d-none');
-                }
-
                 // Restore progress if available
                 this.restoreProgress(item.path);
 
                 // Autoplay the video
-                this.video.play().catch(() => {});
+                this.video.play().catch(error => {
+                    console.log('Autoplay failed:', error);
+                });
             } else {
                 this.showStatusMessage('Error loading video: ' + videoData.error, 'error');
             }
@@ -544,7 +546,8 @@ class ModernVideoPlayerBrowser {
         if (this.videoState.isPlaying) {
             this.video.pause();
         } else {
-            this.video.play().catch(() => {
+            this.video.play().catch(error => {
+                console.error('Play failed:', error);
                 this.showStatusMessage('Failed to play video', 'error');
             });
         }
@@ -559,13 +562,16 @@ class ModernVideoPlayerBrowser {
     toggleFullscreen() {
         if (!this.isFullscreen) {
             if (this.video.requestFullscreen) {
-                this.video.requestFullscreen().catch(() => {
+                this.video.requestFullscreen().catch(err => {
+                    console.error('Fullscreen request failed:', err);
                     this.showStatusMessage('Failed to enter fullscreen mode', 'error');
                 });
             }
         } else {
             if (document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
+                document.exitFullscreen().catch(err => {
+                    console.error('Exit fullscreen failed:', err);
+                });
             }
         }
     }
@@ -585,7 +591,6 @@ class ModernVideoPlayerBrowser {
         this.video.pause();
         this.video.currentTime = 0;
         this.currentVideo = null;
-        this.currentPlaylistId = null; // Reset playlist context
     }
 
     onVideoEnded() {
@@ -637,6 +642,8 @@ class ModernVideoPlayerBrowser {
     // Grid view only - toggleView method removed
 
     switchTab(tabName) {
+        console.log('Switching to tab:', tabName);
+
         // Update tab buttons
         this.tabBtns.forEach(btn => {
             const isActive = btn.id === tabName + '-tab';
@@ -661,16 +668,21 @@ class ModernVideoPlayerBrowser {
 
     async performSearch() {
         if (this.isLoading('search')) {
+            console.log('Search already in progress, skipping...');
             return;
         }
 
         const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
 
+        console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
+
         return this.safeAsyncOperation(async () => {
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
 
             const data = await response.json();
+
+            console.log('Search API response:', data);
 
             if (response.ok) {
                 this.searchResults = data.results;
@@ -684,6 +696,7 @@ class ModernVideoPlayerBrowser {
     }
 
     renderSearchResults() {
+        console.log('Rendering search results:', this.searchResults.length, 'items');
         this.searchList.innerHTML = '';
 
         if (this.searchResults.length === 0) {
@@ -697,6 +710,8 @@ class ModernVideoPlayerBrowser {
                 !item.name.startsWith('.DS_Store') &&
                 !item.name.startsWith('Thumbs.db');
         });
+
+        console.log('Filtered results:', filteredResults.length, 'items');
 
         if (filteredResults.length === 0) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found (filtered out system files)</p></div></div>';
@@ -725,6 +740,7 @@ class ModernVideoPlayerBrowser {
             } else if (item.isVideo) {
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                        <i class="fas fa-video fa-2x"></i>
                     </div>
                 `;
             } else {
@@ -771,7 +787,10 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
+            console.log('Added search result item:', item.name);
         });
+
+        console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
     }
 
     async loadPlaylists() {
@@ -783,9 +802,11 @@ class ModernVideoPlayerBrowser {
                 this.playlists = data.playlists || [];
                 this.renderPlaylists();
             } else {
+                console.error('Failed to load playlists:', data.error);
                 this.showStatusMessage('Failed to load playlists: ' + data.error, 'error');
             }
         } catch (error) {
+            console.error('Failed to load playlists:', error);
             this.showStatusMessage('Failed to load playlists: ' + error.message, 'error');
         }
     }
@@ -848,7 +869,6 @@ class ModernVideoPlayerBrowser {
         // Store the current playlist for navigation
         this.currentPlaylist = playlist;
         this.currentPlaylistIndex = 0;
-        this.currentPlaylistId = playlist.id;
 
         // Update the playlist list to show videos
         this.renderPlaylistVideos(playlist);
@@ -925,6 +945,7 @@ class ModernVideoPlayerBrowser {
             } else if (video.isVideo) {
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                        <i class="fas fa-video fa-2x"></i>
                     </div>
                 `;
             } else {
@@ -938,8 +959,7 @@ class ModernVideoPlayerBrowser {
             div.innerHTML = `
                 <div class="video-thumbnail mb-2 position-relative" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center;">
                     ${thumbnailHtml}
-                    <button class="btn btn-sm btn-danger position-absolute" 
-                            style="top: 8px; right: 8px; z-index: 10;"
+                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2" 
                             onclick="event.stopPropagation(); app.removeVideoFromPlaylist('${playlist.id}', '${video.path}')"
                             title="Remove from playlist">
                         <i class="fas fa-times"></i>
@@ -954,22 +974,14 @@ class ModernVideoPlayerBrowser {
             // Add hover effect
             div.addEventListener('mouseenter', () => {
                 div.style.backgroundColor = '#374151';
+                div.style.transform = 'translateY(-2px)';
                 div.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                // Apply transform only to the thumbnail container, not the button
-                const thumbnailContainer = div.querySelector('.video-thumbnail');
-                if (thumbnailContainer) {
-                    thumbnailContainer.style.transform = 'translateY(-2px)';
-                }
             });
 
             div.addEventListener('mouseleave', () => {
                 div.style.backgroundColor = '';
+                div.style.transform = '';
                 div.style.boxShadow = '';
-                // Reset transform on the thumbnail container
-                const thumbnailContainer = div.querySelector('.video-thumbnail');
-                if (thumbnailContainer) {
-                    thumbnailContainer.style.transform = '';
-                }
             });
 
             // Add click handler to play video
@@ -998,6 +1010,8 @@ class ModernVideoPlayerBrowser {
         }
 
         try {
+            console.log('Removing video with path:', videoPath);
+
             const response = await fetch(`/api/playlists/${playlistId}/remove-video`, {
                 method: 'POST',
                 headers: {
@@ -1027,50 +1041,7 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('Failed to remove video: ' + errorData.error, 'error');
             }
         } catch (error) {
-            this.showStatusMessage('Error removing video: ' + error.message, 'error');
-        }
-    }
-
-    async removeCurrentVideoFromPlaylist() {
-        if (!this.currentPlaylistId || !this.currentVideo) {
-            this.showStatusMessage('No video to remove from playlist', 'warning');
-            return;
-        }
-
-        if (!confirm('Are you sure you want to remove this video from the playlist?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/playlists/${this.currentPlaylistId}/remove-video`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ videoPath: this.currentVideo.path })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-
-                // Update the current playlist
-                this.currentPlaylist = data.playlist;
-
-                // Update the playlists array
-                const playlistIndex = this.playlists.findIndex(p => p.id === this.currentPlaylistId);
-                if (playlistIndex !== -1) {
-                    this.playlists[playlistIndex] = data.playlist;
-                }
-
-                // Close the video player and go back to playlist
-                this.closeVideo();
-                this.showPlaylistVideos(this.currentPlaylist);
-                this.showStatusMessage('Video removed from playlist', 'success');
-            } else {
-                const errorData = await response.json();
-                this.showStatusMessage('Failed to remove video: ' + errorData.error, 'error');
-            }
-        } catch (error) {
+            console.error('Error removing video from playlist:', error);
             this.showStatusMessage('Error removing video: ' + error.message, 'error');
         }
     }
@@ -1085,7 +1056,7 @@ class ModernVideoPlayerBrowser {
                 this.renderFavorites();
             }
         } catch (error) {
-            // Failed to load favorites
+            console.error('Failed to load favorites:', error);
         }
     }
 
@@ -1118,6 +1089,7 @@ class ModernVideoPlayerBrowser {
             } else if (favorite.isVideo) {
                 thumbnailHtml = `
                     <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail not available">
+                        <i class="fas fa-video fa-2x"></i>
                     </div>
                 `;
             } else {
@@ -1307,6 +1279,7 @@ class ModernVideoPlayerBrowser {
                     `;
 
                     playlistItem.addEventListener('click', () => {
+                        console.log('Playlist clicked:', playlist.name);
                         // Remove active class and custom selection styling from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                             item.classList.remove('active', 'playlist-item-selected');
@@ -1314,6 +1287,8 @@ class ModernVideoPlayerBrowser {
                         // Add active class and custom selection styling to clicked item
                         playlistItem.classList.add('active', 'playlist-item-selected');
                         this.selectedPlaylistId = playlist.id;
+                        console.log('Selected playlist ID:', this.selectedPlaylistId);
+                        console.log('Playlist item classes:', playlistItem.className);
                     });
 
                     existingPlaylistsList.appendChild(playlistItem);
@@ -1323,6 +1298,7 @@ class ModernVideoPlayerBrowser {
                 noPlaylistsMessage.style.display = 'block';
             }
         } catch (error) {
+            console.error('Error loading playlists:', error);
             this.showStatusMessage('Error loading playlists', 'error');
         }
     }
@@ -1612,8 +1588,11 @@ class ModernVideoPlayerBrowser {
     // Video player initialization
     initializeVideoPlayer() {
         if (!this.video || !this.videoSource) {
+            console.error('Video elements not found during initialization');
             return;
         }
+
+        console.log('Initializing video player...');
 
         this.videoState.isInitialized = true;
         this.videoState.volume = this.video.volume || 1.0;
@@ -1621,6 +1600,7 @@ class ModernVideoPlayerBrowser {
         this.videoState.playbackRate = this.video.playbackRate || 1.0;
 
         this.setupVideoEventListeners();
+        console.log('Video player initialized successfully');
     }
 
     setupVideoEventListeners() {
@@ -1642,19 +1622,22 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoLoadStart() {
+        console.log('Video load started');
         this.videoState.isSeeking = false;
     }
 
     handleVideoLoadedMetadata() {
+        console.log('Video metadata loaded, duration:', this.video.duration);
         this.videoState.duration = this.video.duration;
         this.updateVideoInfo();
     }
 
     handleVideoLoadedData() {
-        // Video data loaded
+        console.log('Video data loaded');
     }
 
     handleVideoCanPlay() {
+        console.log('Video can play');
         this.videoState.isInitialized = true;
     }
 
@@ -1688,6 +1671,7 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoError(e) {
+        console.error('Video error:', e);
         this.showStatusMessage('Video playback error occurred', 'error');
         this.videoState.isPlaying = false;
     }
@@ -1862,6 +1846,7 @@ class ModernVideoPlayerBrowser {
             const result = await operation();
             return result;
         } catch (error) {
+            console.error(`Error in ${context}:`, error);
             this.handleError(error, context);
             throw error;
         } finally {
@@ -1883,6 +1868,7 @@ class ModernVideoPlayerBrowser {
     }
 
     handleError(error, context = '') {
+        console.error(`Error in ${context}:`, error);
         this.showStatusMessage(`Error: ${error.message || 'Something went wrong'}`, 'error');
         this.announceToScreenReader(`Error: ${error.message || 'Something went wrong'}`);
     }
@@ -1939,10 +1925,12 @@ class ModernVideoPlayerBrowser {
     }
 
     showError(message) {
+        console.error(message);
         // You could implement a toast notification here
     }
 
     showStatusMessage(message, type = 'info') {
+        console.log(`${type.toUpperCase()}: ${message}`);
         // You could implement a toast notification here
     }
 
@@ -1991,7 +1979,7 @@ class ModernVideoPlayerBrowser {
         try {
             localStorage.setItem('videoPlayerProgress', JSON.stringify(this.playbackProgress));
         } catch (error) {
-            // Failed to save progress
+            console.warn('Failed to save progress:', error);
         }
     }
 
@@ -2003,7 +1991,7 @@ class ModernVideoPlayerBrowser {
                 this.playbackProgress = JSON.parse(saved);
             }
         } catch (error) {
-            // Failed to load progress
+            console.warn('Failed to load progress:', error);
         }
     }
 
@@ -2038,7 +2026,8 @@ class ModernVideoPlayerBrowser {
                 }
             }).then(() => {
                 window.location.href = '/login';
-            }).catch(() => {
+            }).catch(error => {
+                console.error('Logout error:', error);
                 window.location.href = '/login';
             });
         }
