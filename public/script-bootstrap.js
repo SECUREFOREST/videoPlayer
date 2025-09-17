@@ -6,7 +6,7 @@ class ModernVideoPlayerBrowser {
         this.playlists = [];
         this.favorites = [];
         this.searchResults = [];
-        this.isGridView = false;
+        this.isGridView = true;
         this.isFullscreen = false;
         this.playbackProgress = {};
         this.currentPlaylist = null;
@@ -62,8 +62,7 @@ class ModernVideoPlayerBrowser {
         // Navigation
         this.backBtn = document.getElementById('back-btn');
         this.refreshBtn = document.getElementById('refresh-btn');
-        this.gridViewRadio = document.getElementById('grid-view');
-        this.listViewRadio = document.getElementById('list-view');
+        // Grid view only - no view toggle elements needed
 
         // Search and filters
         this.searchInput = document.getElementById('search-input');
@@ -123,9 +122,7 @@ class ModernVideoPlayerBrowser {
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) logoutBtn.addEventListener('click', () => this.logout());
 
-        // View toggle
-        if (this.gridViewRadio) this.gridViewRadio.addEventListener('change', () => this.toggleView(true));
-        if (this.listViewRadio) this.listViewRadio.addEventListener('change', () => this.toggleView(false));
+        // Grid view only - no view toggle needed
 
         // Search and filters
         if (this.searchInput) {
@@ -250,11 +247,7 @@ class ModernVideoPlayerBrowser {
             this.fileList.appendChild(parentItem);
         }
 
-        if (this.isGridView) {
-            this.renderGridView(items);
-        } else {
-            this.renderListView(items);
-        }
+        this.renderGridView(items);
 
         // Start background thumbnail generation for all videos
         this.preloadThumbnails(items);
@@ -639,12 +632,7 @@ class ModernVideoPlayerBrowser {
         }
     }
 
-    toggleView(isGrid) {
-        this.isGridView = isGrid;
-        this.gridViewRadio.checked = isGrid;
-        this.listViewRadio.checked = !isGrid;
-        this.loadDirectory();
-    }
+    // Grid view only - toggleView method removed
 
     switchTab(tabName) {
         console.log('Switching to tab:', tabName);
