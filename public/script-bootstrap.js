@@ -938,7 +938,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (video.isVideo) {
                 thumbnailHtml = `
