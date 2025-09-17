@@ -290,7 +290,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 100%; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-lg\\"></i></div>'"
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-lg\\"></i></div>
                     </div>
                 `;
             } else {
@@ -366,7 +366,7 @@ class ModernVideoPlayerBrowser {
                              class="img-fluid rounded" 
                              style="width: 100%; height: 120px; object-fit: cover;"
                              loading="lazy"
-                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
+                             onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                     `;
                 }
             } else {
@@ -474,7 +474,7 @@ class ModernVideoPlayerBrowser {
 
             if (response.ok) {
                 this.currentVideo = item;
-                this.videoTitle.innerHTML = `<i class="fas fa-play-circle me-2"></i>${videoData.name}`;
+                this.videoTitle.innerHTML = `<i class="fas fa-play-circle me-2"></i>${this.formatFileName(videoData.name, videoData.isVideo)}`;
 
                 const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                 this.videoSource.src = videoUrl;
@@ -735,7 +735,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (item.isVideo) {
                 thumbnailHtml = `
@@ -940,7 +940,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 100%; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (video.isVideo) {
                 thumbnailHtml = `
@@ -1084,7 +1084,7 @@ class ModernVideoPlayerBrowser {
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
-                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>'"
+                         onerror="this.parentElement.innerHTML='<div class=\\"d-flex align-items-center justify-content-center h-100 text-muted\\"><i class=\\"fas fa-video fa-2x\\"></i></div>
                 `;
             } else if (favorite.isVideo) {
                 thumbnailHtml = `
@@ -1144,7 +1144,7 @@ class ModernVideoPlayerBrowser {
         this.showPlaylistModal();
         this.playlistVideos.innerHTML = `
             <div class="alert alert-info">
-                <i class="fas fa-video me-2"></i>${this.currentVideo.name}
+                <i class="fas fa-video me-2"></i>${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}
             </div>
         `;
 
