@@ -127,6 +127,8 @@ app.get('/login', (req, res) => {
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <!-- Custom CSS -->
+            <link rel="stylesheet" href="style-bootstrap.css?v=6">
             
             <style>
                 body { 
@@ -153,37 +155,9 @@ app.get('/login', (req, res) => {
                     border-radius: 20px 20px 0 0; 
                     border: none;
                 }
-                .form-control {
-                    background-color: var(--bs-dark) !important;
-                    border-color: var(--bs-border-color);
-                    color: var(--bs-light);
-                }
-                .form-control:focus {
-                    background-color: var(--bs-dark) !important;
-                    border-color: var(--bs-primary);
-                    color: var(--bs-light);
-                    box-shadow: 0 0 0 0.2rem rgba(185, 28, 28, 0.25);
-                }
-                .form-label {
-                    color: var(--bs-light);
-                    font-weight: 500;
-                }
-                .btn-primary {
-                    background: linear-gradient(135deg, var(--bs-primary), var(--bs-danger));
-                    border: 1px solid var(--bs-primary);
-                    font-weight: 600;
-                    padding: 12px;
-                    box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
-                }
-                .btn-primary:hover {
-                    background: linear-gradient(135deg, var(--bs-danger), #EF4444);
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(185, 28, 28, 0.4);
-                }
-                .alert-danger {
-                    background-color: var(--bs-primary);
-                    border-color: var(--bs-danger);
-                    color: var(--bs-light);
+                /* Login-specific styles - main styles come from style-bootstrap.css */
+                .login-card {
+                    background: rgba(33, 37, 41, 0.95) !important;
                 }
                 .navbar-brand {
                     font-weight: 700;
@@ -217,7 +191,7 @@ app.get('/login', (req, res) => {
                                             <i class="fas fa-key me-2"></i>Password
                                         </label>
                                         <input type="password" 
-                                               class="form-control" 
+                                               class="form-control bg-dark" 
                                                id="password" 
                                                name="password" 
                                                placeholder="Enter your password..."
