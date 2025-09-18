@@ -583,11 +583,26 @@
 .favorite-item {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateZ(0);
+    cursor: grab;
 }
 
 .favorite-item:hover {
     transform: translateY(-2px) scale(1.01);
     box-shadow: 0 6px 20px rgba(139, 21, 56, 0.15);
+}
+
+.favorite-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg) scale(1.05);
+    z-index: 1000;
+    cursor: grabbing;
+    box-shadow: 0 10px 30px rgba(139, 21, 56, 0.3);
+}
+
+.favorite-item.drag-over {
+    border: 2px dashed var(--bs-primary);
+    background-color: rgba(139, 21, 56, 0.1);
+    transform: scale(1.05);
 }
 
 /* Custom favorite button styling */

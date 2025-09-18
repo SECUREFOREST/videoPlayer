@@ -1175,12 +1175,29 @@ class ModernVideoPlayerBrowser {
             return;
         }
 
-        this.favorites.forEach(favorite => {
+        // Add instruction text
+        const instructionCol = document.createElement('div');
+        instructionCol.className = 'col-12 mb-3';
+        instructionCol.innerHTML = `
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>Drag favorites to reorder them
+            </small>
+        `;
+        this.favoritesList.appendChild(instructionCol);
+
+        // Create sortable container
+        const sortableContainer = document.createElement('div');
+        sortableContainer.className = 'sortable-favorites row g-3';
+        sortableContainer.id = 'favorites-container';
+
+        this.favorites.forEach((favorite, index) => {
             const col = document.createElement('div');
             col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
             const div = document.createElement('div');
-            div.className = 'file-grid-item h-100 position-relative';
+            div.className = 'file-grid-item h-100 position-relative favorite-item';
+            div.draggable = true;
+            div.dataset.favoriteIndex = index;
 
             // Create thumbnail or icon
             let thumbnailHtml = '';
@@ -1225,6 +1242,39 @@ class ModernVideoPlayerBrowser {
                 </div>
             `;
 
+            // Add drag and drop event handlers
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', index);
+                div.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            div.addEventListener('dragend', (e) => {
+                div.classList.remove('dragging');
+            });
+
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                div.classList.add('drag-over');
+            });
+
+            div.addEventListener('dragleave', (e) => {
+                div.classList.remove('drag-over');
+            });
+
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                
+                const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const targetIndex = index;
+                
+                if (draggedIndex !== targetIndex) {
+                    this.reorderFavorites(draggedIndex, targetIndex);
+                }
+            });
+
             // Add hover effect
             div.addEventListener('mouseenter', () => {
                 div.style.backgroundColor = '#374151';
@@ -1235,8 +1285,30 @@ class ModernVideoPlayerBrowser {
             });
 
             col.appendChild(div);
-            this.favoritesList.appendChild(col);
+            sortableContainer.appendChild(col);
         });
+
+        this.favoritesList.appendChild(sortableContainer);
+    }
+
+    async reorderFavorites(fromIndex, toIndex) {
+        try {
+            // Reorder the favorites array
+            const reorderedFavorites = [...this.favorites];
+            const [movedFavorite] = reorderedFavorites.splice(fromIndex, 1);
+            reorderedFavorites.splice(toIndex, 0, movedFavorite);
+
+            // Update the favorites array
+            this.favorites = reorderedFavorites;
+
+            // Re-render the favorites to show the new order
+            this.renderFavorites();
+
+            this.showStatusMessage('Favorites reordered successfully!', 'success');
+        } catch (error) {
+            console.error('Error reordering favorites:', error);
+            this.showStatusMessage('Error reordering favorites', 'error');
+        }
     }
 
     async addToPlaylist() {
