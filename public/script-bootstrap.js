@@ -2000,7 +2000,7 @@ class ModernVideoPlayerBrowser {
     }
 
     // Status messages
-    showStatusMessage(message, type = 'info', duration = 3000) {
+    showStatusMessage(message, type = 'info', duration = 2000) {
         const statusMessage = document.createElement('div');
         statusMessage.className = `status-message status-message--${type}`;
         statusMessage.textContent = message;
