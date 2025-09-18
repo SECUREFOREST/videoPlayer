@@ -1247,6 +1247,35 @@ app.put('/api/playlists/:id', (req, res) => {
     }
 });
 
+// API endpoint to update playlists order
+app.put('/api/playlists', (req, res) => {
+    try {
+        const playlistsFile = path.join(__dirname, 'playlists.json');
+        const { playlists: newPlaylists } = req.body;
+
+        // Validate input
+        if (!Array.isArray(newPlaylists)) {
+            return res.status(400).json({ error: 'Playlists must be an array' });
+        }
+
+        // Validate that all playlists have required fields
+        for (const playlist of newPlaylists) {
+            if (!playlist.id || !playlist.name || !playlist.videos || !playlist.created || !playlist.modified) {
+                return res.status(400).json({ error: 'Invalid playlist data structure' });
+            }
+        }
+
+        // Update the playlists with new order
+        const playlists = { playlists: newPlaylists };
+        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+
+        res.json({ success: true, playlists: newPlaylists });
+    } catch (error) {
+        console.error('Error updating playlists order:', error);
+        res.status(500).json({ error: 'Unable to update playlists order' });
+    }
+});
+
 // API endpoint to add video to existing playlist
 app.post('/api/playlists/:id/add-video', (req, res) => {
     try {
