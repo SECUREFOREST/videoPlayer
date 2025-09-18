@@ -18,7 +18,7 @@
     /* Pure white */
 
     /* Custom colors for enhanced dark theme */
-    --custom-gray-900: #111827;
+    --custom-gray-900: #222325;
     /* Darkest gray */
     --custom-gray-800: #1F2937;
     /* Dark gray */
@@ -53,7 +53,7 @@
     transition: all 0.2s ease;
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
-    background: var(--bs-secondary-bg-subtle);
+    background: var(--bs-secondary-bg);
 }
 
 .file-item:hover {
@@ -92,7 +92,7 @@
     padding: 1rem;
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
-    background: var(--bs-secondary-bg-subtle);
+    background: var(--bs-secondary-bg);
     transition: all 0.2s ease;
 }
 
@@ -135,7 +135,7 @@
 .search-item {
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
-    background: var(--bs-secondary-bg-subtle);
+    background: var(--bs-secondary-bg);
     transition: all 0.2s ease;
     margin-bottom: 0.75rem;
 }
