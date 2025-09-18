@@ -597,7 +597,13 @@ class ModernVideoPlayerBrowser {
     }
 
     onVideoEnded() {
-        this.playNextInPlaylist();
+        // First try to play next in playlist
+        if (this.currentPlaylist && this.currentPlaylist.videos.length > 0) {
+            this.playNextInPlaylist();
+        } else {
+            // If no playlist, try to play next video in current directory
+            this.playNextInDirectory();
+        }
     }
 
     playNextInPlaylist() {
@@ -612,6 +618,37 @@ class ModernVideoPlayerBrowser {
                 this.currentPlaylistIndex = 0;
                 this.showStatusMessage('Playlist ended', 'info');
             }
+        }
+    }
+
+    async playNextInDirectory() {
+        try {
+            // Get current directory videos
+            const response = await fetch(`/api/browse?path=${encodeURIComponent(this.currentPath)}`);
+            const data = await response.json();
+            
+            if (response.ok && data.items) {
+                // Filter only video files
+                const videos = data.items.filter(item => item.isVideo);
+                
+                if (videos.length > 1) {
+                    // Find current video index
+                    const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
+                    
+                    if (currentIndex !== -1 && currentIndex < videos.length - 1) {
+                        // Play next video
+                        const nextVideo = videos[currentIndex + 1];
+                        this.playVideo(nextVideo);
+                        this.showStatusMessage(`Auto-playing: ${this.formatFileName(nextVideo.name, true)}`, 'info');
+                    } else {
+                        this.showStatusMessage('No more videos in this directory', 'info');
+                    }
+                } else {
+                    this.showStatusMessage('Only one video in this directory', 'info');
+                }
+            }
+        } catch (error) {
+            console.error('Error playing next video in directory:', error);
         }
     }
 
@@ -908,6 +945,9 @@ class ModernVideoPlayerBrowser {
                 </div>
             </div>
             <p class="text-muted mb-0">${playlist.videos.length} videos in this playlist</p>
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>Drag videos to reorder them
+            </small>
         `;
         this.playlistList.appendChild(headerCol);
 
@@ -924,13 +964,20 @@ class ModernVideoPlayerBrowser {
             return;
         }
 
+        // Create sortable container
+        const sortableContainer = document.createElement('div');
+        sortableContainer.className = 'sortable-playlist-videos row g-3';
+        sortableContainer.id = `playlist-${playlist.id}-videos`;
+
         // Render videos
         playlist.videos.forEach((video, index) => {
             const col = document.createElement('div');
             col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
             const div = document.createElement('div');
-            div.className = 'file-grid-item h-100 position-relative';
+            div.className = 'file-grid-item h-100 position-relative playlist-video-item';
+            div.draggable = true;
+            div.dataset.videoIndex = index;
 
             // Create thumbnail HTML
             let thumbnailHtml = '';
@@ -974,17 +1021,50 @@ class ModernVideoPlayerBrowser {
             `;
 
 
+            // Add drag and drop event handlers
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', index);
+                div.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            div.addEventListener('dragend', (e) => {
+                div.classList.remove('dragging');
+            });
+
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                div.classList.add('drag-over');
+            });
+
+            div.addEventListener('dragleave', (e) => {
+                div.classList.remove('drag-over');
+            });
+
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                
+                const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const targetIndex = index;
+                
+                if (draggedIndex !== targetIndex) {
+                    this.reorderPlaylistVideos(playlist.id, draggedIndex, targetIndex);
+                }
+            });
+
             // Add click handler to play video
             div.addEventListener('click', () => {
                 this.currentPlaylistIndex = index;
                 this.playVideo(video);
             });
 
-            // Thumbnails are now handled directly in the HTML above
-
             col.appendChild(div);
-            this.playlistList.appendChild(col);
+            sortableContainer.appendChild(col);
         });
+
+        this.playlistList.appendChild(sortableContainer);
     }
 
     showPlaylistList() {
@@ -992,6 +1072,43 @@ class ModernVideoPlayerBrowser {
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
         this.renderPlaylists();
+    }
+
+    async reorderPlaylistVideos(playlistId, fromIndex, toIndex) {
+        try {
+            const playlist = this.playlists.find(p => p.id === playlistId);
+            if (!playlist) return;
+
+            // Reorder the videos array
+            const videos = [...playlist.videos];
+            const [movedVideo] = videos.splice(fromIndex, 1);
+            videos.splice(toIndex, 0, movedVideo);
+
+            // Update the playlist
+            const response = await fetch(`/api/playlists/${playlistId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videos: videos })
+            });
+
+            if (response.ok) {
+                // Update local playlist
+                playlist.videos = videos;
+                
+                // Update current playlist if we're viewing it
+                if (this.currentPlaylist && this.currentPlaylist.id === playlistId) {
+                    this.currentPlaylist.videos = videos;
+                    this.renderPlaylistVideos(this.currentPlaylist);
+                }
+
+                this.showStatusMessage('Playlist reordered successfully!', 'success');
+            } else {
+                this.showStatusMessage('Failed to reorder playlist', 'error');
+            }
+        } catch (error) {
+            console.error('Error reordering playlist:', error);
+            this.showStatusMessage('Error reordering playlist', 'error');
+        }
     }
 
     async removeVideoFromPlaylist(playlistId, videoPath) {

@@ -50,15 +50,16 @@
 
 /* Custom file item styles */
 .file-item {
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
     background: var(--bs-secondary-bg);
+    transform: translateZ(0); /* Hardware acceleration */
 }
 
 .file-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 21, 56, 0.15);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(139, 21, 56, 0.2);
     border-color: var(--bs-primary);
 }
 
@@ -93,12 +94,13 @@
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
     background: var(--bs-secondary-bg);
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0); /* Hardware acceleration */
 }
 
 .file-grid-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 21, 56, 0.15);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(139, 21, 56, 0.2);
     border-color: var(--bs-primary);
 }
 
@@ -463,6 +465,129 @@
 /* Custom ratio for video */
 .ratio {
     background: var(--bs-dark);
+}
+
+/* Drag and Drop Styles */
+.playlist-video-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: grab;
+    transform: translateZ(0);
+}
+
+.playlist-video-item:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(139, 21, 56, 0.15);
+}
+
+.playlist-video-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg) scale(1.05);
+    z-index: 1000;
+    cursor: grabbing;
+    box-shadow: 0 10px 30px rgba(139, 21, 56, 0.3);
+}
+
+.playlist-video-item.drag-over {
+    border: 2px dashed var(--bs-primary);
+    background-color: rgba(139, 21, 56, 0.1);
+    transform: scale(1.05);
+}
+
+/* Smooth animations for all interactive elements */
+.btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Smooth modal transitions */
+.modal {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth tab transitions */
+.tab-pane {
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Smooth status messages */
+.status-message {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(20px);
+    opacity: 0;
+}
+
+.status-message--show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* Smooth loading states */
+.loading-skeleton {
+    animation: loading 1.5s infinite ease-in-out;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        background-position: -200% 0;
+        opacity: 0.6;
+    }
+}
+
+/* Smooth page transitions */
+.container-fluid {
+    transition: all 0.3s ease;
+}
+
+/* Smooth search results */
+.search-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+}
+
+.search-item:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 6px 20px rgba(139, 21, 56, 0.15);
+}
+
+/* Smooth playlist items */
+.playlist-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+}
+
+.playlist-item:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 6px 20px rgba(139, 21, 56, 0.15);
+}
+
+/* Smooth favorite items */
+.favorite-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+}
+
+.favorite-item:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 6px 20px rgba(139, 21, 56, 0.15);
 }
 
 /* Custom breadcrumb button */
