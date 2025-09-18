@@ -590,6 +590,31 @@
     box-shadow: 0 6px 20px rgba(139, 21, 56, 0.15);
 }
 
+/* Custom favorite button styling */
+#favorite-btn.btn-outline-danger {
+    background-color: #000000 !important;
+    border-color: #dc3545 !important;
+    color: #dc3545 !important;
+}
+
+#favorite-btn.btn-outline-danger:hover {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+}
+
+#favorite-btn.btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+}
+
+#favorite-btn.btn-danger:hover {
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
+    color: #ffffff !important;
+}
+
 /* Custom breadcrumb button */
 .breadcrumb .btn-link {
     color: var(--bs-primary);
