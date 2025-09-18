@@ -250,7 +250,6 @@ class ModernVideoPlayerBrowser {
         this.renderGridView(items);
 
         // Start background thumbnail generation for all videos
-        this.preloadThumbnails(items);
     }
 
     renderListView(items) {
@@ -397,11 +396,6 @@ class ModernVideoPlayerBrowser {
     }
 
 
-    preloadThumbnails(items) {
-        // Thumbnails are now generated on server startup, so no client-side processing needed
-        const videoItems = items.filter(item => item.isVideo);
-        // console.log(`📹 Found ${videoItems.length} videos (thumbnails generated on server startup)`);
-    }
 
     async checkServerStatus() {
         try {
@@ -2230,26 +2224,6 @@ class ModernVideoPlayerBrowser {
 
     // Utility methods - validateInput is defined above in the Input validation section
 
-    showLoading() {
-        // Simple loading indicator
-        const loadingEl = document.querySelector('.loading');
-        if (loadingEl) loadingEl.style.display = 'block';
-    }
-
-    hideLoading() {
-        const loadingEl = document.querySelector('.loading');
-        if (loadingEl) loadingEl.style.display = 'none';
-    }
-
-    showError(message) {
-        console.error(message);
-        // You could implement a toast notification here
-    }
-
-    showStatusMessage(message, type = 'info') {
-        console.log(`${type.toUpperCase()}: ${message}`);
-        // You could implement a toast notification here
-    }
 
     handleKeyboard(e) {
         // Basic keyboard navigation
@@ -2264,25 +2238,6 @@ class ModernVideoPlayerBrowser {
         // Handle key up events if needed
     }
 
-    handleFocusIn(e) {
-        this.focusedElement = e.target;
-    }
-
-    handleFocusOut(e) {
-        // Handle focus out if needed
-    }
-
-    setupAriaLiveRegion() {
-        // Create ARIA live region for screen readers
-        if (!document.getElementById('aria-live-region')) {
-            const liveRegion = document.createElement('div');
-            liveRegion.id = 'aria-live-region';
-            liveRegion.setAttribute('aria-live', 'polite');
-            liveRegion.setAttribute('aria-atomic', 'true');
-            liveRegion.className = 'sr-only';
-            document.body.appendChild(liveRegion);
-        }
-    }
 
     handleFullscreenChange() {
         this.isFullscreen = !!(document.fullscreenElement ||
