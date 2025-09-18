@@ -591,16 +591,12 @@
 }
 
 /* Custom favorite button styling */
-#favorite-btn.btn-outline-danger {
-    background-color: #000000 !important;
-    border-color: #dc3545 !important;
-    color: #dc3545 !important;
+#favorite-btn.btn-outline-primary {
+    /* Uses default Bootstrap outline-primary styling (same as + button) */
 }
 
-#favorite-btn.btn-outline-danger:hover {
-    background-color: #dc3545 !important;
-    border-color: #dc3545 !important;
-    color: #ffffff !important;
+#favorite-btn.btn-outline-primary:hover {
+    /* Uses default Bootstrap outline-primary hover styling */
 }
 
 #favorite-btn.btn-danger {

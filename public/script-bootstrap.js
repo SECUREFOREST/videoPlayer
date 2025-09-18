@@ -1586,7 +1586,7 @@ class ModernVideoPlayerBrowser {
     updateFavoriteButton(isFavorited) {
         if (isFavorited) {
             this.favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
-            this.favoriteBtn.classList.remove('btn-outline-danger');
+            this.favoriteBtn.classList.remove('btn-outline-primary');
             this.favoriteBtn.classList.add('btn-danger');
             // Reset inline styles to use Bootstrap classes
             this.favoriteBtn.style.backgroundColor = '';
@@ -1596,11 +1596,11 @@ class ModernVideoPlayerBrowser {
         } else {
             this.favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
             this.favoriteBtn.classList.remove('btn-danger');
-            this.favoriteBtn.classList.add('btn-outline-danger');
-            // Apply custom black background with red outline
-            this.favoriteBtn.style.backgroundColor = '#000000';
-            this.favoriteBtn.style.borderColor = '#dc3545';
-            this.favoriteBtn.style.color = '#dc3545';
+            this.favoriteBtn.classList.add('btn-outline-primary');
+            // Reset inline styles to use Bootstrap classes (same as + button)
+            this.favoriteBtn.style.backgroundColor = '';
+            this.favoriteBtn.style.borderColor = '';
+            this.favoriteBtn.style.color = '';
             this.favoriteBtn.title = 'Add to favorites';
         }
     }
