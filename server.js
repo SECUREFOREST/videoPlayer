@@ -154,36 +154,36 @@ app.get('/login', (req, res) => {
                     border: none;
                 }
                 .form-control {
-                    background-color: #212529;
-                    border-color: #495057;
-                    color: #ffffff;
+                    background-color: var(--bs-dark) !important;
+                    border-color: var(--bs-border-color);
+                    color: var(--bs-light);
                 }
                 .form-control:focus {
-                    background-color: #212529;
-                    border-color: #B91C1C;
-                    color: #ffffff;
+                    background-color: var(--bs-dark) !important;
+                    border-color: var(--bs-primary);
+                    color: var(--bs-light);
                     box-shadow: 0 0 0 0.2rem rgba(185, 28, 28, 0.25);
                 }
                 .form-label {
-                    color: #ffffff;
+                    color: var(--bs-light);
                     font-weight: 500;
                 }
                 .btn-primary {
-                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
-                    border: 1px solid #991b1b;
+                    background: linear-gradient(135deg, var(--bs-primary), var(--bs-danger));
+                    border: 1px solid var(--bs-primary);
                     font-weight: 600;
                     padding: 12px;
                     box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
                 }
                 .btn-primary:hover {
-                    background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+                    background: linear-gradient(135deg, var(--bs-danger), #EF4444);
                     transform: translateY(-2px);
                     box-shadow: 0 6px 20px rgba(185, 28, 28, 0.4);
                 }
                 .alert-danger {
-                    background-color: #B91C1C;
-                    border-color: #DC2626;
-                    color: white;
+                    background-color: var(--bs-primary);
+                    border-color: var(--bs-danger);
+                    color: var(--bs-light);
                 }
                 .navbar-brand {
                     font-weight: 700;
