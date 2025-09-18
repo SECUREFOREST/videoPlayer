@@ -114,7 +114,7 @@ app.get('/login', (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <meta name="description" content="Login to access the Video Player">
             <meta name="theme-color" content="#000000">
-            <title>Login - Shibari Videos</title>
+            <title>Login - Tie them up!</title>
             
             <!-- Bootstrap 5 CSS -->
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -195,8 +195,8 @@ app.get('/login', (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
                 <div class="container-fluid">
                     <a class="navbar-brand d-flex align-items-center" href="#">
-                        <i class="fas fa-play-circle me-2" style="color: #5d050e;"></i>
-                        <span class="fw-bold">Shibari Videos</span>
+                        <i class="fas fa-link me-2" style="color: #5d050e;"></i>
+                        <span class="fw-bold">Tie them up!</span>
                     </a>
                 </div>
             </nav>

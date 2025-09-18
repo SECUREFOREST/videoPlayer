@@ -474,7 +474,7 @@ class ModernVideoPlayerBrowser {
 
             if (response.ok) {
                 this.currentVideo = item;
-                this.videoTitle.innerHTML = `<i class="fas fa-play-circle me-2"></i>${this.formatFileName(videoData.name, videoData.isVideo)}`;
+                this.videoTitle.innerHTML = `<i class="fas fa-link me-2"></i>${this.formatFileName(videoData.name, videoData.isVideo)}`;
 
                 const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                 this.videoSource.src = videoUrl;
