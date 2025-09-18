@@ -1475,6 +1475,35 @@ app.delete('/api/favorites/:id', (req, res) => {
     }
 });
 
+// API endpoint to update favorites order
+app.put('/api/favorites', (req, res) => {
+    try {
+        const favoritesFile = path.join(__dirname, 'favorites.json');
+        const { favorites: newFavorites } = req.body;
+
+        // Validate input
+        if (!Array.isArray(newFavorites)) {
+            return res.status(400).json({ error: 'Favorites must be an array' });
+        }
+
+        // Validate that all favorites have required fields
+        for (const favorite of newFavorites) {
+            if (!favorite.id || !favorite.name || !favorite.path || !favorite.added) {
+                return res.status(400).json({ error: 'Invalid favorite data structure' });
+            }
+        }
+
+        // Update the favorites with new order
+        const favorites = { favorites: newFavorites };
+        fs.writeFileSync(favoritesFile, JSON.stringify(favorites, null, 2));
+
+        res.json({ success: true, favorites: newFavorites });
+    } catch (error) {
+        console.error('Error updating favorites order:', error);
+        res.status(500).json({ error: 'Unable to update favorites order' });
+    }
+});
+
 // Serve the main HTML file on root path
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

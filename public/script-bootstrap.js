@@ -1298,13 +1298,25 @@ class ModernVideoPlayerBrowser {
             const [movedFavorite] = reorderedFavorites.splice(fromIndex, 1);
             reorderedFavorites.splice(toIndex, 0, movedFavorite);
 
-            // Update the favorites array
-            this.favorites = reorderedFavorites;
+            // Update the favorites on the server
+            const response = await fetch('/api/favorites', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ favorites: reorderedFavorites })
+            });
 
-            // Re-render the favorites to show the new order
-            this.renderFavorites();
+            if (response.ok) {
+                // Update the local favorites array
+                this.favorites = reorderedFavorites;
 
-            this.showStatusMessage('Favorites reordered successfully!', 'success');
+                // Re-render the favorites to show the new order
+                this.renderFavorites();
+
+                this.showStatusMessage('Favorites reordered successfully!', 'success');
+            } else {
+                const data = await response.json();
+                this.showStatusMessage('Failed to reorder favorites: ' + data.error, 'error');
+            }
         } catch (error) {
             console.error('Error reordering favorites:', error);
             this.showStatusMessage('Error reordering favorites', 'error');
