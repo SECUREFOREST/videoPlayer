@@ -148,7 +148,7 @@ app.get('/login', (req, res) => {
                     border: 1px solid #495057;
                 }
                 .login-header { 
-                    background: linear-gradient(135deg, #5d050e 0%, #7a0a12 100%); 
+                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%); 
                     color: white; 
                     border-radius: 20px 20px 0 0; 
                     border: none;
@@ -160,29 +160,29 @@ app.get('/login', (req, res) => {
                 }
                 .form-control:focus {
                     background-color: #212529;
-                    border-color: #5d050e;
+                    border-color: #B91C1C;
                     color: #ffffff;
-                    box-shadow: 0 0 0 0.2rem rgba(93, 5, 14, 0.25);
+                    box-shadow: 0 0 0 0.2rem rgba(185, 28, 28, 0.25);
                 }
                 .form-label {
                     color: #ffffff;
                     font-weight: 500;
                 }
                 .btn-primary {
-                    background: linear-gradient(135deg, #5d050e 0%, #7a0a12 100%);
-                    border: 1px solid #3d0309;
+                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
+                    border: 1px solid #991b1b;
                     font-weight: 600;
                     padding: 12px;
-                    box-shadow: 0 4px 15px rgba(93, 5, 14, 0.3);
+                    box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
                 }
                 .btn-primary:hover {
-                    background: linear-gradient(135deg, #7a0a12 0%, #9d0e18 100%);
+                    background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(93, 5, 14, 0.4);
+                    box-shadow: 0 6px 20px rgba(185, 28, 28, 0.4);
                 }
                 .alert-danger {
-                    background-color: #5d050e;
-                    border-color: #7a0a12;
+                    background-color: #B91C1C;
+                    border-color: #DC2626;
                     color: white;
                 }
                 .navbar-brand {
@@ -196,7 +196,7 @@ app.get('/login', (req, res) => {
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom">
                 <div class="container-fluid">
                     <a class="navbar-brand d-flex align-items-center" href="#">
-                        <i class="fas fa-link me-2" style="color: #5d050e;"></i>
+                        <i class="fas fa-link me-2" style="color: #B91C1C;"></i>
                         <span class="fw-bold">Tie them up!</span>
                     </a>
                 </div>
