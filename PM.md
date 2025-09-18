@@ -48,8 +48,7 @@ videoPlayer/
 │   ├── index.html              # Main Bootstrap interface
 │   ├── script-bootstrap.js     # Bootstrap version JS
 │   ├── style-bootstrap.css     # Bootstrap version CSS
-│   ├── script.js              # Original version JS
-│   └── style.css              # Original version CSS
+│   └── script.js              # Original version JS
 ├── server.js                  # Express API server
 ├── package.json               # Dependencies
 ├── nginx.conf                 # Nginx configuration

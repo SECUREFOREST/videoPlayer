@@ -6,13 +6,10 @@ class ModernVideoPlayerBrowser {
         this.playlists = [];
         this.favorites = [];
         this.searchResults = [];
-        this.isGridView = true;
         this.isFullscreen = false;
         this.playbackProgress = {};
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
-        this.focusedElement = null;
-        this.keyboardNavigation = true;
         this.selectedPlaylistId = null;
 
         // Video player state management
@@ -201,7 +198,6 @@ class ModernVideoPlayerBrowser {
 
     async loadDirectory(path = '') {
         if (this.isLoading('loadDirectory')) {
-            console.log('Directory load already in progress, skipping...');
             return;
         }
 
@@ -676,7 +672,6 @@ class ModernVideoPlayerBrowser {
     // Grid view only - toggleView method removed
 
     switchTab(tabName) {
-        // console.log('Switching to tab:', tabName);
 
         // Update tab buttons
         this.tabBtns.forEach(btn => {
@@ -702,21 +697,18 @@ class ModernVideoPlayerBrowser {
 
     async performSearch() {
         if (this.isLoading('search')) {
-            console.log('Search already in progress, skipping...');
             return;
         }
 
         const searchTerm = this.validateSearchQuery(this.searchInput.value);
         if (!searchTerm) return;
 
-        // console.log('Performing search for:', searchTerm, 'Filter type:', this.filterType.value);
 
         return this.safeAsyncOperation(async () => {
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
 
             const data = await response.json();
 
-            // console.log('Search API response:', data);
 
             if (response.ok) {
                 this.searchResults = data.results;
@@ -730,7 +722,6 @@ class ModernVideoPlayerBrowser {
     }
 
     renderSearchResults() {
-        // console.log('Rendering search results:', this.searchResults.length, 'items');
         this.searchList.innerHTML = '';
 
         if (this.searchResults.length === 0) {
@@ -745,7 +736,6 @@ class ModernVideoPlayerBrowser {
                 !item.name.startsWith('Thumbs.db');
         });
 
-        // console.log('Filtered results:', filteredResults.length, 'items');
 
         if (filteredResults.length === 0) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No results found (filtered out system files)</p></div></div>';
@@ -821,10 +811,7 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
-            // console.log('Added search result item:', item.name);
         });
-
-        // console.log('Search results rendered. Total items in DOM:', this.searchList.children.length);
     }
 
     async loadPlaylists() {
@@ -1194,7 +1181,6 @@ class ModernVideoPlayerBrowser {
         }
 
         try {
-            console.log('Removing video with path:', videoPath);
 
             const response = await fetch(`/api/playlists/${playlistId}/remove-video`, {
                 method: 'POST',
@@ -1547,7 +1533,6 @@ class ModernVideoPlayerBrowser {
                     `;
 
                     playlistItem.addEventListener('click', () => {
-                        console.log('Playlist clicked:', playlist.name);
                         // Remove active class and custom selection styling from all items
                         existingPlaylistsList.querySelectorAll('.list-group-item').forEach(item => {
                             item.classList.remove('active', 'playlist-item-selected');
@@ -1555,8 +1540,6 @@ class ModernVideoPlayerBrowser {
                         // Add active class and custom selection styling to clicked item
                         playlistItem.classList.add('active', 'playlist-item-selected');
                         this.selectedPlaylistId = playlist.id;
-                        console.log('Selected playlist ID:', this.selectedPlaylistId);
-                        console.log('Playlist item classes:', playlistItem.className);
                     });
 
                     existingPlaylistsList.appendChild(playlistItem);
@@ -1903,15 +1886,11 @@ class ModernVideoPlayerBrowser {
             return;
         }
 
-        console.log('Initializing video player...');
-
-        this.videoState.isInitialized = true;
         this.videoState.volume = this.video.volume || 1.0;
         this.videoState.isMuted = this.video.muted || false;
         this.videoState.playbackRate = this.video.playbackRate || 1.0;
 
         this.setupVideoEventListeners();
-        console.log('Video player initialized successfully');
     }
 
     setupVideoEventListeners() {
@@ -1919,7 +1898,6 @@ class ModernVideoPlayerBrowser {
 
         this.video.addEventListener('loadstart', () => this.handleVideoLoadStart());
         this.video.addEventListener('loadedmetadata', () => this.handleVideoLoadedMetadata());
-        this.video.addEventListener('loadeddata', () => this.handleVideoLoadedData());
         this.video.addEventListener('canplay', () => this.handleVideoCanPlay());
         this.video.addEventListener('play', () => this.handleVideoPlay());
         this.video.addEventListener('pause', () => this.handleVideoPause());
@@ -1933,22 +1911,16 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoLoadStart() {
-        // console.log('Video load started');
         this.videoState.isSeeking = false;
     }
 
     handleVideoLoadedMetadata() {
-        // console.log('Video metadata loaded, duration:', this.video.duration);
         this.videoState.duration = this.video.duration;
         this.updateVideoInfo();
     }
 
-    handleVideoLoadedData() {
-        // console.log('Video data loaded');
-    }
 
     handleVideoCanPlay() {
-        // console.log('Video can play');
         this.videoState.isInitialized = true;
     }
 
@@ -2014,7 +1986,6 @@ class ModernVideoPlayerBrowser {
     }
 
     handleFocusIn(e) {
-        this.focusedElement = e.target;
         e.target.classList.add('focus-visible');
     }
 
@@ -2024,7 +1995,6 @@ class ModernVideoPlayerBrowser {
 
     handleKeyboardUp(e) {
         if (e.key === 'Tab') {
-            this.keyboardNavigation = true;
             document.body.classList.add('keyboard-navigation');
         }
     }
@@ -2234,9 +2204,6 @@ class ModernVideoPlayerBrowser {
         }
     }
 
-    handleKeyboardUp(e) {
-        // Handle key up events if needed
-    }
 
 
     handleFullscreenChange() {

@@ -74,7 +74,7 @@ videoPlayer/
 ├── package.json           # Dependencies and scripts
 ├── public/                # Client-side files
 │   ├── index.html         # Main HTML file
-│   ├── style.css          # Styling
+│   ├── style-bootstrap.css # Styling
 │   └── script.js          # JavaScript functionality
 ├── thumbnails/            # Generated video thumbnails
 ├── videos/                # Video files directory
@@ -154,7 +154,7 @@ Thumbnails are automatically generated using FFmpeg. If FFmpeg is not installed,
 ## 🎨 Customization
 
 ### Styling
-Modify `public/style.css` to customize the appearance:
+Modify `public/style-bootstrap.css` to customize the appearance:
 - Color scheme
 - Layout dimensions
 - Animation effects
