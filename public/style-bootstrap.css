@@ -53,7 +53,7 @@
     transition: all 0.2s ease;
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
-    background: var(--bs-secondary-bg);
+    background: var(--bs-secondary-bg-subtle);
 }
 
 .file-item:hover {
@@ -92,7 +92,7 @@
     padding: 1rem;
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
-    background: var(--bs-secondary-bg);
+    background: var(--bs-secondary-bg-subtle);
     transition: all 0.2s ease;
 }
 
@@ -135,7 +135,7 @@
 .search-item {
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
-    background: var(--bs-secondary-bg);
+    background: var(--bs-secondary-bg-subtle);
     transition: all 0.2s ease;
     margin-bottom: 0.75rem;
 }
