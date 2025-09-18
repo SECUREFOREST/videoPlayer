@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const session = require('express-session');
@@ -57,8 +58,8 @@ function resolveSafePath(requestedPath) {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Session middleware
 app.use(session({
@@ -318,8 +319,18 @@ app.use('/', express.static(path.join(__dirname, 'public'), {
     }
 }));
 
-// Serve static files on root path
-app.use('/videos', express.static(path.join(__dirname, 'videos')));
+// Serve static files on root path with large file support
+app.use('/videos', express.static(path.join(__dirname, 'videos'), {
+    setHeaders: (res, filePath) => {
+        // Set appropriate headers for video files
+        if (filePath.match(/\.(mp4|avi|mov|mkv|webm|m4v|flv|wmv|3gp|ogv)$/i)) {
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+        }
+    },
+    maxAge: '1y' // Cache for 1 year
+}));
 
 // Helper function to check if file is video
 function isVideoFile(extension) {
@@ -385,26 +396,27 @@ function getThumbnailUrl(videoPath) {
 let durationCache = {};
 
 // Load duration cache from file
-function loadDurationCache() {
+async function loadDurationCache() {
     try {
-        if (fs.existsSync(DURATIONS_CACHE_FILE)) {
-            const data = fs.readFileSync(DURATIONS_CACHE_FILE, 'utf8');
-            durationCache = JSON.parse(data);
-            console.log(`📊 Loaded ${Object.keys(durationCache).length} video durations from cache`);
-        } else {
+        await fsPromises.access(DURATIONS_CACHE_FILE);
+        const data = await fsPromises.readFile(DURATIONS_CACHE_FILE, 'utf8');
+        durationCache = JSON.parse(data);
+        console.log(`📊 Loaded ${Object.keys(durationCache).length} video durations from cache`);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
             durationCache = {};
             console.log('📊 No duration cache found, starting fresh');
+        } else {
+            console.error('Error loading duration cache:', error);
+            durationCache = {};
         }
-    } catch (error) {
-        console.error('Error loading duration cache:', error);
-        durationCache = {};
     }
 }
 
 // Save duration cache to file
-function saveDurationCache() {
+async function saveDurationCache() {
     try {
-        fs.writeFileSync(DURATIONS_CACHE_FILE, JSON.stringify(durationCache, null, 2));
+        await fsPromises.writeFile(DURATIONS_CACHE_FILE, JSON.stringify(durationCache, null, 2));
         console.log(`💾 Saved ${Object.keys(durationCache).length} video durations to cache`);
     } catch (error) {
         console.error('Error saving duration cache:', error);
@@ -420,14 +432,14 @@ async function buildDurationCache() {
     let newCount = 0;
 
     try {
-        function scanDirectory(dirPath) {
-            const items = fs.readdirSync(dirPath, { withFileTypes: true });
+        async function scanDirectory(dirPath) {
+            const items = await fsPromises.readdir(dirPath, { withFileTypes: true });
             
             for (const item of items) {
                 const fullPath = path.join(dirPath, item.name);
                 
                 if (item.isDirectory()) {
-                    scanDirectory(fullPath);
+                    await scanDirectory(fullPath);
                 } else {
                     const ext = path.extname(item.name).toLowerCase();
                     if (isVideoFile(ext)) {
@@ -445,7 +457,7 @@ async function buildDurationCache() {
         }
 
         // First pass: count videos
-        scanDirectory(VIDEOS_ROOT);
+        await scanDirectory(VIDEOS_ROOT);
         console.log(`📊 Found ${processedCount} videos (${cachedCount} cached, ${newCount} need calculation)`);
 
         if (newCount === 0) {
@@ -455,25 +467,25 @@ async function buildDurationCache() {
 
         // Second pass: calculate missing durations
         let calculatedCount = 0;
-        function calculateMissingDurations(dirPath) {
-            const items = fs.readdirSync(dirPath, { withFileTypes: true });
+        async function calculateMissingDurations(dirPath) {
+            const items = await fsPromises.readdir(dirPath, { withFileTypes: true });
             
             for (const item of items) {
                 const fullPath = path.join(dirPath, item.name);
                 
                 if (item.isDirectory()) {
-                    calculateMissingDurations(fullPath);
+                    await calculateMissingDurations(fullPath);
                 } else {
                     const ext = path.extname(item.name).toLowerCase();
                     if (isVideoFile(ext)) {
                         const relativePath = path.relative(VIDEOS_ROOT, fullPath);
                         
                         if (!durationCache[relativePath]) {
-                            // Calculate duration synchronously for startup
+                            // Calculate duration asynchronously for startup
                             try {
                                 const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${fullPath}"`;
-                                const durationOutput = require('child_process').execSync(durationCommand, { encoding: 'utf8' });
-                                const duration = parseFloat(durationOutput.trim());
+                                const durationOutput = await execAsync(durationCommand);
+                                const duration = parseFloat(durationOutput.stdout.trim());
                                 
                                 if (duration && duration > 0) {
                                     durationCache[relativePath] = duration;
@@ -489,10 +501,10 @@ async function buildDurationCache() {
             }
         }
 
-        calculateMissingDurations(VIDEOS_ROOT);
+        await calculateMissingDurations(VIDEOS_ROOT);
         
         // Save the updated cache
-        saveDurationCache();
+        await saveDurationCache();
         
         const endTime = Date.now();
         const duration = Math.round((endTime - startTime) / 1000);
@@ -530,7 +542,7 @@ async function getVideoDuration(videoPath) {
         if (duration && duration > 0) {
             // Cache the result
             durationCache[relativePath] = duration;
-            saveDurationCache(); // Save cache immediately
+            await saveDurationCache(); // Save cache immediately
             console.log('✅ Duration found and cached:', duration, 'seconds for', path.basename(videoPath));
             return duration;
         }
@@ -582,18 +594,21 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                 await execAsync(command);
 
                 // Validate that thumbnail was actually created and is a valid image
-                if (fs.existsSync(thumbnailPath)) {
-                    const stats = fs.statSync(thumbnailPath);
+                try {
+                    await fsPromises.access(thumbnailPath);
+                    const stats = await fsPromises.stat(thumbnailPath);
                     if (stats.size > 0) {
                         console.log(`Thumbnail generated successfully: ${path.basename(thumbnailPath)} at ${timestamp}`);
                         return true;
                     } else {
                         console.error(`Generated thumbnail is empty at ${timestamp}: ${path.basename(thumbnailPath)}`);
-                        if (fs.existsSync(thumbnailPath)) {
-                            fs.unlinkSync(thumbnailPath); // Remove empty file
+                        try {
+                            await fsPromises.unlink(thumbnailPath); // Remove empty file
+                        } catch (unlinkError) {
+                            // Ignore unlink errors
                         }
                     }
-                } else {
+                } catch (accessError) {
                     console.error(`Thumbnail file was not created at ${timestamp}: ${path.basename(thumbnailPath)}`);
                 }
             } catch (ffmpegError) {
@@ -612,7 +627,7 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
 }
 
 // Function to scan all directories and find videos without thumbnails
-function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000) {
+async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000) {
     try {
         // Prevent memory issues with very large collections
         if (videoList.length >= maxVideos) {
@@ -620,17 +635,17 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
             return videoList;
         }
 
-        const items = fs.readdirSync(dirPath, { withFileTypes: true });
+        const items = await fsPromises.readdir(dirPath, { withFileTypes: true });
 
-        items.forEach(item => {
+        for (const item of items) {
             // Check memory limit on each iteration
-            if (videoList.length >= maxVideos) return;
+            if (videoList.length >= maxVideos) break;
 
             const fullPath = path.join(dirPath, item.name);
 
             if (item.isDirectory()) {
                 // Recursively scan subdirectories
-                findVideosWithoutThumbnails(fullPath, videoList, maxVideos);
+                await findVideosWithoutThumbnails(fullPath, videoList, maxVideos);
             } else if (item.isFile()) {
                 const ext = path.extname(item.name).toLowerCase();
                 if (isVideoFile(ext)) {
@@ -644,7 +659,11 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
                     const safeThumbnailName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_') + '_thumb.jpg';
                     const thumbnailPath = path.join(__dirname, 'thumbnails', safeThumbnailName);
 
-                    if (!fs.existsSync(thumbnailPath)) {
+                    try {
+                        await fsPromises.access(thumbnailPath);
+                        // Thumbnail exists, skip
+                    } catch (accessError) {
+                        // Thumbnail doesn't exist, add to list
                         videoList.push({
                             videoPath: fullPath,
                             thumbnailPath: thumbnailPath,
@@ -653,7 +672,7 @@ function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000)
                     }
                 }
             }
-        });
+        }
     } catch (error) {
         console.warn(`Could not scan directory ${dirPath}:`, error.message);
     }
@@ -667,13 +686,15 @@ async function generateAllMissingThumbnails() {
 
     // Create thumbnails directory if it doesn't exist
     const thumbnailsDir = path.join(__dirname, 'thumbnails');
-    if (!fs.existsSync(thumbnailsDir)) {
-        fs.mkdirSync(thumbnailsDir, { recursive: true });
+    try {
+        await fsPromises.access(thumbnailsDir);
+    } catch (accessError) {
+        await fsPromises.mkdir(thumbnailsDir, { recursive: true });
         console.log('📁 Created thumbnails directory');
     }
 
     // Find all videos without thumbnails
-    const videosWithoutThumbnails = findVideosWithoutThumbnails(VIDEOS_ROOT);
+    const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
 
     if (videosWithoutThumbnails.length === 0) {
         console.log('✅ All videos already have thumbnails!');
@@ -725,47 +746,47 @@ async function generateAllMissingThumbnails() {
     console.log(`   ✅ Successful: ${successful}`);
     console.log(`   ❌ Failed: ${failed}`);
 
-    // Cleanup: Remove any empty or corrupted thumbnail files
-    if (failed > 0) {
-        console.log('🧹 Cleaning up failed thumbnail files...');
-        try {
-            const thumbnailsDir = path.join(__dirname, 'thumbnails');
-            const files = fs.readdirSync(thumbnailsDir);
-            let cleaned = 0;
+        // Cleanup: Remove any empty or corrupted thumbnail files
+        if (failed > 0) {
+            console.log('🧹 Cleaning up failed thumbnail files...');
+            try {
+                const thumbnailsDir = path.join(__dirname, 'thumbnails');
+                const files = await fsPromises.readdir(thumbnailsDir);
+                let cleaned = 0;
 
-            files.forEach(file => {
-                const filePath = path.join(thumbnailsDir, file);
-                const stats = fs.statSync(filePath);
-                if (stats.size === 0) {
-                    fs.unlinkSync(filePath);
-                    cleaned++;
+                for (const file of files) {
+                    const filePath = path.join(thumbnailsDir, file);
+                    const stats = await fsPromises.stat(filePath);
+                    if (stats.size === 0) {
+                        await fsPromises.unlink(filePath);
+                        cleaned++;
+                    }
                 }
-            });
 
-            if (cleaned > 0) {
-                console.log(`🧹 Cleaned up ${cleaned} empty thumbnail files`);
+                if (cleaned > 0) {
+                    console.log(`🧹 Cleaned up ${cleaned} empty thumbnail files`);
+                }
+            } catch (cleanupError) {
+                console.warn('⚠️  Error during cleanup:', cleanupError.message);
             }
-        } catch (cleanupError) {
-            console.warn('⚠️  Error during cleanup:', cleanupError.message);
         }
-    }
 
     // Cleanup: Remove incorrectly named thumbnails (with .mp4 in filename)
     console.log('🧹 Cleaning up incorrectly named thumbnails...');
     try {
         const thumbnailsDir = path.join(__dirname, 'thumbnails');
-        const files = fs.readdirSync(thumbnailsDir);
+        const files = await fsPromises.readdir(thumbnailsDir);
         let cleaned = 0;
 
-        files.forEach(file => {
+        for (const file of files) {
             // Check if filename contains .mp4 (incorrect naming)
             if (file.includes('.mp4_thumb.jpg')) {
                 const filePath = path.join(thumbnailsDir, file);
-                fs.unlinkSync(filePath);
+                await fsPromises.unlink(filePath);
                 cleaned++;
                 console.log(`🗑️  Removed incorrectly named thumbnail: ${file}`);
             }
-        });
+        }
 
         if (cleaned > 0) {
             console.log(`🧹 Cleaned up ${cleaned} incorrectly named thumbnail files`);
@@ -792,19 +813,19 @@ app.get('/api/browse', async (req, res) => {
     const filterType = req.query.filterType || 'all';
 
     try {
-        const items = fs.readdirSync(directoryPath, { withFileTypes: true });
+        const items = await fsPromises.readdir(directoryPath, { withFileTypes: true });
 
         let result = await Promise.all(items
             .filter(item => !item.name.startsWith('._'))
             .map(async item => {
                 const fullPath = path.join(directoryPath, item.name);
-                const stats = fs.statSync(fullPath);
+                const stats = await fsPromises.stat(fullPath);
                 const extension = path.extname(item.name).toLowerCase();
 
                 let fileCount = null;
                 if (item.isDirectory()) {
                     try {
-                        const dirContents = fs.readdirSync(fullPath, { withFileTypes: true });
+                        const dirContents = await fsPromises.readdir(fullPath, { withFileTypes: true });
                         fileCount = dirContents.filter(dirItem => !dirItem.name.startsWith('._')).length;
                     } catch (err) {
                         fileCount = 0; // Directory not accessible
@@ -904,7 +925,7 @@ app.get('/api/browse', async (req, res) => {
 });
 
 // API endpoint to get video info
-app.get('/api/video-info', (req, res) => {
+app.get('/api/video-info', async (req, res) => {
     const relativePath = req.query.path;
 
     if (!relativePath) {
@@ -913,7 +934,7 @@ app.get('/api/video-info', (req, res) => {
 
     try {
         const videoPath = resolveSafePath(relativePath);
-        const stats = fs.statSync(videoPath);
+        const stats = await fsPromises.stat(videoPath);
         const ext = path.extname(videoPath).toLowerCase();
 
         if (!isVideoFile(ext)) {
@@ -942,8 +963,51 @@ app.get('/api/video-info', (req, res) => {
 app.get('/api/server-status', (req, res) => {
     res.json({
         generatingThumbnails: false, // This would be set to true during startup generation
-        serverReady: true
+        serverReady: true,
+        largeFileSupport: true,
+        maxFileSize: '10GB'
     });
+});
+
+// API endpoint to check video file size and streaming capability
+app.get('/api/video-stream-info', async (req, res) => {
+    const relativePath = req.query.path;
+
+    if (!relativePath) {
+        return res.status(400).json({ error: 'Video path is required' });
+    }
+
+    try {
+        const videoPath = resolveSafePath(relativePath);
+        const stats = await fsPromises.stat(videoPath);
+        const ext = path.extname(videoPath).toLowerCase();
+
+        if (!isVideoFile(ext)) {
+            return res.status(400).json({ error: 'File is not a supported video format' });
+        }
+
+        const fileSizeGB = stats.size / (1024 * 1024 * 1024);
+        const isLargeFile = fileSizeGB > 2;
+
+        res.json({
+            path: path.relative(VIDEOS_ROOT, videoPath),
+            size: stats.size,
+            sizeGB: Math.round(fileSizeGB * 100) / 100,
+            isLargeFile: isLargeFile,
+            supportsRangeRequests: true,
+            streamingOptimized: true,
+            maxSupportedSize: '10GB',
+            name: path.basename(videoPath),
+            extension: ext,
+            mimeType: getVideoMimeType(ext)
+        });
+    } catch (error) {
+        console.error('Video stream info error:', error);
+        if (error.message.includes('Access denied')) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        res.status(500).json({ error: 'Unable to read video file' });
+    }
 });
 
 // API endpoint to check thumbnail status
@@ -1014,7 +1078,7 @@ app.get('/api/search', async (req, res) => {
 
         async function searchDirectory(dirPath) {
             try {
-                const items = fs.readdirSync(dirPath, { withFileTypes: true });
+                const items = await fsPromises.readdir(dirPath, { withFileTypes: true });
 
                 for (const item of items) {
                     const fullPath = path.join(dirPath, item.name);
@@ -1023,7 +1087,7 @@ app.get('/api/search', async (req, res) => {
                         await searchDirectory(fullPath);
                     } else {
                         const ext = path.extname(item.name).toLowerCase();
-                        const stats = fs.statSync(fullPath);
+                        const stats = await fsPromises.stat(fullPath);
 
                         const isVideo = isVideoFile(ext);
                         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1078,8 +1142,9 @@ app.get('/api/search', async (req, res) => {
 app.get('/api/playlists', async (req, res) => {
     try {
         const playlistsFile = path.join(__dirname, 'playlists.json');
-        if (fs.existsSync(playlistsFile)) {
-            const data = fs.readFileSync(playlistsFile, 'utf8');
+        try {
+            await fsPromises.access(playlistsFile);
+            const data = await fsPromises.readFile(playlistsFile, 'utf8');
             const playlists = JSON.parse(data);
             
             // Add thumbnail URLs and duration for playlist videos
@@ -1105,7 +1170,7 @@ app.get('/api/playlists', async (req, res) => {
             }
             
             res.json(playlists);
-        } else {
+        } catch (accessError) {
             res.json({ playlists: [] });
         }
     } catch (error) {
@@ -1113,7 +1178,7 @@ app.get('/api/playlists', async (req, res) => {
     }
 });
 
-app.post('/api/playlists', (req, res) => {
+app.post('/api/playlists', async (req, res) => {
     try {
         const playlistsFile = path.join(__dirname, 'playlists.json');
         const { name, videos } = req.body;
@@ -1128,9 +1193,12 @@ app.post('/api/playlists', (req, res) => {
         }
 
         let playlists = { playlists: [] };
-        if (fs.existsSync(playlistsFile)) {
-            const data = fs.readFileSync(playlistsFile, 'utf8');
+        try {
+            await fsPromises.access(playlistsFile);
+            const data = await fsPromises.readFile(playlistsFile, 'utf8');
             playlists = JSON.parse(data);
+        } catch (accessError) {
+            // File doesn't exist, use empty playlists
         }
 
         // Check for duplicate playlist names
@@ -1149,7 +1217,7 @@ app.post('/api/playlists', (req, res) => {
         };
 
         playlists.playlists.push(newPlaylist);
-        fs.writeFileSync(playlistsFile, JSON.stringify(playlists, null, 2));
+        await fsPromises.writeFile(playlistsFile, JSON.stringify(playlists, null, 2));
 
         res.json(newPlaylist);
     } catch (error) {
@@ -1545,7 +1613,7 @@ app.listen(PORT, async () => {
     console.log(`🎬 Browse files and watch videos!`);
 
     // Load duration cache
-    loadDurationCache();
+    await loadDurationCache();
 
     // Generate missing thumbnails and build duration cache on startup
     try {

@@ -4,10 +4,10 @@ module.exports = {
       name: 'video-player',
       script: 'server.js',
       cwd: '/app/videoPlayer',
-      instances: 1,
-      exec_mode: 'fork',
+      instances: 'max', // Use all CPU cores
+      exec_mode: 'cluster',
       watch: false,
-      max_memory_restart: '1G',
+      max_memory_restart: '2G',
       env: {
         NODE_ENV: 'production',
         PORT: 4000
@@ -42,7 +42,7 @@ module.exports = {
         '.git',
         '*.log'
       ],
-      node_args: '--max-old-space-size=1024',
+      node_args: '--max-old-space-size=2048',
       source_map_support: true,
       instance_var: 'INSTANCE_ID',
       increment_var: 'PORT',
