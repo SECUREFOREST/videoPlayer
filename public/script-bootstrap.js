@@ -458,6 +458,7 @@ class ModernVideoPlayerBrowser {
     }
 
     createClickablePath(relativePath, fullPath) {
+        console.log('createClickablePath called with:', { relativePath, fullPath });
         if (!relativePath) return '';
         
         // Split the path into parts
@@ -825,8 +826,8 @@ class ModernVideoPlayerBrowser {
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
                     ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size}
                 </div>
-                <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath}">
-                    ${this.createClickablePath(item.relativePath, item.path)}
+                <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath || item.path}">
+                    ${this.createClickablePath(item.relativePath || item.path, item.path)}
                 </div>
             `;
 
