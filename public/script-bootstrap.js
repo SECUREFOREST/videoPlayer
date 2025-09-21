@@ -2317,7 +2317,6 @@ class ModernVideoPlayerBrowser {
                     } else {
                         aValue = a.duration || 0;
                         bValue = b.duration || 0;
-                        console.log(`Sorting: ${a.name} (${aValue}s) vs ${b.name} (${bValue}s)`);
                     }
                     break;
                 case 'modified':
