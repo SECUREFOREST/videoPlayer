@@ -490,9 +490,11 @@ class ModernVideoPlayerBrowser {
         // Truncate if too long
         if (clickablePath.length > 30) {
             const truncated = clickablePath.substring(0, 30) + '...';
+            console.log('Path truncated:', { original: clickablePath, truncated });
             return truncated;
         }
         
+        console.log('Final clickable path:', clickablePath);
         return clickablePath;
     }
 
