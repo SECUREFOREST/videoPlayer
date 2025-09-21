@@ -433,6 +433,14 @@
 /* Video player enhancements */
 #video {
     background: var(--bs-dark);
+    outline: none !important;
+    border: none !important;
+}
+
+#video:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* Empty state styles */
