@@ -489,9 +489,10 @@ class ModernVideoPlayerBrowser {
         
         // Truncate if too long (check actual text content, not HTML)
         const textContent = relativePath;
-        if (textContent.length > 30) {
+        if (textContent.length > 50) {
             // If the original text is too long, truncate the clickable path
-            const truncated = clickablePath.substring(0, 30) + '...';
+            // Use a much higher limit to account for HTML tags
+            const truncated = clickablePath.substring(0, 200) + '...';
             console.log('Path truncated:', { original: clickablePath, truncated });
             return truncated;
         }
