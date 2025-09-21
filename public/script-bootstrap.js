@@ -158,9 +158,19 @@ class ModernVideoPlayerBrowser {
 
                 const orderIcon = this.sortOrder.value === 'asc' ? '↑' : '↓';
                 this.updateSortDropdownText(`${e.target.textContent.trim()} ${orderIcon}`);
-                this.loadDirectory();
+                
+                // Check if we're on the search results tab
+                const searchResultsTab = document.getElementById('search-results-pane');
+                if (searchResultsTab && searchResultsTab.classList.contains('active')) {
+                    // Sort search results
+                    this.sortSearchResults();
+                } else {
+                    // Sort directory contents
+                    this.loadDirectory();
+                }
             });
         });
+
 
         // Tabs
         this.tabBtns.forEach(btn => {
@@ -2255,6 +2265,44 @@ class ModernVideoPlayerBrowser {
                 sortDropdown.innerHTML = `<i class="fas fa-sort me-1"></i>${text}`;
             }
         }
+    }
+
+
+    sortSearchResults() {
+        if (!this.searchResults || this.searchResults.length === 0) return;
+
+        const sortedResults = [...this.searchResults].sort((a, b) => {
+            let aValue, bValue;
+
+            switch (this.sortBy.value) {
+                case 'name':
+                    aValue = a.name.toLowerCase();
+                    bValue = b.name.toLowerCase();
+                    break;
+                case 'size':
+                    aValue = a.size || 0;
+                    bValue = b.size || 0;
+                    break;
+                case 'modified':
+                    aValue = new Date(a.modified);
+                    bValue = new Date(b.modified);
+                    break;
+                case 'type':
+                    aValue = a.isDirectory ? 'directory' : (a.isVideo ? 'video' : 'file');
+                    bValue = b.isDirectory ? 'directory' : (b.isVideo ? 'video' : 'file');
+                    break;
+                default:
+                    aValue = a.name.toLowerCase();
+                    bValue = b.name.toLowerCase();
+            }
+
+            if (aValue < bValue) return this.sortOrder.value === 'asc' ? -1 : 1;
+            if (aValue > bValue) return this.sortOrder.value === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        this.searchResults = sortedResults;
+        this.renderSearchResults();
     }
 
     // Utility methods - validateInput is defined above in the Input validation section
