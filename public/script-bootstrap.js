@@ -212,7 +212,7 @@ class ModernVideoPlayerBrowser {
         }
 
         return this.safeAsyncOperation(async () => {
-            this.showSkeletonLoading();
+            this.showLoading();
             const params = new URLSearchParams({
                 path: path,
                 search: this.searchInput.value,
@@ -765,7 +765,6 @@ class ModernVideoPlayerBrowser {
 
 
         return this.safeAsyncOperation(async () => {
-            this.showSearchSkeletonLoading();
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
 
             const data = await response.json();
@@ -1936,49 +1935,6 @@ class ModernVideoPlayerBrowser {
                 </div>
             </div>
         `;
-    }
-
-    showSkeletonLoading() {
-        this.fileList.innerHTML = '';
-        
-        // Create skeleton items
-        for (let i = 0; i < 12; i++) {
-            const col = document.createElement('div');
-            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
-            
-            const skeletonDiv = document.createElement('div');
-            skeletonDiv.className = 'file-grid-item h-100 position-relative';
-            skeletonDiv.innerHTML = `
-                <div class="skeleton-thumbnail" style="height: 120px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 0.375rem; margin-bottom: 0.5rem;"></div>
-                <div class="skeleton-text" style="height: 16px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 0.25rem;"></div>
-                <div class="skeleton-text" style="height: 12px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; width: 70%;"></div>
-            `;
-            
-            col.appendChild(skeletonDiv);
-            this.fileList.appendChild(col);
-        }
-    }
-
-    showSearchSkeletonLoading() {
-        this.searchList.innerHTML = '';
-        
-        // Create skeleton items for search results
-        for (let i = 0; i < 12; i++) {
-            const col = document.createElement('div');
-            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
-            
-            const skeletonDiv = document.createElement('div');
-            skeletonDiv.className = 'file-grid-item h-100 position-relative';
-            skeletonDiv.innerHTML = `
-                <div class="skeleton-thumbnail" style="height: 120px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 0.375rem; margin-bottom: 0.5rem;"></div>
-                <div class="skeleton-text" style="height: 16px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 0.25rem;"></div>
-                <div class="skeleton-text" style="height: 12px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 0.25rem; width: 80%;"></div>
-                <div class="skeleton-text" style="height: 10px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; width: 60%;"></div>
-            `;
-            
-            col.appendChild(skeletonDiv);
-            this.searchList.appendChild(col);
-        }
     }
 
     showError(message) {
