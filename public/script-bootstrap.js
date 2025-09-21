@@ -466,29 +466,32 @@ class ModernVideoPlayerBrowser {
         
         if (pathParts.length === 0) return relativePath;
         
-        // Create clickable breadcrumb-style path
+        // Only show folder path (exclude filename)
+        const folderParts = pathParts.slice(0, -1); // Remove the last part (filename)
+        
+        if (folderParts.length === 0) {
+            // If no folders, just show the filename
+            return pathParts[pathParts.length - 1];
+        }
+        
+        // Create clickable breadcrumb-style path for folders only
         let clickablePath = '';
         let currentPath = '';
         
-        pathParts.forEach((part, index) => {
+        folderParts.forEach((part, index) => {
             currentPath += (currentPath ? '/' : '') + part;
             
-            // Create clickable span for each folder (not the file itself)
-            if (index < pathParts.length - 1) {
-                clickablePath += `<span class="clickable-folder" data-path="${currentPath}" style="cursor: pointer; color: #3B82F6; text-decoration: underline;" title="Navigate to ${currentPath}">${part}</span>`;
-            } else {
-                // Last part (file name) is not clickable
-                clickablePath += part;
-            }
+            // Create clickable span for each folder
+            clickablePath += `<span class="clickable-folder" data-path="${currentPath}" style="cursor: pointer; color: #3B82F6; text-decoration: underline;" title="Navigate to ${currentPath}">${part}</span>`;
             
-            // Add separator if not the last part
-            if (index < pathParts.length - 1) {
+            // Add separator if not the last folder
+            if (index < folderParts.length - 1) {
                 clickablePath += ' / ';
             }
         });
         
         // Truncate if too long (check actual text content, not HTML)
-        const textContent = relativePath;
+        const textContent = folderParts.join('/');
         if (textContent.length > 50) {
             // If the original text is too long, truncate the clickable path
             // Use a much higher limit to account for HTML tags
