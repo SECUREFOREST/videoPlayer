@@ -1808,7 +1808,7 @@ class ModernVideoPlayerBrowser {
 
     updateFavoriteButton(isFavorited) {
         if (isFavorited) {
-            this.favoriteBtn.innerHTML = '<i class="fas fa-heart-broken"></i>';
+            this.favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
             this.favoriteBtn.classList.remove('btn-outline-primary');
             this.favoriteBtn.classList.add('btn-danger');
             this.favoriteBtn.title = 'Remove from favorites';
