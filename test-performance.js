@@ -100,14 +100,12 @@ class PerformanceTester {
             if (loginResponse.ok) {
                 // Extract session cookie from response
                 const setCookieHeader = loginResponse.headers.get('set-cookie');
-                console.log('🔍 Set-Cookie header:', setCookieHeader);
                 
                 if (setCookieHeader) {
                     // Extract the connect.sid cookie
                     const cookieMatch = setCookieHeader.match(/connect\.sid=[^;]+/);
                     if (cookieMatch) {
                         cookie = cookieMatch[0];
-                        console.log('🍪 Extracted cookie:', cookie);
                     } else {
                         console.log('❌ No connect.sid found in cookies');
                         return;
@@ -130,7 +128,6 @@ class PerformanceTester {
             const startTime = performance.now();
             
             try {
-                console.log(`🔍 Testing ${endpoint} with cookie: ${cookie.substring(0, 20)}...`);
                 const response = await fetch(`${baseUrl}${endpoint}`, {
                     headers: {
                         'Cookie': cookie
@@ -142,13 +139,6 @@ class PerformanceTester {
                     console.log(`✅ ${endpoint} - ${responseTime.toFixed(2)}ms`);
                 } else {
                     console.log(`❌ ${endpoint} - ${response.status} (${responseTime.toFixed(2)}ms)`);
-                    // Try to get response body for debugging
-                    try {
-                        const errorText = await response.text();
-                        console.log(`   Error details: ${errorText.substring(0, 100)}...`);
-                    } catch (e) {
-                        // Ignore error reading response body
-                    }
                 }
                 
                 this.results.responseTimes.push({
