@@ -212,7 +212,7 @@ class ModernVideoPlayerBrowser {
         }
 
         return this.safeAsyncOperation(async () => {
-            this.showLoading();
+            this.showSkeletonLoading();
             const params = new URLSearchParams({
                 path: path,
                 search: this.searchInput.value,
@@ -237,6 +237,7 @@ class ModernVideoPlayerBrowser {
     renderFileList(items, parentPath) {
         this.fileList.innerHTML = '';
 
+
         // Only show parent directory option if we're not at the root level
         if (parentPath && parentPath !== this.currentPath && parentPath !== '') {
             const parentItem = this.createFileItem({
@@ -253,6 +254,8 @@ class ModernVideoPlayerBrowser {
         }
 
         this.renderGridView(items);
+
+        // Start background thumbnail generation for all videos
     }
 
     renderListView(items) {
@@ -263,79 +266,10 @@ class ModernVideoPlayerBrowser {
     }
 
     renderGridView(items) {
-        // Clear existing content
-        this.fileList.innerHTML = '';
-        
-        // Only show parent directory option if we're not at the root level
-        if (this.currentPath && this.currentPath !== '') {
-            const parentItem = this.createFileItem({
-                name: '..',
-                path: this.getParentPath(this.currentPath),
-                isDirectory: true,
-                isFile: false,
-                size: 0,
-                modified: new Date(),
-                extension: '',
-                isVideo: false
-            });
-            this.fileList.appendChild(parentItem);
-        }
-
-        // Render items with lazy loading
-        this.renderItemsLazy(items, 0);
-    }
-
-    renderItemsLazy(items, startIndex = 0, batchSize = 20) {
-        const endIndex = Math.min(startIndex + batchSize, items.length);
-        
-        for (let i = startIndex; i < endIndex; i++) {
-            const gridItem = this.createGridItem(items[i]);
+        items.forEach(item => {
+            const gridItem = this.createGridItem(item);
             this.fileList.appendChild(gridItem);
-        }
-        
-        // If there are more items to render, schedule the next batch
-        if (endIndex < items.length) {
-            // Show loading indicator for remaining items
-            if (startIndex === 0) {
-                this.showLazyLoadingIndicator(endIndex, items.length);
-            }
-            
-            requestAnimationFrame(() => {
-                this.renderItemsLazy(items, endIndex, batchSize);
-            });
-        } else {
-            // All items rendered, hide loading indicator
-            this.hideLazyLoadingIndicator();
-        }
-    }
-
-    showLazyLoadingIndicator(loaded, total) {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.id = 'lazy-loading-indicator';
-        loadingDiv.className = 'col-12 text-center py-3';
-        loadingDiv.innerHTML = `
-            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <span class="text-muted">Loading ${loaded} of ${total} items...</span>
-        `;
-        this.fileList.appendChild(loadingDiv);
-    }
-
-    hideLazyLoadingIndicator() {
-        const loadingIndicator = document.getElementById('lazy-loading-indicator');
-        if (loadingIndicator) {
-            loadingIndicator.remove();
-        }
-    }
-
-    getParentPath(currentPath) {
-        const pathParts = currentPath.split('/').filter(part => part !== '');
-        if (pathParts.length > 0) {
-            pathParts.pop();
-            return pathParts.join('/');
-        }
-        return '';
+        });
     }
 
     createFileItem(item) {
@@ -831,6 +765,7 @@ class ModernVideoPlayerBrowser {
 
 
         return this.safeAsyncOperation(async () => {
+            this.showSearchSkeletonLoading();
             const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
 
             const data = await response.json();
@@ -868,15 +803,7 @@ class ModernVideoPlayerBrowser {
             return;
         }
 
-        // Render search results with lazy loading
-        this.renderSearchResultsLazy(filteredResults, 0);
-    }
-
-    renderSearchResultsLazy(items, startIndex = 0, batchSize = 20) {
-        const endIndex = Math.min(startIndex + batchSize, items.length);
-        
-        for (let i = startIndex; i < endIndex; i++) {
-            const item = items[i];
+        filteredResults.forEach(item => {
             const col = document.createElement('div');
             col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
@@ -945,17 +872,10 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
-        }
-        
-        // If there are more items to render, schedule the next batch
-        if (endIndex < items.length) {
-            requestAnimationFrame(() => {
-                this.renderSearchResultsLazy(items, endIndex, batchSize);
-            });
-        } else {
-            // All items rendered, add event listeners for clickable folder paths
-            this.setupClickablePathListeners();
-        }
+        });
+
+        // Add event listeners for clickable folder paths
+        this.setupClickablePathListeners();
     }
 
     setupClickablePathListeners() {
@@ -2016,6 +1936,49 @@ class ModernVideoPlayerBrowser {
                 </div>
             </div>
         `;
+    }
+
+    showSkeletonLoading() {
+        this.fileList.innerHTML = '';
+        
+        // Create skeleton items
+        for (let i = 0; i < 12; i++) {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
+            
+            const skeletonDiv = document.createElement('div');
+            skeletonDiv.className = 'file-grid-item h-100 position-relative';
+            skeletonDiv.innerHTML = `
+                <div class="skeleton-thumbnail" style="height: 120px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 0.375rem; margin-bottom: 0.5rem;"></div>
+                <div class="skeleton-text" style="height: 16px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton-text" style="height: 12px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; width: 70%;"></div>
+            `;
+            
+            col.appendChild(skeletonDiv);
+            this.fileList.appendChild(col);
+        }
+    }
+
+    showSearchSkeletonLoading() {
+        this.searchList.innerHTML = '';
+        
+        // Create skeleton items for search results
+        for (let i = 0; i < 12; i++) {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
+            
+            const skeletonDiv = document.createElement('div');
+            skeletonDiv.className = 'file-grid-item h-100 position-relative';
+            skeletonDiv.innerHTML = `
+                <div class="skeleton-thumbnail" style="height: 120px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 0.375rem; margin-bottom: 0.5rem;"></div>
+                <div class="skeleton-text" style="height: 16px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 0.25rem;"></div>
+                <div class="skeleton-text" style="height: 12px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 0.25rem; width: 80%;"></div>
+                <div class="skeleton-text" style="height: 10px; background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; width: 60%;"></div>
+            `;
+            
+            col.appendChild(skeletonDiv);
+            this.searchList.appendChild(col);
+        }
     }
 
     showError(message) {

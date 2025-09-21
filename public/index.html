@@ -39,6 +39,21 @@
             background-color: #374151 !important;
             transition: all 0.2s ease !important;
         }
+
+        /* Skeleton loading animation */
+        @keyframes skeleton-loading {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .skeleton-thumbnail,
+        .skeleton-text {
+            animation: skeleton-loading 1.5s infinite;
+        }
     </style>
 </head>
 
