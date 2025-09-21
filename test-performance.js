@@ -75,6 +75,34 @@ class PerformanceTester {
         this.results.memoryUsage.push(memInfo);
     }
 
+    async findVideoFiles(dir) {
+        const videoFiles = [];
+        const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
+        
+        try {
+            const items = await fs.readdir(dir, { withFileTypes: true });
+            
+            for (const item of items) {
+                const fullPath = path.join(dir, item.name);
+                
+                if (item.isDirectory()) {
+                    // Recursively search subdirectories
+                    const subDirVideos = await this.findVideoFiles(fullPath);
+                    videoFiles.push(...subDirVideos);
+                } else if (item.isFile()) {
+                    const ext = path.extname(item.name).toLowerCase();
+                    if (videoExtensions.includes(ext)) {
+                        videoFiles.push(fullPath);
+                    }
+                }
+            }
+        } catch (error) {
+            // Ignore permission errors or other issues
+        }
+        
+        return videoFiles;
+    }
+
     async testApiEndpoints() {
         console.log('🧪 Testing API endpoints...');
         
@@ -159,11 +187,8 @@ class PerformanceTester {
         const testDir = path.join(__dirname, 'videos');
         
         try {
-            const items = await fs.readdir(testDir, { withFileTypes: true });
-            const videoFiles = items.filter(item => {
-                const ext = path.extname(item.name).toLowerCase();
-                return ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'].includes(ext);
-            });
+            // Recursively find all video files
+            const videoFiles = await this.findVideoFiles(testDir);
             
             console.log(`📹 Found ${videoFiles.length} video files`);
             
@@ -172,15 +197,14 @@ class PerformanceTester {
             let totalSize = 0;
             
             for (const videoFile of videoFiles.slice(0, 5)) { // Test first 5 videos
-                const fullPath = path.join(testDir, videoFile.name);
-                const stats = await fs.stat(fullPath);
+                const stats = await fs.stat(videoFile);
                 const sizeMB = Math.round(stats.size / 1024 / 1024);
                 const sizeGB = Math.round(stats.size / (1024 * 1024 * 1024) * 100) / 100;
                 totalSize += sizeMB;
                 
                 if (sizeMB > 100) { // Files larger than 100MB
                     largeFiles++;
-                    console.log(`📊 ${videoFile.name}: ${sizeGB}GB (${sizeMB}MB)`);
+                    console.log(`📊 ${path.basename(videoFile)}: ${sizeGB}GB (${sizeMB}MB)`);
                 }
             }
             
@@ -191,7 +215,9 @@ class PerformanceTester {
             console.log('🔍 Testing range request support...');
             const testVideo = videoFiles[0];
             if (testVideo) {
-                const testUrl = `http://localhost:4000/videos/${encodeURIComponent(testVideo.name)}`;
+                // Get relative path from videos directory
+                const relativePath = path.relative(path.join(__dirname, 'videos'), testVideo);
+                const testUrl = `http://localhost:4000/videos/${encodeURIComponent(relativePath)}`;
                 
                 try {
                     // First authenticate to get session cookie
