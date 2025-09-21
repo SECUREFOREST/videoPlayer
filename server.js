@@ -1070,24 +1070,7 @@ app.get('/api/search', async (req, res) => {
                     const fullPath = path.join(dirPath, item.name);
 
                     if (item.isDirectory()) {
-                        // Check if directory name matches search
-                        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-                        if (matchesSearch && (fileType === 'all' || fileType === 'directories')) {
-                            const stats = await fsPromises.stat(fullPath);
-                            const resultItem = {
-                                name: item.name,
-                                path: path.relative(VIDEOS_ROOT, fullPath),
-                                isDirectory: true,
-                                isFile: false,
-                                size: stats.size,
-                                modified: stats.mtime,
-                                extension: '',
-                                isVideo: false,
-                                mimeType: null,
-                                relativePath: path.relative(searchPath, fullPath)
-                            };
-                            results.push(resultItem);
-                        }
+                        // Recursively search subdirectories but don't include directories in results
                         await searchDirectory(fullPath);
                     } else {
                         const ext = path.extname(item.name).toLowerCase();
@@ -1096,31 +1079,26 @@ app.get('/api/search', async (req, res) => {
                         const isVideo = isVideoFile(ext);
                         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-                        if (matchesSearch) {
-                            if (fileType === 'all' ||
-                                (fileType === 'videos' && isVideo)) {
-                                
-                                const resultItem = {
-                                    name: item.name,
-                                    path: path.relative(VIDEOS_ROOT, fullPath), // Return relative path
-                                    isDirectory: false,
-                                    isFile: true,
-                                    size: stats.size,
-                                    modified: stats.mtime,
-                                    extension: ext,
-                                    isVideo: isVideo,
-                                    mimeType: isVideo ? getVideoMimeType(ext) : null,
-                                    relativePath: path.relative(searchPath, fullPath)
-                                };
-                                
-                                // Add thumbnail URL and duration for videos
-                                if (isVideo) {
-                                    resultItem.thumbnailUrl = getThumbnailUrl(fullPath);
-                                    resultItem.duration = await getVideoDuration(fullPath);
-                                }
-                                
-                                results.push(resultItem);
-                            }
+                        if (matchesSearch && isVideo) {
+                            // Only include video files in search results
+                            const resultItem = {
+                                name: item.name,
+                                path: path.relative(VIDEOS_ROOT, fullPath), // Return relative path
+                                isDirectory: false,
+                                isFile: true,
+                                size: stats.size,
+                                modified: stats.mtime,
+                                extension: ext,
+                                isVideo: isVideo,
+                                mimeType: isVideo ? getVideoMimeType(ext) : null,
+                                relativePath: path.relative(searchPath, fullPath)
+                            };
+                            
+                            // Add thumbnail URL and duration for videos
+                            resultItem.thumbnailUrl = getThumbnailUrl(fullPath);
+                            resultItem.duration = await getVideoDuration(fullPath);
+                            
+                            results.push(resultItem);
                         }
                     }
                 }
