@@ -482,7 +482,7 @@ class ModernVideoPlayerBrowser {
             currentPath += (currentPath ? '/' : '') + part;
             
             // Create clickable span for each folder
-            clickablePath += `<span class="clickable-folder" data-path="${currentPath}" style="cursor: pointer; color: #B91C1C; text-decoration: underline; transition: all 0.2s ease; padding: 2px 4px; border-radius: 3px;" title="Navigate to ${currentPath}" onmouseover="this.style.backgroundColor='#B91C1C'; this.style.color='#FFFFFF'; this.style.textDecoration='none';" onmouseout="this.style.backgroundColor=''; this.style.color='#B91C1C'; this.style.textDecoration='underline';">${part}</span>`;
+            clickablePath += `<span class="clickable-folder" data-path="${currentPath}" style="cursor: pointer; color: #B91C1C; transition: all 0.2s ease; padding: 2px 4px; border-radius: 3px;" title="Navigate to ${currentPath}" onmouseover="this.style.backgroundColor='#B91C1C'; this.style.color='#FFFFFF';" onmouseout="this.style.backgroundColor=''; this.style.color='#B91C1C';">${part}</span>`;
             
             // Add separator if not the last folder
             if (index < folderParts.length - 1) {
