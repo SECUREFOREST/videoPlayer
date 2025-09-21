@@ -841,9 +841,10 @@ app.get('/api/browse', async (req, res) => {
                 result = result.filter(item => item.isVideo);
             } else if (filterType === 'directories') {
                 result = result.filter(item => item.isDirectory);
-            } else if (filterType === 'files') {
-                result = result.filter(item => item.isFile && !item.isVideo);
             }
+        } else {
+            // For 'all' filter, only show videos and directories (exclude other files)
+            result = result.filter(item => item.isVideo || item.isDirectory);
         }
 
         // Filter out empty directories
@@ -1058,6 +1059,24 @@ app.get('/api/search', async (req, res) => {
                     const fullPath = path.join(dirPath, item.name);
 
                     if (item.isDirectory()) {
+                        // Check if directory name matches search
+                        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+                        if (matchesSearch && (fileType === 'all' || fileType === 'directories')) {
+                            const stats = await fsPromises.stat(fullPath);
+                            const resultItem = {
+                                name: item.name,
+                                path: path.relative(VIDEOS_ROOT, fullPath),
+                                isDirectory: true,
+                                isFile: false,
+                                size: stats.size,
+                                modified: stats.mtime,
+                                extension: '',
+                                isVideo: false,
+                                mimeType: null,
+                                relativePath: path.relative(searchPath, fullPath)
+                            };
+                            results.push(resultItem);
+                        }
                         await searchDirectory(fullPath);
                     } else {
                         const ext = path.extname(item.name).toLowerCase();
@@ -1068,8 +1087,7 @@ app.get('/api/search', async (req, res) => {
 
                         if (matchesSearch) {
                             if (fileType === 'all' ||
-                                (fileType === 'videos' && isVideo) ||
-                                (fileType === 'files' && !isVideo)) {
+                                (fileType === 'videos' && isVideo)) {
                                 
                                 const resultItem = {
                                     name: item.name,

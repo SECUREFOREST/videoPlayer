@@ -749,6 +749,9 @@ class ModernVideoPlayerBrowser {
             this.loadPlaylists();
         } else if (tabName === 'favorites') {
             this.loadFavorites();
+        } else if (tabName === 'browser') {
+            // Reset search when switching back to browser
+            this.resetSearch();
         }
     }
 
@@ -2243,6 +2246,29 @@ class ModernVideoPlayerBrowser {
     clearSearch() {
         this.searchResults = [];
         this.switchTab('browser');
+        this.loadDirectory();
+    }
+
+    resetSearch() {
+        // Clear search input
+        if (this.searchInput) {
+            this.searchInput.value = '';
+        }
+        
+        // Clear search results
+        this.searchResults = [];
+        
+        // Reset search count
+        if (this.searchCount) {
+            this.searchCount.textContent = '0 results';
+        }
+        
+        // Clear search list
+        if (this.searchList) {
+            this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No search performed yet</p></div></div>';
+        }
+        
+        // Load current directory
         this.loadDirectory();
     }
 
