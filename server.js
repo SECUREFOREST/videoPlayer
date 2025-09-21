@@ -72,13 +72,21 @@ app.use(session({
     }
 }));
 
-// Password protection middleware
-const PASSWORD = 'bringbeerforpassword';
+// Load Application Configuration
+const config = require('./config.js');
+
+// Application Configuration (for backward compatibility)
+const APP_CONFIG = {
+    name: config.name,
+    description: config.description,
+    password: config.password,
+    port: config.port
+};
 
 // Check if user is authenticated
 function requireAuth(req, res, next) {
-    // Skip auth for login endpoint and static files
-    if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/api/auth/login') || req.path.startsWith('/static/')) {
+    // Skip auth for login endpoint, config, and static files
+    if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/api/auth/login') || req.path.startsWith('/api/config') || req.path.startsWith('/static/')) {
         return next();
     }
 
@@ -87,7 +95,7 @@ function requireAuth(req, res, next) {
         const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString('ascii');
         const [username, password] = credentials.split(':');
 
-        if (password === PASSWORD) {
+        if (password === APP_CONFIG.password) {
             return next();
         }
     }
@@ -115,7 +123,7 @@ app.get('/login', (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <meta name="description" content="Login to access the Video Player">
             <meta name="theme-color" content="#000000">
-            <title>Login - Tie them up!</title>
+            <title>Login - ${APP_CONFIG.name}</title>
             
             <!-- Bootstrap 5 CSS -->
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -217,7 +225,7 @@ app.get('/login', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
 
-    if (password === PASSWORD) {
+    if (password === APP_CONFIG.password) {
         req.session.authenticated = true;
         res.redirect('/');
     } else {
@@ -229,7 +237,7 @@ app.post('/api/login', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
     const { password } = req.body;
 
-    if (password === PASSWORD) {
+    if (password === APP_CONFIG.password) {
         req.session.authenticated = true;
         res.json({ success: true, message: 'Authentication successful' });
     } else {
@@ -243,7 +251,15 @@ app.post('/api/logout', (req, res) => {
     res.redirect('/login');
 });
 
-// Apply authentication to all routes except login
+// Serve app configuration
+app.get('/api/config', (req, res) => {
+    res.json({
+        name: APP_CONFIG.name,
+        description: APP_CONFIG.description
+    });
+});
+
+// Apply authentication to all routes except login and config
 app.use(requireAuth);
 
 // Debug route to catch all requests
@@ -1600,10 +1616,10 @@ app.get('/', (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, async () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(config.port, async () => {
+    console.log(`🚀 Server running on http://localhost:${config.port}`);
     console.log(`📁 Video directory: ${VIDEOS_ROOT}`);
-    console.log(`🎬 Browse files and watch videos!`);
+    console.log(`🎬 ${config.name} ready!`);
 
     // Load duration cache
     await loadDurationCache();

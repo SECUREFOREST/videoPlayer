@@ -77,8 +77,9 @@ A high-performance Node.js video streaming application with professional-grade f
    - **Ubuntu/Debian**: `sudo apt install ffmpeg`
    - **Windows**: Download from [FFmpeg website](https://ffmpeg.org/download.html)
 
-4. **Configure authentication** (optional):
-   - Edit `server.js` and change the password in the `PASSWORD` variable
+4. **Configure the application** (optional):
+   - Edit `config.js` to customize the application
+   - Change the app name, password, port, and other settings
    - Default password: `bringbeerforpassword`
 
 5. **Start the application**:
@@ -102,6 +103,7 @@ A high-performance Node.js video streaming application with professional-grade f
 ```
 videoPlayer/
 ├── server.js                    # Main server file with authentication
+├── config.js                    # Application configuration
 ├── package.json                 # Dependencies and scripts
 ├── ecosystem.config.js          # PM2 configuration
 ├── nginx.conf                   # Nginx reverse proxy configuration
@@ -158,6 +160,23 @@ videoPlayer/
 3. **Video Info**: View video details in the player footer
 
 ## 🔧 Configuration
+
+### Application Settings
+Edit `config.js` to customize your video player:
+
+```javascript
+module.exports = {
+    // Application Identity
+    name: 'Your Video Player',           // App name shown in UI
+    description: 'Your Description',     // Meta description
+    
+    // Security Settings
+    password: 'your-password',          // Login password
+    
+    // Server Settings
+    port: 4000                          // Server port
+};
+```
 
 ### Supported Video Formats
 The application supports these video formats:
