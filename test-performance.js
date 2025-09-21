@@ -86,11 +86,42 @@ class PerformanceTester {
             '/api/favorites'
         ];
         
+        // First, authenticate to get session cookie
+        let cookie = '';
+        try {
+            const loginResponse = await fetch(`${baseUrl}/api/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'password=bringbeerforpassword'
+            });
+            
+            if (loginResponse.ok) {
+                // Extract session cookie from response
+                const setCookieHeader = loginResponse.headers.get('set-cookie');
+                if (setCookieHeader) {
+                    cookie = setCookieHeader.split(';')[0];
+                }
+                console.log('✅ Authentication successful');
+            } else {
+                console.log('❌ Authentication failed');
+                return;
+            }
+        } catch (error) {
+            console.log(`❌ Authentication error: ${error.message}`);
+            return;
+        }
+        
         for (const endpoint of endpoints) {
             const startTime = performance.now();
             
             try {
-                const response = await fetch(`${baseUrl}${endpoint}`);
+                const response = await fetch(`${baseUrl}${endpoint}`, {
+                    headers: {
+                        'Cookie': cookie
+                    }
+                });
                 const responseTime = performance.now() - startTime;
                 
                 if (response.ok) {
@@ -152,10 +183,28 @@ class PerformanceTester {
                 const testUrl = `http://localhost:4000/videos/${encodeURIComponent(testVideo.name)}`;
                 
                 try {
+                    // First authenticate to get session cookie
+                    const loginResponse = await fetch('http://localhost:4000/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'password=bringbeerforpassword'
+                    });
+                    
+                    let cookie = '';
+                    if (loginResponse.ok) {
+                        const setCookieHeader = loginResponse.headers.get('set-cookie');
+                        if (setCookieHeader) {
+                            cookie = setCookieHeader.split(';')[0];
+                        }
+                    }
+                    
                     // Test partial content request
                     const response = await fetch(testUrl, {
                         headers: {
-                            'Range': 'bytes=0-1023'
+                            'Range': 'bytes=0-1023',
+                            'Cookie': cookie
                         }
                     });
                     
