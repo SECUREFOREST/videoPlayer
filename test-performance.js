@@ -192,23 +192,48 @@ class PerformanceTester {
             
             console.log(`📹 Found ${videoFiles.length} video files`);
             
-            // Test file size handling
+            // Test file size handling - sort by size to find the largest files
             let largeFiles = 0;
+            let hugeFiles = 0;
             let totalSize = 0;
             
-            for (const videoFile of videoFiles.slice(0, 5)) { // Test first 5 videos
-                const stats = await fs.stat(videoFile);
-                const sizeMB = Math.round(stats.size / 1024 / 1024);
-                const sizeGB = Math.round(stats.size / (1024 * 1024 * 1024) * 100) / 100;
-                totalSize += sizeMB;
+            // Get file sizes and sort by size (largest first)
+            const fileSizes = [];
+            for (const videoFile of videoFiles) {
+                try {
+                    const stats = await fs.stat(videoFile);
+                    fileSizes.push({
+                        path: videoFile,
+                        size: stats.size,
+                        sizeMB: Math.round(stats.size / 1024 / 1024),
+                        sizeGB: Math.round(stats.size / (1024 * 1024 * 1024) * 100) / 100
+                    });
+                } catch (error) {
+                    // Skip files that can't be accessed
+                }
+            }
+            
+            // Sort by size (largest first)
+            fileSizes.sort((a, b) => b.size - a.size);
+            
+            // Test the largest files (up to 20)
+            const filesToTest = Math.min(fileSizes.length, 20);
+            
+            for (let i = 0; i < filesToTest; i++) {
+                const file = fileSizes[i];
+                totalSize += file.sizeMB;
                 
-                if (sizeMB > 100) { // Files larger than 100MB
+                if (file.sizeMB > 1000) { // Files larger than 1GB
+                    hugeFiles++;
+                    console.log(`📊 ${path.basename(file.path)}: ${file.sizeGB}GB (${file.sizeMB}MB) - HUGE!`);
+                } else if (file.sizeMB > 100) { // Files larger than 100MB
                     largeFiles++;
-                    console.log(`📊 ${path.basename(videoFile)}: ${sizeGB}GB (${sizeMB}MB)`);
+                    console.log(`📊 ${path.basename(file.path)}: ${file.sizeGB}GB (${file.sizeMB}MB)`);
                 }
             }
             
             console.log(`✅ Large file support: ${largeFiles} files > 100MB`);
+            console.log(`✅ Huge file support: ${hugeFiles} files > 1GB`);
             console.log(`📊 Total size tested: ${Math.round(totalSize)}MB`);
             
             // Test range request capability
