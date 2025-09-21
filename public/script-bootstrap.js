@@ -1374,10 +1374,7 @@ class ModernVideoPlayerBrowser {
                     ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • Duration: ${this.formatTime(favorite.duration)}` : ''}
                 </div>
                 <div class="favorite-actions d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary flex-fill" onclick="app.playVideo({path: '${favorite.path}', name: '${favorite.name}', isVideo: ${favorite.isVideo || false}})">
-                        <i class="fas fa-play me-1"></i>Play
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="app.removeFavorite('${favorite.id}')" title="Remove from favorites">
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); app.removeFavorite('${favorite.id}')" title="Remove from favorites">
                         <i class="fas fa-heart-broken"></i>
                     </button>
                 </div>
@@ -1423,6 +1420,15 @@ class ModernVideoPlayerBrowser {
 
             div.addEventListener('mouseleave', () => {
                 div.style.backgroundColor = '';
+            });
+
+            // Add click handler to play video
+            div.addEventListener('click', () => {
+                this.playVideo({
+                    path: favorite.path,
+                    name: favorite.name,
+                    isVideo: favorite.isVideo || false
+                });
             });
 
             col.appendChild(div);
