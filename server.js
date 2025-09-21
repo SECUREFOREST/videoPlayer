@@ -862,14 +862,25 @@ app.get('/api/browse', async (req, res) => {
             if (sortBy === 'name') {
                 comparison = a.name.localeCompare(b.name);
             } else if (sortBy === 'duration') {
-                comparison = (a.duration || 0) - (b.duration || 0);
+                // For duration sorting, directories should be sorted by name since they don't have duration
+                if (a.isDirectory && b.isDirectory) {
+                    comparison = a.name.localeCompare(b.name);
+                } else if (a.isDirectory && !b.isDirectory) {
+                    comparison = -1; // Directories first
+                } else if (!a.isDirectory && b.isDirectory) {
+                    comparison = 1; // Directories first
+                } else {
+                    comparison = (a.duration || 0) - (b.duration || 0);
+                }
             } else if (sortBy === 'modified') {
                 comparison = new Date(a.modified) - new Date(b.modified);
             }
 
-            // Sort directories first, then files
-            if (a.isDirectory && !b.isDirectory) return -1;
-            if (!a.isDirectory && b.isDirectory) return 1;
+            // For non-duration sorts, sort directories first, then files
+            if (sortBy !== 'duration') {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
+            }
 
             return sortOrder === 'desc' ? -comparison : comparison;
         });

@@ -2306,8 +2306,18 @@ class ModernVideoPlayerBrowser {
                     bValue = b.name.toLowerCase();
                     break;
                 case 'duration':
-                    aValue = a.duration || 0;
-                    bValue = b.duration || 0;
+                    // For duration sorting, directories should be sorted by name since they don't have duration
+                    if (a.isDirectory && b.isDirectory) {
+                        aValue = a.name.toLowerCase();
+                        bValue = b.name.toLowerCase();
+                    } else if (a.isDirectory && !b.isDirectory) {
+                        return -1; // Directories first
+                    } else if (!a.isDirectory && b.isDirectory) {
+                        return 1; // Directories first
+                    } else {
+                        aValue = a.duration || 0;
+                        bValue = b.duration || 0;
+                    }
                     break;
                 case 'modified':
                     aValue = new Date(a.modified);
