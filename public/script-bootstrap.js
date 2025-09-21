@@ -237,7 +237,6 @@ class ModernVideoPlayerBrowser {
     renderFileList(items, parentPath) {
         this.fileList.innerHTML = '';
 
-
         // Only show parent directory option if we're not at the root level
         if (parentPath && parentPath !== this.currentPath && parentPath !== '') {
             const parentItem = this.createFileItem({
@@ -254,8 +253,6 @@ class ModernVideoPlayerBrowser {
         }
 
         this.renderGridView(items);
-
-        // Start background thumbnail generation for all videos
     }
 
     renderListView(items) {
@@ -266,10 +263,79 @@ class ModernVideoPlayerBrowser {
     }
 
     renderGridView(items) {
-        items.forEach(item => {
-            const gridItem = this.createGridItem(item);
+        // Clear existing content
+        this.fileList.innerHTML = '';
+        
+        // Only show parent directory option if we're not at the root level
+        if (this.currentPath && this.currentPath !== '') {
+            const parentItem = this.createFileItem({
+                name: '..',
+                path: this.getParentPath(this.currentPath),
+                isDirectory: true,
+                isFile: false,
+                size: 0,
+                modified: new Date(),
+                extension: '',
+                isVideo: false
+            });
+            this.fileList.appendChild(parentItem);
+        }
+
+        // Render items with lazy loading
+        this.renderItemsLazy(items, 0);
+    }
+
+    renderItemsLazy(items, startIndex = 0, batchSize = 20) {
+        const endIndex = Math.min(startIndex + batchSize, items.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            const gridItem = this.createGridItem(items[i]);
             this.fileList.appendChild(gridItem);
-        });
+        }
+        
+        // If there are more items to render, schedule the next batch
+        if (endIndex < items.length) {
+            // Show loading indicator for remaining items
+            if (startIndex === 0) {
+                this.showLazyLoadingIndicator(endIndex, items.length);
+            }
+            
+            requestAnimationFrame(() => {
+                this.renderItemsLazy(items, endIndex, batchSize);
+            });
+        } else {
+            // All items rendered, hide loading indicator
+            this.hideLazyLoadingIndicator();
+        }
+    }
+
+    showLazyLoadingIndicator(loaded, total) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'lazy-loading-indicator';
+        loadingDiv.className = 'col-12 text-center py-3';
+        loadingDiv.innerHTML = `
+            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="text-muted">Loading ${loaded} of ${total} items...</span>
+        `;
+        this.fileList.appendChild(loadingDiv);
+    }
+
+    hideLazyLoadingIndicator() {
+        const loadingIndicator = document.getElementById('lazy-loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
+    }
+
+    getParentPath(currentPath) {
+        const pathParts = currentPath.split('/').filter(part => part !== '');
+        if (pathParts.length > 0) {
+            pathParts.pop();
+            return pathParts.join('/');
+        }
+        return '';
     }
 
     createFileItem(item) {
@@ -802,7 +868,15 @@ class ModernVideoPlayerBrowser {
             return;
         }
 
-        filteredResults.forEach(item => {
+        // Render search results with lazy loading
+        this.renderSearchResultsLazy(filteredResults, 0);
+    }
+
+    renderSearchResultsLazy(items, startIndex = 0, batchSize = 20) {
+        const endIndex = Math.min(startIndex + batchSize, items.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            const item = items[i];
             const col = document.createElement('div');
             col.className = 'col-6 col-md-4 col-lg-3 col-xl-2';
 
@@ -871,10 +945,17 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
-        });
-
-        // Add event listeners for clickable folder paths
-        this.setupClickablePathListeners();
+        }
+        
+        // If there are more items to render, schedule the next batch
+        if (endIndex < items.length) {
+            requestAnimationFrame(() => {
+                this.renderSearchResultsLazy(items, endIndex, batchSize);
+            });
+        } else {
+            // All items rendered, add event listeners for clickable folder paths
+            this.setupClickablePathListeners();
+        }
     }
 
     setupClickablePathListeners() {
