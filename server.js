@@ -861,12 +861,10 @@ app.get('/api/browse', async (req, res) => {
 
             if (sortBy === 'name') {
                 comparison = a.name.localeCompare(b.name);
-            } else if (sortBy === 'size') {
-                comparison = a.size - b.size;
+            } else if (sortBy === 'duration') {
+                comparison = (a.duration || 0) - (b.duration || 0);
             } else if (sortBy === 'modified') {
                 comparison = new Date(a.modified) - new Date(b.modified);
-            } else if (sortBy === 'type') {
-                comparison = a.extension.localeCompare(b.extension);
             }
 
             // Sort directories first, then files

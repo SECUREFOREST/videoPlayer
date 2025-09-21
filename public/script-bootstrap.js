@@ -2305,17 +2305,13 @@ class ModernVideoPlayerBrowser {
                     aValue = a.name.toLowerCase();
                     bValue = b.name.toLowerCase();
                     break;
-                case 'size':
-                    aValue = a.size || 0;
-                    bValue = b.size || 0;
+                case 'duration':
+                    aValue = a.duration || 0;
+                    bValue = b.duration || 0;
                     break;
                 case 'modified':
                     aValue = new Date(a.modified);
                     bValue = new Date(b.modified);
-                    break;
-                case 'type':
-                    aValue = a.isDirectory ? 'directory' : (a.isVideo ? 'video' : 'file');
-                    bValue = b.isDirectory ? 'directory' : (b.isVideo ? 'video' : 'file');
                     break;
                 default:
                     aValue = a.name.toLowerCase();
