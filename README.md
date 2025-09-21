@@ -1,6 +1,6 @@
 # 🎬 Tie them up! - Advanced Video Player
 
-A high-performance Node.js video streaming application with professional-grade features including authentication, playlists, favorites, search, and optimized video delivery.
+A high-performance Node.js video streaming application with professional-grade features including authentication, playlists, favorites, search, and optimized video delivery. Built with modern web technologies and designed to handle large video collections efficiently.
 
 ## ✨ Features
 
@@ -44,19 +44,20 @@ A high-performance Node.js video streaming application with professional-grade f
 - **Custom Styling**: Professional video player appearance
 
 ### ⚡ Performance Optimizations
-- **Async File Operations**: Non-blocking file system operations
-- **PM2 Clustering**: Multi-process server architecture
+- **Async File Operations**: Non-blocking file system operations using fs.promises
+- **PM2 Clustering**: Multi-process server architecture for production
 - **Nginx Integration**: Reverse proxy with upstream configuration
-- **Caching Headers**: Optimized browser caching
+- **Caching Headers**: Optimized browser caching for static assets
 - **Gzip Compression**: Reduced bandwidth usage
-- **Range Request Support**: Efficient video streaming
+- **Range Request Support**: Efficient video streaming with 206 Partial Content
+- **Memory Efficient**: Handles 600+ videos with minimal memory usage (~45MB RSS)
 
 ## 🚀 Installation
 
 ### Prerequisites
 - **Node.js** (v14 or higher)
 - **FFmpeg** (for video processing and thumbnails)
-- **PM2** (for production deployment)
+- **PM2** (optional, for production deployment)
 - **Nginx** (optional, for reverse proxy)
 
 ### Quick Start
@@ -87,10 +88,10 @@ A high-performance Node.js video streaming application with professional-grade f
    # Development mode
    npm start
    
-   # Production mode with PM2
+   # Production mode with PM2 (optional)
    pm2 start ecosystem.config.js
    
-   # With Nginx (if configured)
+   # With Nginx (optional)
    sudo systemctl start nginx
    ```
 
@@ -198,6 +199,14 @@ Thumbnails are automatically generated using FFmpeg. If FFmpeg is not installed,
 - **Playlists**: Stored in `playlists.json`
 - **Favorites**: Stored in `favorites.json`
 - **Progress**: Stored in browser's localStorage
+- **Configuration**: Centralized in `config.js`
+
+### Dynamic Configuration
+The application supports dynamic configuration loading:
+- **App Name**: Automatically updates in UI (title, navbar, modal)
+- **Description**: Updates meta description for SEO
+- **Password**: Configurable authentication
+- **Port**: Flexible server port configuration
 
 ## 🛠️ API Endpoints
 
@@ -247,22 +256,36 @@ Add new features by extending the JavaScript classes in `public/script.js`:
 
 ### Common Issues
 
-1. **Thumbnails not generating**:
+1. **Authentication issues**:
+   - Check if the password in `config.js` is correct
+   - Clear browser cookies and try again
+   - Ensure session storage is enabled
+
+2. **Thumbnails not generating**:
    - Ensure FFmpeg is installed and accessible
    - Check file permissions for the thumbnails directory
+   - Verify video files are not corrupted
 
-2. **Videos not playing**:
+3. **Videos not playing**:
    - Verify the video format is supported
    - Check if the video file is corrupted
    - Ensure proper MIME type configuration
+   - Check if range requests are working (206 status)
 
-3. **Search not working**:
+4. **Search not working**:
    - Check if the search path is accessible
    - Verify file permissions
+   - Ensure authentication is working
 
-4. **Playlists not saving**:
+5. **Playlists not saving**:
    - Check write permissions for the project directory
    - Ensure JSON files are not corrupted
+   - Verify authentication is working
+
+6. **Performance issues**:
+   - Run `node test-performance.js` to diagnose
+   - Check memory usage and file system performance
+   - Consider using PM2 for production deployment
 
 ### Performance Tips
 
@@ -279,6 +302,7 @@ Add new features by extending the JavaScript classes in `public/script.js`:
 - **Video Collection**: 602+ videos supported
 - **Large File Support**: Tested with files up to 1.6GB
 - **Range Request Support**: 206 Partial Content responses
+- **Authentication**: Session-based with persistent login
 
 ### Performance Testing
 Run the included performance test:
@@ -289,21 +313,23 @@ node test-performance.js
 This will test:
 - Async file operations
 - Memory usage
-- API endpoint performance
+- API endpoint performance (with authentication)
 - Large video file handling
 - Range request support
+- Video collection analysis (602+ videos)
 
 ## 🔮 Future Enhancements
 
 Potential features for future versions:
-- Video transcoding pipeline
-- Multiple quality levels (1080p, 720p, 480p)
-- HLS streaming support
-- Subtitle support
-- Video metadata editing
-- Advanced analytics
-- Cloud storage integration
+- Video transcoding pipeline for multiple quality levels
+- HLS streaming support for adaptive bitrate
+- Subtitle support (.srt, .vtt files)
+- Video metadata editing and management
+- Advanced analytics and usage statistics
+- Cloud storage integration (AWS S3, Google Drive)
 - Mobile app version
+- Real-time collaboration features
+- Video editing capabilities
 
 ## 📄 License
 
