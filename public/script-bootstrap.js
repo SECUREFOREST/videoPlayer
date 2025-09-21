@@ -457,6 +457,44 @@ class ModernVideoPlayerBrowser {
         return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
     }
 
+    createClickablePath(relativePath, fullPath) {
+        if (!relativePath) return '';
+        
+        // Split the path into parts
+        const pathParts = relativePath.split('/').filter(part => part !== '');
+        
+        if (pathParts.length === 0) return relativePath;
+        
+        // Create clickable breadcrumb-style path
+        let clickablePath = '';
+        let currentPath = '';
+        
+        pathParts.forEach((part, index) => {
+            currentPath += (currentPath ? '/' : '') + part;
+            
+            // Create clickable span for each folder (not the file itself)
+            if (index < pathParts.length - 1) {
+                clickablePath += `<span class="clickable-folder" data-path="${currentPath}" style="cursor: pointer; color: #3B82F6; text-decoration: underline;" title="Navigate to ${currentPath}">${part}</span>`;
+            } else {
+                // Last part (file name) is not clickable
+                clickablePath += part;
+            }
+            
+            // Add separator if not the last part
+            if (index < pathParts.length - 1) {
+                clickablePath += ' / ';
+            }
+        });
+        
+        // Truncate if too long
+        if (clickablePath.length > 30) {
+            const truncated = clickablePath.substring(0, 30) + '...';
+            return truncated;
+        }
+        
+        return clickablePath;
+    }
+
     async playVideo(item) {
         try {
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
@@ -788,7 +826,7 @@ class ModernVideoPlayerBrowser {
                     ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size}
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath}">
-                    ${item.relativePath.length > 30 ? item.relativePath.substring(0, 30) + '...' : item.relativePath}
+                    ${this.createClickablePath(item.relativePath, item.path)}
                 </div>
             `;
 
@@ -811,6 +849,24 @@ class ModernVideoPlayerBrowser {
 
             col.appendChild(div);
             this.searchList.appendChild(col);
+        });
+
+        // Add event listeners for clickable folder paths
+        this.setupClickablePathListeners();
+    }
+
+    setupClickablePathListeners() {
+        // Add click event listeners to all clickable folder spans
+        const clickableFolders = this.searchList.querySelectorAll('.clickable-folder');
+        clickableFolders.forEach(folder => {
+            folder.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering the item click
+                const folderPath = folder.getAttribute('data-path');
+                if (folderPath) {
+                    this.loadDirectory(folderPath);
+                    this.switchTab('browser'); // Switch to browser tab to show the folder contents
+                }
+            });
         });
     }
 
