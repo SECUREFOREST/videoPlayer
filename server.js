@@ -78,7 +78,7 @@ const PASSWORD = 'bringbeerforpassword';
 // Check if user is authenticated
 function requireAuth(req, res, next) {
     // Skip auth for login endpoint and static files
-    if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/static/')) {
+    if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/api/auth/login') || req.path.startsWith('/static/')) {
         return next();
     }
 
@@ -222,6 +222,18 @@ app.post('/api/login', (req, res) => {
         res.redirect('/');
     } else {
         res.redirect('/login?error=1');
+    }
+});
+
+// Programmatic login API endpoint (for testing/API access)
+app.post('/api/auth/login', (req, res) => {
+    const { password } = req.body;
+
+    if (password === PASSWORD) {
+        req.session.authenticated = true;
+        res.json({ success: true, message: 'Authentication successful' });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid password' });
     }
 });
 

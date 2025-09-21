@@ -89,7 +89,7 @@ class PerformanceTester {
         // First, authenticate to get session cookie
         let cookie = '';
         try {
-            const loginResponse = await fetch(`${baseUrl}/api/login`, {
+            const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -205,7 +205,7 @@ class PerformanceTester {
                 
                 try {
                     // First authenticate to get session cookie
-                    const loginResponse = await fetch('http://localhost:4000/api/login', {
+                    const loginResponse = await fetch('http://localhost:4000/api/auth/login', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
