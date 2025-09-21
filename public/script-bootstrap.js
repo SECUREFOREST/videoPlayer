@@ -165,8 +165,8 @@ class ModernVideoPlayerBrowser {
                     // Sort search results
                     this.sortSearchResults();
                 } else {
-                    // Sort directory contents
-                    this.loadDirectory();
+                    // Sort directory contents - maintain current path
+                    this.loadDirectory(this.currentPath);
                 }
             });
         });
