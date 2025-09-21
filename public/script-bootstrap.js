@@ -1373,11 +1373,6 @@ class ModernVideoPlayerBrowser {
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
                     ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • Duration: ${this.formatTime(favorite.duration)}` : ''}
                 </div>
-                <div class="favorite-actions d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); app.removeFavorite('${favorite.id}')" title="Remove from favorites">
-                        <i class="fas fa-heart-broken"></i>
-                    </button>
-                </div>
             `;
 
             // Add drag and drop event handlers
@@ -1813,7 +1808,7 @@ class ModernVideoPlayerBrowser {
 
     updateFavoriteButton(isFavorited) {
         if (isFavorited) {
-            this.favoriteBtn.innerHTML = '<i class="fas fa-heart"></i>';
+            this.favoriteBtn.innerHTML = '<i class="fas fa-heart-broken"></i>';
             this.favoriteBtn.classList.remove('btn-outline-primary');
             this.favoriteBtn.classList.add('btn-danger');
             this.favoriteBtn.title = 'Remove from favorites';
