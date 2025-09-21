@@ -823,6 +823,9 @@ app.get('/api/browse', async (req, res) => {
                 if (isVideoFile(extension)) {
                     result.thumbnailUrl = getThumbnailUrl(fullPath);
                     result.duration = await getVideoDuration(fullPath);
+                    console.log(`Video: ${item.name}, Duration: ${result.duration}`);
+                } else {
+                    result.duration = null; // Ensure non-videos have null duration
                 }
 
                 return result;
