@@ -82,6 +82,10 @@ class VideoCodecAnalyzer {
             const { stdout } = await execAsync(command);
             const info = JSON.parse(stdout);
             
+            if (!info.streams || !info.format) {
+                return null;
+            }
+            
             const videoStream = info.streams.find(stream => stream.codec_type === 'video');
             const audioStream = info.streams.find(stream => stream.codec_type === 'audio');
             const format = info.format;
@@ -153,7 +157,7 @@ class VideoCodecAnalyzer {
 
     isWebOptimized(videoStream, format) {
         // Check if video is optimized for web streaming
-        const codec = videoStream.codec_name;
+        const codec = videoStream.codec_name || '';
         const profile = videoStream.profile || '';
         
         // Web-optimized codecs
@@ -271,7 +275,7 @@ class VideoCodecAnalyzer {
                     this.analysis.optimizationIssues.nonWebOptimized++;
                 }
                 
-                if (['mpeg2video', 'mpeg4', 'divx', 'xvid'].includes(codec.toLowerCase())) {
+                if (['mpeg2video', 'mpeg4', 'divx', 'xvid'].includes((codec || '').toLowerCase())) {
                     this.analysis.optimizationIssues.oldCodecs++;
                 }
                 
