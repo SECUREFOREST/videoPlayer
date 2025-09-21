@@ -1,113 +1,161 @@
-# 🎬 Advanced Video Player Browser
+# 🎬 Tie them up! - Advanced Video Player
 
-A comprehensive Node.js application for browsing files and watching videos with advanced features like playlists, favorites, search, and more.
+A high-performance Node.js video streaming application with professional-grade features including authentication, playlists, favorites, search, and optimized video delivery.
 
 ## ✨ Features
 
+### 🔐 Security & Authentication
+- **Password Protection**: Secure access with session-based authentication
+- **Session Management**: Persistent login sessions
+- **API Security**: Protected endpoints with authentication middleware
+
 ### 🎥 Video Support
 - **Multiple Formats**: MP4, AVI, MOV, MKV, WebM, M4V, FLV, WMV, 3GP, OGV
+- **Range Request Support**: Efficient video streaming with partial content delivery
+- **Large File Handling**: Optimized for videos up to 1.6GB+
 - **Thumbnail Generation**: Automatic video thumbnails using FFmpeg
 - **Progress Tracking**: Resume videos from where you left off
 - **Fullscreen Mode**: Immersive viewing experience
 
 ### 🔍 Search & Navigation
 - **Real-time Search**: Search across all files and directories
-- **Advanced Filtering**: Filter by file type, size, date
-- **Multiple Sorting**: Sort by name, size, date, or type
-- **Grid/List Views**: Toggle between different viewing modes
+- **Advanced Filtering**: Filter by file type (All Files, Videos Only, Directories Only)
+- **Multiple Sorting**: Sort by name, duration, or modification date
+- **Breadcrumb Navigation**: Easy directory navigation with clickable paths
+- **Grid View**: Optimized grid layout for video browsing
 
 ### 📋 Playlist Management
-- **Create Playlists**: Organize your favorite videos
-- **Queue Management**: Add videos to playlists
-- **Auto-play**: Continuous playback through playlists
+- **Create Playlists**: Organize your favorite videos with custom names
+- **Drag & Drop**: Reorder playlist items with drag and drop
+- **Modal Interface**: Easy playlist management with modern UI
+- **Persistent Storage**: Playlists saved between sessions
 
 ### ❤️ Favorites System
-- **Quick Access**: Mark videos as favorites
+- **Quick Access**: Mark videos as favorites with heart button
+- **Dedicated Tab**: Easy access to all favorite videos
+- **Visual Feedback**: Clear indication of favorite status
 - **Persistent Storage**: Favorites saved between sessions
-- **Easy Management**: Add/remove favorites with one click
 
-### ⌨️ Keyboard Shortcuts
-- **Space**: Play/Pause
-- **F**: Toggle fullscreen
-- **M**: Mute/Unmute
-- **←/→**: Seek backward/forward (10 seconds)
-- **Escape**: Exit fullscreen or close video
+### 🎨 Modern UI/UX
+- **Bootstrap 5**: Modern, responsive design
+- **Dark Theme**: Eye-friendly dark interface
+- **Smooth Animations**: Polished user experience
+- **Mobile Responsive**: Works on all device sizes
+- **Custom Styling**: Professional video player appearance
 
-### 🎮 Advanced Video Controls
-- **Custom Controls**: Enhanced video player interface
-- **Speed Control**: Playback speeds from 0.5x to 2x
-- **Volume Control**: Fine-tuned audio control
-- **Progress Bar**: Click to seek to any position
-
-### 🖱️ Drag & Drop
-- **File Upload**: Drag video files to upload (UI ready)
-- **Visual Feedback**: Clear drag and drop indicators
+### ⚡ Performance Optimizations
+- **Async File Operations**: Non-blocking file system operations
+- **PM2 Clustering**: Multi-process server architecture
+- **Nginx Integration**: Reverse proxy with upstream configuration
+- **Caching Headers**: Optimized browser caching
+- **Gzip Compression**: Reduced bandwidth usage
+- **Range Request Support**: Efficient video streaming
 
 ## 🚀 Installation
 
-1. **Clone or download** the project
+### Prerequisites
+- **Node.js** (v14 or higher)
+- **FFmpeg** (for video processing and thumbnails)
+- **PM2** (for production deployment)
+- **Nginx** (optional, for reverse proxy)
+
+### Quick Start
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd videoPlayer
+   ```
+
 2. **Install dependencies**:
    ```bash
    npm install
    ```
-3. **Install FFmpeg** (for thumbnail generation):
+
+3. **Install FFmpeg**:
    - **macOS**: `brew install ffmpeg`
    - **Ubuntu/Debian**: `sudo apt install ffmpeg`
    - **Windows**: Download from [FFmpeg website](https://ffmpeg.org/download.html)
 
-4. **Start the server**:
+4. **Configure authentication** (optional):
+   - Edit `server.js` and change the password in the `PASSWORD` variable
+   - Default password: `bringbeerforpassword`
+
+5. **Start the application**:
    ```bash
+   # Development mode
    npm start
-   ```
-   or for development:
-   ```bash
-   npm run dev
+   
+   # Production mode with PM2
+   pm2 start ecosystem.config.js
+   
+   # With Nginx (if configured)
+   sudo systemctl start nginx
    ```
 
-5. **Open your browser** and go to `http://localhost:4000`
+6. **Access the application**:
+   - Open your browser and go to `http://localhost:4000`
+   - Enter the password when prompted
 
 ## 📁 Project Structure
 
 ```
 videoPlayer/
-├── server.js              # Main server file
-├── package.json           # Dependencies and scripts
-├── public/                # Client-side files
-│   ├── index.html         # Main HTML file
-│   ├── style-bootstrap.css # Styling
-│   └── script.js          # JavaScript functionality
-├── thumbnails/            # Generated video thumbnails
-├── videos/                # Video files directory
-├── playlists.json         # Playlist data (auto-created)
-└── favorites.json         # Favorites data (auto-created)
+├── server.js                    # Main server file with authentication
+├── package.json                 # Dependencies and scripts
+├── ecosystem.config.js          # PM2 configuration
+├── nginx.conf                   # Nginx reverse proxy configuration
+├── test-performance.js          # Performance testing script
+├── public/                      # Client-side files
+│   ├── index.html              # Main HTML file with Bootstrap 5
+│   ├── style-bootstrap.css     # Custom styling (v9)
+│   ├── script-bootstrap.js     # JavaScript functionality (v113)
+│   └── favicon.svg             # Application icon
+├── thumbnails/                  # Generated video thumbnails
+├── videos/                      # Video files directory (602+ videos)
+├── logs/                        # PM2 and application logs
+├── playlists.json              # Playlist data (auto-created)
+└── favorites.json              # Favorites data (auto-created)
 ```
 
 ## 🎯 Usage
 
-### Basic Navigation
-1. **Browse Files**: Use the file browser to navigate directories
-2. **Play Videos**: Click on any video file to start playback
-3. **Search**: Use the search bar to find specific files
-4. **Filter**: Use the dropdown filters to narrow down results
+### Getting Started
+1. **Login**: Enter the password to access the application
+2. **Browse Videos**: Navigate through the video collection using the file browser
+3. **Play Videos**: Click on any video to open the full-screen player
+4. **Search**: Use the search bar to find specific videos or files
 
-### Advanced Features
-1. **Create Playlists**: 
+### Navigation Features
+1. **Breadcrumb Navigation**: Click on folder names to navigate back
+2. **Filtering**: Use the Filter dropdown to show All Files, Videos Only, or Directories Only
+3. **Sorting**: Sort by Name, Duration, or Date using the Sort dropdown
+4. **Search Results**: Access search results from the dedicated Search Results tab
+
+### Playlist Management
+1. **Create Playlist**: 
    - Click "Create Playlist" button
-   - Add videos to your playlist
-   - Save for later viewing
+   - Enter a playlist name
+   - Add videos by clicking the "+" button while playing
 
-2. **Add to Favorites**:
+2. **Manage Playlists**:
+   - View all playlists in the Playlists tab
+   - Drag and drop to reorder playlist items
+   - Delete playlists or individual items
+
+### Favorites System
+1. **Add to Favorites**:
    - Click the heart icon while playing a video
    - Access favorites from the Favorites tab
 
-3. **Use Keyboard Shortcuts**:
-   - Press Space to play/pause
-   - Press F for fullscreen
-   - Use arrow keys to seek
+2. **Manage Favorites**:
+   - View all favorite videos in one place
+   - Remove favorites by clicking the heart icon again
 
-4. **Switch Views**:
-   - Toggle between grid and list view
-   - Grid view shows video thumbnails
+### Video Player Controls
+1. **Playback Controls**: Play, pause, seek, volume control
+2. **Fullscreen**: Click the fullscreen button or press F
+3. **Video Info**: View video details in the player footer
 
 ## 🔧 Configuration
 
@@ -134,17 +182,26 @@ Thumbnails are automatically generated using FFmpeg. If FFmpeg is not installed,
 
 ## 🛠️ API Endpoints
 
+### Authentication
+- `GET /login` - Login page
+- `POST /api/login` - Authenticate user (redirects)
+- `POST /api/auth/login` - Authenticate user (JSON response)
+- `POST /api/logout` - Logout user
+
 ### File Browsing
 - `GET /api/browse` - Get directory contents with filtering and sorting
 - `GET /api/search` - Search files recursively
-- `GET /api/video-info` - Get video file information
+- `GET /api/server-status` - Get server status and statistics
 
-### Thumbnails
+### Video Streaming
+- `GET /videos/*` - Stream video files with range request support
 - `GET /api/thumbnail` - Generate video thumbnail
 
 ### Playlists
 - `GET /api/playlists` - Get all playlists
 - `POST /api/playlists` - Create new playlist
+- `PUT /api/playlists/:id` - Update playlist
+- `DELETE /api/playlists/:id` - Delete playlist
 
 ### Favorites
 - `GET /api/favorites` - Get all favorites
@@ -194,17 +251,40 @@ Add new features by extending the JavaScript classes in `public/script.js`:
 2. **Thumbnail Generation**: First-time thumbnail generation may be slow
 3. **Memory Usage**: Close unused tabs to free up memory
 
+## 📊 Performance
+
+### Current Performance Metrics
+- **File Operations**: ~2-4ms for directory operations
+- **Memory Usage**: ~45MB RSS, ~5MB heap
+- **API Response Times**: Average 11-12ms
+- **Video Collection**: 602+ videos supported
+- **Large File Support**: Tested with files up to 1.6GB
+- **Range Request Support**: 206 Partial Content responses
+
+### Performance Testing
+Run the included performance test:
+```bash
+node test-performance.js
+```
+
+This will test:
+- Async file operations
+- Memory usage
+- API endpoint performance
+- Large video file handling
+- Range request support
+
 ## 🔮 Future Enhancements
 
 Potential features for future versions:
-- Video streaming support
+- Video transcoding pipeline
+- Multiple quality levels (1080p, 720p, 480p)
+- HLS streaming support
 - Subtitle support
-- Video editing capabilities
-- Cloud storage integration
-- Mobile app version
-- Real-time collaboration
 - Video metadata editing
 - Advanced analytics
+- Cloud storage integration
+- Mobile app version
 
 ## 📄 License
 
