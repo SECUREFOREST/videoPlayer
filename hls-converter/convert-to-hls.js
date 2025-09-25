@@ -54,7 +54,7 @@ class HLSConverter {
             enableHEVC: false,  // HEVC/H.265 support
             codecPreference: 'h264'  // h264, hevc, av1
         };
-        
+
         this.stats = {
             totalFiles: 0,
             processedFiles: 0,
@@ -85,14 +85,14 @@ class HLSConverter {
         const cpus = os.cpus().length;
         const totalMem = os.totalmem() / 1024 / 1024 / 1024; // GB
         const freeMem = (os.freemem() / 1024 / 1024 / 1024); // GB
-        
+
         // Smart resource allocation based on system specs
         let concurrency = Math.floor(cpus / 2);
-        
+
         // Adjust based on available memory (each process needs ~2GB)
         const maxByMemory = Math.floor(freeMem / 2);
         concurrency = Math.min(concurrency, maxByMemory);
-        
+
         // Adjust based on platform
         if (this.platform === 'darwin') {
             // macOS typically handles fewer concurrent processes better
@@ -101,19 +101,19 @@ class HLSConverter {
             // Windows may need more conservative settings
             concurrency = Math.min(concurrency, 4);
         }
-        
+
         // Ensure minimum and maximum bounds
         concurrency = Math.max(1, Math.min(concurrency, 8));
-        
+
         console.log(`🧠 Smart allocation: ${cpus} CPUs, ${totalMem.toFixed(1)}GB RAM, ${freeMem.toFixed(1)}GB free`);
         console.log(`⚡ Optimal concurrency: ${concurrency} processes`);
-        
+
         return concurrency;
     }
 
     async detectGPUAcceleration() {
         console.log('🔍 Detecting GPU acceleration capabilities...\n');
-        
+
         const gpuInfo = {
             nvidia: false,
             intel: false,
@@ -185,7 +185,7 @@ class HLSConverter {
             try {
                 const { stdout } = await execAsync('ffmpeg -hwaccels 2>&1');
                 const hwaccels = stdout.toLowerCase();
-                
+
                 if (hwaccels.includes('cuda') && gpuInfo.nvidia) {
                     console.log('✅ NVIDIA CUDA acceleration supported');
                 }
@@ -228,14 +228,14 @@ class HLSConverter {
         try {
             const stateData = await fs.readFile(this.stats.stateFile, 'utf8');
             const state = JSON.parse(stateData);
-            
+
             // Check if state is recent (within 24 hours)
             const age = Date.now() - state.timestamp;
             if (age > 24 * 60 * 60 * 1000) {
                 console.log('🕐 State file is too old, starting fresh');
                 return false;
             }
-            
+
             this.stats.conversionState = state.conversionState || {};
             console.log('📁 Loaded previous state, resuming conversion...');
             return true;
@@ -258,7 +258,7 @@ class HLSConverter {
         this.stats.currentFile = fileName;
         this.stats.currentQuality = quality;
         this.stats.progress = progress;
-        
+
         // Calculate ETA
         if (this.stats.startTime && this.stats.processedFiles > 0) {
             const elapsed = Date.now() - this.stats.startTime;
@@ -266,19 +266,24 @@ class HLSConverter {
             const remainingFiles = Math.max(0, this.stats.totalFiles - this.stats.processedFiles);
             this.stats.eta = Math.round((remainingFiles * avgTimePerFile) / 1000);
         }
-        
+
         this.displayProgress();
     }
 
     displayProgress() {
         const progressBar = this.createProgressBar(this.stats.progress);
         const eta = this.stats.eta ? `ETA: ${this.stats.eta}s` : 'ETA: calculating...';
-        
+
         process.stdout.write(`\r${progressBar} ${this.stats.progress}% | ${this.stats.currentFile} | ${this.stats.currentQuality} | ${eta}`);
     }
 
+    clearProgress() {
+        process.stdout.write('\r' + ' '.repeat(100) + '\r');
+    }
+
     createProgressBar(progress, width = 30) {
-        const filled = Math.round((progress / 100) * width);
+        const clampedProgress = Math.max(0, Math.min(100, progress));
+        const filled = Math.round((clampedProgress / 100) * width);
         const empty = width - filled;
         return `[${'█'.repeat(filled)}${'░'.repeat(empty)}]`;
     }
@@ -286,20 +291,20 @@ class HLSConverter {
     // Health monitoring methods
     async checkSystemHealth() {
         if (!this.config.healthChecks) return true;
-        
+
         try {
             // Check CPU usage
             const cpuUsage = await this.getCPUUsage();
             this.stats.systemHealth.cpuUsage = cpuUsage;
-            
+
             // Check memory usage
             const memUsage = process.memoryUsage();
             this.stats.systemHealth.memoryUsage = memUsage.heapUsed / 1024 / 1024 / 1024; // GB
-            
+
             // Check disk space
             const diskSpace = await this.getDiskSpace();
             this.stats.systemHealth.diskSpace = diskSpace;
-            
+
             // Health warnings
             if (cpuUsage > 90) {
                 console.log('⚠️  High CPU usage detected:', cpuUsage.toFixed(1) + '%');
@@ -311,7 +316,7 @@ class HLSConverter {
                 console.log('⚠️  Low disk space detected:', diskSpace.toFixed(1) + 'GB free');
                 return false;
             }
-            
+
             return true;
         } catch (error) {
             console.log('⚠️  Health check failed:', error.message);
@@ -333,8 +338,28 @@ class HLSConverter {
 
     async getDiskSpace() {
         try {
-            const { stdout } = await execAsync('df -h . | tail -1 | awk \'{print $4}\' | sed \'s/G//\'');
-            return parseFloat(stdout.trim());
+            let command;
+            if (this.platform === 'win32') {
+                // Windows command to get free disk space in GB
+                command = 'wmic logicaldisk where size>0 get freespace /value | findstr FreeSpace';
+            } else {
+                // Unix/Linux/macOS command
+                command = 'df -h . | tail -1 | awk \'{print $4}\' | sed \'s/G//\'';
+            }
+
+            const { stdout } = await execAsync(command);
+            let freeSpace;
+
+            if (this.platform === 'win32') {
+                // Windows returns bytes, convert to GB
+                const bytes = parseFloat(stdout.split('=')[1]);
+                freeSpace = bytes / (1024 * 1024 * 1024);
+            } else {
+                // Unix/Linux/macOS returns GB
+                freeSpace = parseFloat(stdout.trim());
+            }
+
+            return isNaN(freeSpace) ? 100 : freeSpace;
         } catch (error) {
             return 100; // Assume enough space if we can't check
         }
@@ -343,23 +368,23 @@ class HLSConverter {
     // File validation methods
     async validateHLSFile(playlistPath) {
         if (!this.config.fileValidation) return true;
-        
+
         try {
             // Check if playlist exists
             await fs.access(playlistPath);
-            
+
             // Read and validate playlist content
             const content = await fs.readFile(playlistPath, 'utf8');
             if (!content.includes('#EXTM3U')) {
                 throw new Error('Invalid HLS playlist format');
             }
-            
+
             // Check for segments
             const segmentLines = content.split('\n').filter(line => line.endsWith('.ts'));
             if (segmentLines.length === 0) {
                 throw new Error('No segments found in playlist');
             }
-            
+
             // Validate segments exist
             for (const segmentLine of segmentLines) {
                 const segmentPath = path.join(path.dirname(playlistPath), segmentLine);
@@ -369,7 +394,7 @@ class HLSConverter {
                     throw new Error(`Segment not found: ${segmentLine}`);
                 }
             }
-            
+
             return true;
         } catch (error) {
             console.log(`❌ Validation failed for ${playlistPath}: ${error.message}`);
@@ -383,12 +408,12 @@ class HLSConverter {
             await fs.writeFile(filePath, content);
             return;
         }
-        
+
         const tempPath = filePath + '.tmp';
         try {
             // Write to temporary file first
             await fs.writeFile(tempPath, content);
-            
+
             // Atomic move
             await fs.rename(tempPath, filePath);
         } catch (error) {
@@ -408,7 +433,7 @@ class HLSConverter {
         console.log(`💻 CPUs: ${os.cpus().length} cores`);
         console.log(`🧠 Memory: ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB total`);
         console.log('=====================================\n');
-        
+
         // Check if FFmpeg is installed
         try {
             const { stdout } = await execAsync('ffmpeg -version');
@@ -428,7 +453,7 @@ class HLSConverter {
             this.config.useAMDGPU = gpuInfo.amd;
             this.config.useAppleGPU = gpuInfo.apple;
             this.config.useVideoToolbox = gpuInfo.videotoolbox;
-            
+
             if (gpuInfo.nvidia || gpuInfo.intel || gpuInfo.amd || gpuInfo.apple || gpuInfo.videotoolbox) {
                 console.log('🚀 GPU acceleration will be used for faster conversion!\n');
             } else {
@@ -443,11 +468,11 @@ class HLSConverter {
 
         // Get input directory
         this.config.inputDir = await this.getInputDirectory();
-        
+
         // Create output directory
         this.config.outputDir = path.join(this.config.inputDir, 'hls_output');
         await this.ensureDirectoryExists(this.config.outputDir);
-        
+
         console.log(`📁 Input directory: ${this.config.inputDir}`);
         console.log(`📁 Output directory: ${this.config.outputDir}`);
         console.log(`⚡ Max concurrent conversions: ${this.config.maxConcurrent}\n`);
@@ -456,7 +481,7 @@ class HLSConverter {
     showInstallInstructions() {
         console.log('\n📥 Installation Instructions:');
         console.log('============================');
-        
+
         switch (this.platform) {
             case 'win32':
                 console.log('Windows:');
@@ -500,11 +525,11 @@ class HLSConverter {
         return new Promise((resolve) => {
             rl.question('Enter the path to your video directory: ', async (inputPath) => {
                 rl.close();
-                
+
                 // Handle quotes and normalize path
                 const cleanPath = inputPath.replace(/['"]/g, '').trim();
                 const fullPath = path.resolve(cleanPath);
-                
+
                 try {
                     await fs.access(fullPath);
                     resolve(fullPath);
@@ -529,13 +554,13 @@ class HLSConverter {
 
     async findVideoFiles(dir) {
         const videoFiles = [];
-        
+
         try {
             const items = await fs.readdir(dir, { withFileTypes: true });
-            
+
             for (const item of items) {
                 const fullPath = path.join(dir, item.name);
-                
+
                 if (item.isDirectory()) {
                     const subDirVideos = await this.findVideoFiles(fullPath);
                     videoFiles.push(...subDirVideos);
@@ -549,7 +574,7 @@ class HLSConverter {
         } catch (error) {
             console.error(`❌ Error scanning directory ${dir}: ${error.message}`);
         }
-        
+
         return videoFiles;
     }
 
@@ -558,10 +583,10 @@ class HLSConverter {
             const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${videoPath}"`;
             const { stdout } = await execAsync(command);
             const info = JSON.parse(stdout);
-            
+
             const videoStream = info.streams.find(stream => stream.codec_type === 'video');
             const format = info.format;
-            
+
             if (!videoStream || !format) {
                 return null;
             }
@@ -592,21 +617,21 @@ class HLSConverter {
         const relativePath = path.relative(this.config.inputDir, videoInfo.path);
         const outputDir = path.join(this.config.outputDir, path.dirname(relativePath));
         const baseName = path.parse(videoInfo.name).name;
-        
+
         await this.ensureDirectoryExists(outputDir);
-        
+
         const hlsDir = path.join(outputDir, baseName);
         await this.ensureDirectoryExists(hlsDir);
-        
+
         const conversions = [];
-        
+
         for (const quality of this.config.qualities) {
             const qualityDir = path.join(hlsDir, quality.name);
             await this.ensureDirectoryExists(qualityDir);
-            
+
             const playlistPath = path.join(qualityDir, 'playlist.m3u8');
             const segmentPattern = path.join(qualityDir, 'segment_%03d.ts');
-            
+
             const command = this.buildFFmpegCommand(
                 videoInfo.path,
                 playlistPath,
@@ -614,7 +639,7 @@ class HLSConverter {
                 quality,
                 videoInfo
             );
-            
+
             conversions.push({
                 quality: quality.name,
                 command: command,
@@ -622,15 +647,15 @@ class HLSConverter {
                 playlistPath: playlistPath
             });
         }
-        
+
         // Convert all qualities concurrently
         const results = await Promise.allSettled(
             conversions.map(conversion => this.runConversion(conversion, videoInfo.name))
         );
-        
+
         // Create master playlist
         await this.createMasterPlaylist(hlsDir, conversions, videoInfo.name);
-        
+
         return {
             success: results.every(result => result.status === 'fulfilled'),
             hlsDir: hlsDir,
@@ -670,16 +695,16 @@ class HLSConverter {
         // Add video codec based on configuration
         const codec = this.getVideoCodec(quality);
         args.splice(args.indexOf('-c:a') - 1, 0, ...codec);
-        
+
         // Add playlist path
         args.push(`"${playlistPath}"`);
-        
+
         return `ffmpeg ${args.join(' ')}`;
     }
 
     getVideoCodec(quality) {
         const codec = this.config.codecPreference;
-        
+
         // AV1 codec (best compression, slower encoding)
         if (codec === 'av1' && this.config.enableAV1) {
             if (this.config.useNvidiaGPU) {
@@ -688,7 +713,7 @@ class HLSConverter {
                 return ['-c:v', 'libaom-av1', '-b:v', quality.bitrate, '-cpu-used', '4'];
             }
         }
-        
+
         // HEVC/H.265 codec (better than H.264)
         if (codec === 'hevc' && this.config.enableHEVC) {
             if (this.config.useNvidiaGPU) {
@@ -701,7 +726,7 @@ class HLSConverter {
                 return ['-c:v', 'libx265', '-b:v', quality.bitrate, '-preset', 'medium', '-crf', '23'];
             }
         }
-        
+
         // H.264 codec (default, best compatibility)
         if (this.config.useNvidiaGPU) {
             return ['-c:v', 'h264_nvenc', '-b:v', quality.bitrate, '-preset', 'p4', '-rc', 'vbr'];
@@ -722,26 +747,26 @@ class HLSConverter {
         try {
             // Update progress
             this.updateProgress(videoName, conversion.quality, 0);
-            
+
             // Check system health before starting
             if (!await this.checkSystemHealth()) {
                 throw new Error('System health check failed');
             }
-            
+
             // Check if already completed (resume mode)
             if (this.config.resumeMode && this.stats.conversionState[conversion.playlistPath]) {
                 console.log(`⏭️  Skipping ${conversion.quality} (already completed)`);
                 return { success: true, quality: conversion.quality, skipped: true };
             }
-            
+
             console.log(`🔄 Converting ${videoName} to ${conversion.quality}...`);
-            
+
             // Run conversion with progress tracking
             const { stdout, stderr } = await execAsync(conversion.command);
-            
+
             // Update progress
             this.updateProgress(videoName, conversion.quality, 50);
-            
+
             // Validate the converted file
             if (this.config.fileValidation) {
                 const isValid = await this.validateHLSFile(conversion.playlistPath);
@@ -749,7 +774,7 @@ class HLSConverter {
                     throw new Error('File validation failed');
                 }
             }
-            
+
             // Mark as completed in state
             if (this.config.resumeMode) {
                 this.stats.conversionState[conversion.playlistPath] = {
@@ -759,19 +784,21 @@ class HLSConverter {
                 };
                 await this.saveState();
             }
-            
+
             // Update progress
             this.updateProgress(videoName, conversion.quality, 100);
-            console.log(`\n✅ ${conversion.quality} conversion completed`);
-            
+            this.clearProgress();
+            console.log(`✅ ${conversion.quality} conversion completed`);
+
             return { success: true, quality: conversion.quality };
         } catch (error) {
-            console.error(`\n❌ ${conversion.quality} conversion failed: ${error.message}`);
-            
+            this.clearProgress();
+            console.error(`❌ ${conversion.quality} conversion failed: ${error.message}`);
+
             // Error isolation: don't fail the entire process
             if (this.config.errorIsolation) {
                 this.stats.errors.push(`${videoName} (${conversion.quality}): ${error.message}`);
-            return { success: false, quality: conversion.quality, error: error.message };
+                return { success: false, quality: conversion.quality, error: error.message };
             } else {
                 throw error; // Re-throw if error isolation is disabled
             }
@@ -780,25 +807,25 @@ class HLSConverter {
 
     async createMasterPlaylist(hlsDir, conversions, videoName) {
         const masterPlaylistPath = path.join(hlsDir, 'master.m3u8');
-        
+
         let masterContent = '#EXTM3U\n#EXT-X-VERSION:3\n\n';
-        
+
         // Only include successful conversions
         const successfulConversions = conversions.filter(conv => conv.success);
-        
+
         for (const conversion of successfulConversions) {
             const relativePlaylistPath = path.relative(hlsDir, conversion.playlistPath);
             const bandwidth = this.getBandwidthForQuality(conversion.quality);
             const resolution = this.getResolutionForQuality(conversion.quality);
-            
+
             masterContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution}\n`;
             masterContent += `${relativePlaylistPath}\n\n`;
         }
-        
+
         // Use atomic write to ensure file integrity
         await this.atomicWrite(masterPlaylistPath, masterContent);
         console.log(`📋 Master playlist created: ${path.basename(masterPlaylistPath)}`);
-        
+
         // Validate master playlist
         if (this.config.fileValidation) {
             const isValid = await this.validateHLSFile(masterPlaylistPath);
@@ -830,11 +857,11 @@ class HLSConverter {
 
     async processVideos() {
         console.log('🔍 Scanning for video files...\n');
-        
+
         const videoFiles = await this.findVideoFiles(this.config.inputDir);
         this.stats.totalFiles = videoFiles.length;
         this.stats.startTime = Date.now();
-        
+
         // Dry run mode - show what would be converted
         if (this.config.dryRun) {
             console.log('🔍 DRY RUN MODE - Preview of conversions:\n');
@@ -853,29 +880,29 @@ class HLSConverter {
             console.log('✅ Dry run complete. Use without --dry-run to start conversion.');
             return;
         }
-        
+
         if (videoFiles.length === 0) {
             console.log('❌ No video files found in the specified directory');
             return;
         }
-        
+
         console.log(`📹 Found ${videoFiles.length} video files\n`);
-        
+
         // Process videos in batches to avoid overwhelming the system
         const batchSize = this.config.maxConcurrent;
-        
+
         for (let i = 0; i < videoFiles.length; i += batchSize) {
             const batch = videoFiles.slice(i, i + batchSize);
-            
+
             const batchPromises = batch.map(async (videoPath) => {
                 const videoInfo = await this.getVideoInfo(videoPath);
                 if (!videoInfo) return;
-                
+
                 this.stats.totalSize += videoInfo.size;
-                
+
                 try {
                     const result = await this.convertVideoToHLS(videoInfo);
-                    
+
                     if (result.success) {
                         this.stats.processedFiles++;
                         console.log(`✅ Completed: ${videoInfo.name}`);
@@ -889,9 +916,9 @@ class HLSConverter {
                     console.error(`❌ Failed: ${videoInfo.name} - ${error.message}`);
                 }
             });
-            
+
             await Promise.all(batchPromises);
-            
+
             // Progress update
             const processedFiles = Math.min(i + batch.length, videoFiles.length);
             const progress = videoFiles.length > 0 ? Math.round((processedFiles / videoFiles.length) * 100) : 0;
@@ -904,7 +931,7 @@ class HLSConverter {
         const hours = Math.floor(duration / 3600);
         const minutes = Math.floor((duration % 3600) / 60);
         const seconds = Math.floor(duration % 60);
-        
+
         console.log('\n📊 CONVERSION REPORT');
         console.log('===================');
         console.log(`Platform: ${this.platform} (${os.arch()})`);
@@ -913,19 +940,19 @@ class HLSConverter {
         console.log(`Failed: ${this.stats.failedFiles}`);
         console.log(`Total time: ${hours}h ${minutes}m ${seconds}s`);
         console.log(`Average time per file: ${this.stats.totalFiles > 0 ? Math.round(duration / this.stats.totalFiles) : 0}s`);
-        
+
         if (this.stats.errors.length > 0) {
             console.log('\n❌ ERRORS:');
             this.stats.errors.forEach(error => console.log(`  - ${error}`));
         }
-        
+
         console.log(`\n📁 HLS files saved to: ${this.config.outputDir}`);
-        
+
         // Show codec information
         if (this.config.codecPreference !== 'h264') {
             console.log(`🎬 Codec used: ${this.config.codecPreference.toUpperCase()}`);
         }
-        
+
         // Show advanced features used
         const features = [];
         if (this.config.hardwareDecoding) features.push('Hardware Decoding');
@@ -933,14 +960,14 @@ class HLSConverter {
         if (this.config.atomicOperations) features.push('Atomic Operations');
         if (this.config.errorIsolation) features.push('Error Isolation');
         if (this.config.healthChecks) features.push('Health Monitoring');
-        
+
         if (features.length > 0) {
             console.log(`🔧 Advanced features: ${features.join(', ')}`);
         }
-        
+
         console.log('\n🎬 HLS Conversion Complete!');
         console.log('You can now use these files with HLS.js or any HLS-compatible player.');
-        
+
         // Clean up state file if conversion completed successfully
         if (this.stats.failedFiles === 0) {
             await this.clearState();
@@ -981,15 +1008,25 @@ function parseArguments() {
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
-        
+
         switch (arg) {
             case '--input':
             case '-i':
-                options.inputDir = args[++i];
+                if (i + 1 < args.length) {
+                    options.inputDir = args[++i];
+                } else {
+                    console.error('❌ Error: --input requires a directory path');
+                    process.exit(1);
+                }
                 break;
             case '--output':
             case '-o':
-                options.outputDir = args[++i];
+                if (i + 1 < args.length) {
+                    options.outputDir = args[++i];
+                } else {
+                    console.error('❌ Error: --output requires a directory path');
+                    process.exit(1);
+                }
                 break;
             case '--nvidia':
             case '--cuda':
@@ -1032,7 +1069,12 @@ function parseArguments() {
                 options.codec = 'hevc';
                 break;
             case '--codec':
-                options.codec = args[++i];
+                if (i + 1 < args.length) {
+                    options.codec = args[++i];
+                } else {
+                    console.error('❌ Error: --codec requires a codec name (h264, hevc, av1)');
+                    process.exit(1);
+                }
                 break;
             case '--help':
             case '-h':
@@ -1092,14 +1134,14 @@ GPU ACCELERATION:
 // Run the converter
 if (require.main === module) {
     const options = parseArguments();
-    
+
     if (options.help) {
         showHelp();
         process.exit(0);
     }
-    
+
     const converter = new HLSConverter();
-    
+
     // Apply command line options
     if (options.inputDir) {
         converter.config.inputDir = options.inputDir;
@@ -1153,7 +1195,7 @@ if (require.main === module) {
             converter.config.useVideoToolbox = true;
         }
     }
-    
+
     converter.run().catch(console.error);
 }
 
