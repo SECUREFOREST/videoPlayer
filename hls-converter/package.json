@@ -1,0 +1,36 @@
+{
+  "name": "hls-video-converter",
+  "version": "1.0.0",
+  "description": "Cross-platform HLS video converter with multiple quality levels",
+  "main": "convert-to-hls.js",
+  "scripts": {
+    "start": "node convert-to-hls.js",
+    "convert": "node convert-to-hls.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "hls",
+    "video",
+    "converter",
+    "streaming",
+    "ffmpeg",
+    "adaptive",
+    "bitrate"
+  ],
+  "author": "Video Player Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "bin": {
+    "hls-convert": "./convert-to-hls.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/video-player"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/video-player/issues"
+  },
+  "homepage": "https://github.com/your-username/video-player#readme"
+}
