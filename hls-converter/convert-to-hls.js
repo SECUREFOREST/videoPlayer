@@ -424,19 +424,40 @@ class HLSConverter {
                 throw new Error('Invalid HLS playlist format');
             }
 
-            // Check for segments
-            const segmentLines = content.split('\n').filter(line => line.endsWith('.ts'));
-            if (segmentLines.length === 0) {
-                throw new Error('No segments found in playlist');
-            }
+            // Check if this is a master playlist or quality playlist
+            const isMasterPlaylist = content.includes('#EXT-X-STREAM-INF');
+            
+            if (isMasterPlaylist) {
+                // For master playlists, check that referenced quality playlists exist
+                const qualityPlaylistLines = content.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+                if (qualityPlaylistLines.length === 0) {
+                    throw new Error('No quality playlists found in master playlist');
+                }
 
-            // Validate segments exist
-            for (const segmentLine of segmentLines) {
-                const segmentPath = path.join(path.dirname(playlistPath), segmentLine);
-                try {
-                    await fs.access(segmentPath);
-                } catch (error) {
-                    throw new Error(`Segment not found: ${segmentLine}`);
+                // Validate each quality playlist exists
+                for (const qualityPlaylistLine of qualityPlaylistLines) {
+                    const qualityPlaylistPath = path.join(path.dirname(playlistPath), qualityPlaylistLine);
+                    try {
+                        await fs.access(qualityPlaylistPath);
+                    } catch (error) {
+                        throw new Error(`Quality playlist not found: ${qualityPlaylistLine}`);
+                    }
+                }
+            } else {
+                // For quality playlists, check for segments
+                const segmentLines = content.split('\n').filter(line => line.endsWith('.ts'));
+                if (segmentLines.length === 0) {
+                    throw new Error('No segments found in quality playlist');
+                }
+
+                // Validate segments exist
+                for (const segmentLine of segmentLines) {
+                    const segmentPath = path.join(path.dirname(playlistPath), segmentLine);
+                    try {
+                        await fs.access(segmentPath);
+                    } catch (error) {
+                        throw new Error(`Segment not found: ${segmentLine}`);
+                    }
                 }
             }
 
@@ -743,8 +764,17 @@ class HLSConverter {
             conversions.map(conversion => this.runConversion(conversion, videoInfo.name))
         );
 
+        // Process results and add success property to conversions
+        const processedConversions = conversions.map((conversion, index) => {
+            const result = results[index];
+            return {
+                ...conversion,
+                success: result.status === 'fulfilled' && result.value?.success === true
+            };
+        });
+
         // Create master playlist
-        await this.createMasterPlaylist(hlsDir, conversions, videoInfo.name);
+        await this.createMasterPlaylist(hlsDir, processedConversions, videoInfo.name);
 
         return {
             success: results.every(result => result.status === 'fulfilled'),
