@@ -609,9 +609,23 @@ class HLSConverter {
                 const fullPath = path.join(dir, item.name);
 
                 if (item.isDirectory()) {
+                    // Skip system directories
+                    if (item.name.startsWith('.') || item.name === 'hls_output') {
+                        continue;
+                    }
                     const subDirVideos = await this.findVideoFiles(fullPath);
                     videoFiles.push(...subDirVideos);
                 } else if (item.isFile()) {
+                    // Skip macOS metadata files, hidden files, and system files
+                    if (item.name.startsWith('._') || 
+                        item.name.startsWith('.') || 
+                        item.name === '.DS_Store' ||
+                        item.name === 'Thumbs.db' ||
+                        item.name.endsWith('.tmp') ||
+                        item.name.endsWith('.temp')) {
+                        continue;
+                    }
+                    
                     const ext = path.extname(item.name).toLowerCase();
                     if (this.config.supportedFormats.includes(ext)) {
                         videoFiles.push(fullPath);
@@ -730,14 +744,14 @@ class HLSConverter {
             '-y' // Overwrite output files
         ];
 
-        // Add hardware decoding if enabled
+        // Add hardware decoding if enabled (must be before input file)
         if (this.config.hardwareDecoding) {
             if (this.config.useNvidiaGPU) {
-                args.splice(1, 0, '-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda');
+                args.unshift('-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda');
             } else if (this.config.useIntelGPU) {
-                args.splice(1, 0, '-hwaccel', 'qsv');
+                args.unshift('-hwaccel', 'qsv');
             } else if (this.config.useVideoToolbox || this.config.useAppleGPU) {
-                args.splice(1, 0, '-hwaccel', 'videotoolbox');
+                args.unshift('-hwaccel', 'videotoolbox');
             }
         }
 
@@ -809,6 +823,7 @@ class HLSConverter {
             }
 
             console.log(`🔄 Converting ${videoName} to ${conversion.quality}...`);
+            console.log(`   Command: ${conversion.command}`);
 
             // Run conversion with progress tracking
             const { stdout, stderr } = await execAsync(conversion.command);
@@ -936,6 +951,18 @@ class HLSConverter {
         }
 
         console.log(`📹 Found ${videoFiles.length} video files\n`);
+        
+        // Show first few files for verification
+        if (videoFiles.length > 0) {
+            console.log('📋 Sample files to be processed:');
+            videoFiles.slice(0, 5).forEach((file, index) => {
+                console.log(`   ${index + 1}. ${path.basename(file)}`);
+            });
+            if (videoFiles.length > 5) {
+                console.log(`   ... and ${videoFiles.length - 5} more files`);
+            }
+            console.log('');
+        }
 
         // Process videos in batches to avoid overwhelming the system
         const batchSize = this.config.maxConcurrent;
