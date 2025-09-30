@@ -78,6 +78,15 @@ class HLSConverter {
             partialRecovery: true,  // Resume from failed segments
             integrityVerification: true,  // Verify file integrity
             corruptionDetection: true,  // Detect data corruption
+            // Smart quality selection
+            smartQualitySelection: true,  // Only generate applicable qualities
+            minQualityRatio: 0.5,  // Minimum quality as ratio of source (0.5 = 50%)
+            maxQualityRatio: 1.0,  // Maximum quality as ratio of source (1.0 = 100%)
+            // Web optimization settings
+            webOptimized: true,  // Enable web-specific optimizations
+            fastStart: true,  // Enable fast start (moov atom at beginning)
+            webCompatible: true,  // Ensure maximum browser compatibility
+            mobileOptimized: true,  // Optimize for mobile devices
             // Codec options
             enableAV1: false,  // AV1 codec support
             enableHEVC: false,  // HEVC/H.265 support
@@ -685,9 +694,20 @@ class HLSConverter {
         const hlsDir = path.join(outputDir, baseName);
         await this.ensureDirectoryExists(hlsDir);
 
+        // Determine which qualities to generate based on source resolution
+        const sourceHeight = videoInfo.height;
+        const sourceWidth = videoInfo.width;
+        const sourceResolution = `${sourceWidth}x${sourceHeight}`;
+        
+        console.log(`📐 Source resolution: ${sourceResolution}`);
+        
+        // Filter qualities to only include those that make sense
+        const applicableQualities = this.getApplicableQualities(sourceHeight);
+        console.log(`🎯 Generating qualities: ${applicableQualities.map(q => q.name).join(', ')}`);
+
         const conversions = [];
 
-        for (const quality of this.config.qualities) {
+        for (const quality of applicableQualities) {
             const qualityDir = path.join(hlsDir, quality.name);
             await this.ensureDirectoryExists(qualityDir);
 
@@ -727,42 +747,86 @@ class HLSConverter {
 
     buildFFmpegCommand(inputPath, playlistPath, segmentPattern, quality, videoInfo) {
         const ffmpegPath = getFFmpegPath();
-        const args = [
-            '-i', `"${inputPath}"`,
+        
+        // Build command parts in correct order
+        const commandParts = [`"${ffmpegPath}"`];
+        
+        // Add hardware acceleration (must come first)
+        if (this.config.hardwareDecoding) {
+            if (this.config.useNvidiaGPU) {
+                commandParts.push('-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda');
+            } else if (this.config.useIntelGPU) {
+                commandParts.push('-hwaccel', 'qsv');
+            } else if (this.config.useVideoToolbox || this.config.useAppleGPU) {
+                commandParts.push('-hwaccel', 'videotoolbox');
+            }
+        }
+        
+        // Add input file
+        commandParts.push('-i', `"${inputPath}"`);
+        
+        // Add video codec
+        const codec = this.getVideoCodec(quality);
+        commandParts.push(...codec);
+        
+        // Add audio codec and settings
+        commandParts.push(
             '-c:a', 'aac',
-            '-b:a', quality.audioBitrate,
+            '-b:a', quality.audioBitrate
+        );
+        
+        // Add video filters and settings
+        commandParts.push(
             '-vf', `scale=${quality.resolution}`,
             '-maxrate', quality.bitrate,
             '-bufsize', `${parseInt(quality.bitrate) * 2}k`,
             '-g', `${this.config.segmentDuration * 30}`, // GOP size
             '-keyint_min', `${this.config.segmentDuration * 30}`,
-            '-sc_threshold', '0',
+            '-sc_threshold', '0'
+        );
+        
+        // Add HLS settings
+        commandParts.push(
             '-f', 'hls',
             '-hls_time', this.config.segmentDuration.toString(),
             '-hls_list_size', '0',
             '-hls_segment_filename', `"${segmentPattern}"`,
-            '-y' // Overwrite output files
-        ];
-
-        // Add hardware decoding if enabled (must be before input file)
-        if (this.config.hardwareDecoding) {
-            if (this.config.useNvidiaGPU) {
-                args.unshift('-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda');
-            } else if (this.config.useIntelGPU) {
-                args.unshift('-hwaccel', 'qsv');
-            } else if (this.config.useVideoToolbox || this.config.useAppleGPU) {
-                args.unshift('-hwaccel', 'videotoolbox');
+            '-hls_flags', 'independent_segments',
+            '-hls_allow_cache', '1',
+            '-hls_segment_type', 'mpegts'
+        );
+        
+        // Add web optimization settings
+        if (this.config.webOptimized) {
+            // Fast start for better streaming
+            if (this.config.fastStart) {
+                commandParts.push('-movflags', '+faststart');
+            }
+            
+            // Web compatibility optimizations
+            if (this.config.webCompatible) {
+                commandParts.push(
+                    '-pix_fmt', 'yuv420p',  // Ensure compatibility
+                    '-profile:v', 'high',   // H.264 high profile
+                    '-level', '4.0'         // H.264 level 4.0 for broad compatibility
+                );
+            }
+            
+            // Mobile optimization
+            if (this.config.mobileOptimized) {
+                commandParts.push(
+                    '-preset', 'fast',      // Faster encoding for mobile
+                    '-tune', 'film'         // Optimize for typical video content
+                );
             }
         }
+        
+        commandParts.push('-y'); // Overwrite output files
+        
+        // Add output file
+        commandParts.push(`"${playlistPath}"`);
 
-        // Add video codec based on configuration
-        const codec = this.getVideoCodec(quality);
-        args.splice(args.indexOf('-c:a') - 1, 0, ...codec);
-
-        // Add playlist path
-        args.push(`"${playlistPath}"`);
-
-        return `"${ffmpegPath}" ${args.join(' ')}`;
+        return commandParts.join(' ');
     }
 
     getVideoCodec(quality) {
@@ -872,17 +936,26 @@ class HLSConverter {
     async createMasterPlaylist(hlsDir, conversions, videoName) {
         const masterPlaylistPath = path.join(hlsDir, 'master.m3u8');
 
-        let masterContent = '#EXTM3U\n#EXT-X-VERSION:3\n\n';
+        let masterContent = '#EXTM3U\n#EXT-X-VERSION:6\n\n';
 
         // Only include successful conversions
         const successfulConversions = conversions.filter(conv => conv.success);
+
+        // Sort by quality (highest first) for better adaptive streaming
+        successfulConversions.sort((a, b) => {
+            const aHeight = parseInt(this.getResolutionForQuality(a.quality).split('x')[1]);
+            const bHeight = parseInt(this.getResolutionForQuality(b.quality).split('x')[1]);
+            return bHeight - aHeight;
+        });
 
         for (const conversion of successfulConversions) {
             const relativePlaylistPath = path.relative(hlsDir, conversion.playlistPath);
             const bandwidth = this.getBandwidthForQuality(conversion.quality);
             const resolution = this.getResolutionForQuality(conversion.quality);
+            const codecs = this.getCodecsString(conversion.quality);
 
-            masterContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution}\n`;
+            // Enhanced stream info with codec information
+            masterContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution},CODECS="${codecs}"\n`;
             masterContent += `${relativePlaylistPath}\n\n`;
         }
 
@@ -917,6 +990,50 @@ class HLSConverter {
             '360p': '640x360'
         };
         return resolutionMap[quality] || '1280x720';
+    }
+
+    getCodecsString(quality) {
+        // Return codec string for HLS compatibility
+        // H.264 High Profile Level 4.0 + AAC-LC
+        return 'avc1.640028,mp4a.40.2';
+    }
+
+    getApplicableQualities(sourceHeight) {
+        // If smart quality selection is disabled, return all qualities
+        if (!this.config.smartQualitySelection) {
+            return this.config.qualities;
+        }
+        
+        const applicableQualities = [];
+        const minHeight = sourceHeight * this.config.minQualityRatio;
+        const maxHeight = sourceHeight * this.config.maxQualityRatio;
+        
+        console.log(`🎯 Quality range: ${Math.round(minHeight)}p - ${Math.round(maxHeight)}p (source: ${sourceHeight}p)`);
+        
+        for (const quality of this.config.qualities) {
+            const qualityHeight = parseInt(quality.resolution.split('x')[1]);
+            
+            // Only include qualities that are within the acceptable range
+            if (qualityHeight >= minHeight && qualityHeight <= maxHeight) {
+                applicableQualities.push(quality);
+            }
+        }
+        
+        // If no qualities are applicable (very low resolution source), 
+        // include the lowest quality as a fallback
+        if (applicableQualities.length === 0) {
+            console.log(`⚠️  No applicable qualities found, using lowest quality as fallback`);
+            applicableQualities.push(this.config.qualities[this.config.qualities.length - 1]);
+        }
+        
+        // Sort by resolution (highest first)
+        applicableQualities.sort((a, b) => {
+            const aHeight = parseInt(a.resolution.split('x')[1]);
+            const bHeight = parseInt(b.resolution.split('x')[1]);
+            return bHeight - aHeight;
+        });
+        
+        return applicableQualities;
     }
 
     async processVideos() {
@@ -1079,6 +1196,8 @@ function parseArguments() {
         enableAV1: false,
         enableHEVC: false,
         codec: 'h264',
+        disableSmartQuality: false,
+        disableWebOptimization: false,
         help: false
     };
 
@@ -1152,6 +1271,14 @@ function parseArguments() {
                     process.exit(1);
                 }
                 break;
+            case '--no-smart-quality':
+            case '--disable-smart-quality':
+                options.disableSmartQuality = true;
+                break;
+            case '--no-web-optimization':
+            case '--disable-web-optimization':
+                options.disableWebOptimization = true;
+                break;
             case '--help':
             case '-h':
                 options.help = true;
@@ -1183,6 +1310,8 @@ OPTIONS:
   --av1                 Use AV1 codec (best compression)
   --hevc, --h265        Use HEVC/H.265 codec (better than H.264)
   --codec <codec>       Specify codec: h264, hevc, av1
+  --no-smart-quality    Disable smart quality selection (generate all qualities)
+  --no-web-optimization Disable web optimization features
   -h, --help            Show this help message
 
 EXAMPLES:
@@ -1241,6 +1370,12 @@ if (require.main === module) {
     }
     if (options.codec) {
         converter.config.codecPreference = options.codec;
+    }
+    if (options.disableSmartQuality) {
+        converter.config.smartQualitySelection = false;
+    }
+    if (options.disableWebOptimization) {
+        converter.config.webOptimized = false;
     }
     if (options.disableGPU) {
         converter.config.autoDetectGPU = false;
