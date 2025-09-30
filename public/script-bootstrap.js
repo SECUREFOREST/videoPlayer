@@ -615,18 +615,18 @@ class ModernVideoPlayerBrowser {
                     testBandwidth: true, // Test bandwidth for quality selection
                     progressive: false, // Disable progressive for better streaming
                     
-                    // Quality selection optimization
-                    abrEwmaFastLive: 3.0, // Fast adaptation for live
-                    abrEwmaSlowLive: 9.0, // Slow adaptation for live
-                    abrEwmaFastVoD: 3.0, // Fast adaptation for VoD
-                    abrEwmaSlowVoD: 9.0, // Slow adaptation for VoD
-                    abrEwmaDefaultEstimate: 500000, // Default bandwidth estimate
-                    abrBandWidthFactor: 0.95, // Bandwidth factor
-                    abrBandWidthUpFactor: 0.7, // Bandwidth up factor
-                    abrMaxWithRealBitrate: false, // Don't max with real bitrate
-                    maxStarvationDelay: 4, // Max starvation delay
-                    maxLoadingDelay: 4, // Max loading delay
-                    minAutoBitrate: 0, // Min auto bitrate
+                    // Quality selection optimization - Always use best quality
+                    abrEwmaFastLive: 1.0, // Very fast adaptation to best quality
+                    abrEwmaSlowLive: 1.0, // Very slow adaptation (stick to best)
+                    abrEwmaFastVoD: 1.0, // Very fast adaptation to best quality
+                    abrEwmaSlowVoD: 1.0, // Very slow adaptation (stick to best)
+                    abrEwmaDefaultEstimate: 10000000, // High bandwidth estimate to force best quality
+                    abrBandWidthFactor: 1.0, // Use full bandwidth
+                    abrBandWidthUpFactor: 1.0, // Always go up to best quality
+                    abrMaxWithRealBitrate: true, // Always use maximum available bitrate
+                    maxStarvationDelay: 1, // Minimal starvation delay
+                    maxLoadingDelay: 1, // Minimal loading delay
+                    minAutoBitrate: 10000000, // High minimum bitrate to force best quality
                     
                     // Security and compatibility
                     enableSoftwareAES: true, // Software AES for compatibility
@@ -654,6 +654,17 @@ class ModernVideoPlayerBrowser {
                 // Handle HLS events
                 this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     console.log('HLS manifest parsed, available levels:', this.hls.levels.length);
+                    
+                    // Automatically select the best quality (highest bitrate)
+                    if (this.hls.levels && this.hls.levels.length > 0) {
+                        const bestLevel = this.hls.levels.reduce((best, current, index) => 
+                            current.bitrate > best.bitrate ? { ...current, index } : best
+                        );
+                        
+                        console.log('Selecting best quality level:', bestLevel.index, 'bitrate:', bestLevel.bitrate);
+                        this.hls.currentLevel = bestLevel.index;
+                    }
+                    
                     this.showHLSQualityInfo(videoData);
                 });
 
@@ -669,7 +680,7 @@ class ModernVideoPlayerBrowser {
                 // Track HLS progress for resume functionality
                 this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
                     console.log('HLS quality switched to level:', data.level);
-                    this.updateHLSQualityIndicator(data.level);
+                    // Quality switching is disabled - always use best quality
                 });
 
                 // Performance monitoring
@@ -887,10 +898,8 @@ class ModernVideoPlayerBrowser {
     }
 
     updateHLSQualityIndicator(level) {
-        const qualityInfo = document.querySelector('.hls-quality-info select');
-        if (qualityInfo && level >= 0) {
-            qualityInfo.value = level;
-        }
+        // Quality switching is disabled - always use best quality
+        // This function is kept for compatibility but does nothing
     }
 
     updateBufferHealthIndicator(bufferAhead) {
@@ -993,41 +1002,15 @@ class ModernVideoPlayerBrowser {
             const qualityInfo = document.createElement('div');
             qualityInfo.className = 'hls-quality-info text-muted small mt-2';
             
-            // Create quality selector
-            const qualitySelector = document.createElement('select');
-            qualitySelector.className = 'form-select form-select-sm d-inline-block w-auto ms-2';
-            qualitySelector.style.fontSize = '0.75rem';
-            
-            // Add auto option
-            const autoOption = document.createElement('option');
-            autoOption.value = 'auto';
-            autoOption.textContent = 'Auto';
-            qualitySelector.appendChild(autoOption);
-            
-            // Add quality options
-            videoData.hlsInfo.qualities.forEach((quality, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = `${quality.quality} (${Math.round(quality.bandwidth / 1000)}k)`;
-                qualitySelector.appendChild(option);
-            });
-            
-            // Add change listener
-            qualitySelector.addEventListener('change', (e) => {
-                if (this.hls && this.hls.levels) {
-                    if (e.target.value === 'auto') {
-                        this.hls.currentLevel = -1; // Auto
-                    } else {
-                        this.hls.currentLevel = parseInt(e.target.value);
-                    }
-                }
-            });
+            // Find the best quality (highest bandwidth)
+            const bestQuality = videoData.hlsInfo.qualities.reduce((best, current) => 
+                current.bandwidth > best.bandwidth ? current : best
+            );
             
             qualityInfo.innerHTML = `
                 <i class="fas fa-stream me-1"></i>
-                HLS Stream - Quality: 
+                HLS Stream - Best Quality: ${bestQuality.quality} (${Math.round(bestQuality.bandwidth / 1000)}k)
             `;
-            qualityInfo.appendChild(qualitySelector);
             
             // Add to video info area
             const videoInfo = document.getElementById('video-info');
