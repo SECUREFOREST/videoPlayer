@@ -16,6 +16,9 @@ const DURATIONS_CACHE_FILE = path.join(__dirname, 'video-durations.json');
 // Supported video formats
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
 
+// Supported HLS formats
+const HLS_EXTENSIONS = ['.m3u8', '.ts'];
+
 function resolveSafePath(requestedPath) {
     // Handle empty or undefined path
     if (!requestedPath || requestedPath === '') {
@@ -366,10 +369,18 @@ app.use('/', express.static(path.join(__dirname, 'public'), {
 app.use('/videos', express.static(path.join(__dirname, 'videos'), {
     setHeaders: (res, filePath) => {
         // Set appropriate headers for video files
-        if (filePath.match(/\.(mp4|avi|mov|mkv|webm|m4v|flv|wmv|3gp|ogv)$/i)) {
+        if (filePath.match(/\.(mp4|avi|mov|mkv|webm|m4v|flv|wmv|3gp|ogv|m3u8|ts)$/i)) {
             res.setHeader('Accept-Ranges', 'bytes');
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             res.setHeader('X-Content-Type-Options', 'nosniff');
+            
+            // HLS-specific headers
+            if (filePath.match(/\.(m3u8|ts)$/i)) {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
+                res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+            }
         }
     },
     maxAge: '1y' // Cache for 1 year
@@ -378,6 +389,16 @@ app.use('/videos', express.static(path.join(__dirname, 'videos'), {
 // Helper function to check if file is video
 function isVideoFile(extension) {
     return VIDEO_EXTENSIONS.includes(extension.toLowerCase());
+}
+
+// Helper function to check if file is HLS
+function isHLSFile(extension) {
+    return HLS_EXTENSIONS.includes(extension.toLowerCase());
+}
+
+// Helper function to check if file is video or HLS
+function isVideoOrHLSFile(extension) {
+    return isVideoFile(extension) || isHLSFile(extension);
 }
 
 // Helper function to get MIME type
@@ -392,17 +413,144 @@ function getVideoMimeType(extension) {
         '.flv': 'video/x-flv',
         '.wmv': 'video/x-ms-wmv',
         '.3gp': 'video/3gpp',
-        '.ogv': 'video/ogg'
+        '.ogv': 'video/ogg',
+        '.m3u8': 'application/vnd.apple.mpegurl',
+        '.ts': 'video/mp2t'
     };
     return mimeTypes[extension.toLowerCase()] || 'video/mp4';
+}
+
+// Helper function to generate HLS thumbnail
+async function getHLSThumbnail(masterPlaylistPath) {
+    try {
+        // Check if thumbnail already exists
+        const relativePath = path.relative(VIDEOS_ROOT, masterPlaylistPath);
+        const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
+        const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const thumbnailPath = path.join(__dirname, 'thumbnails', safeName + '.jpg');
+        
+        if (fs.existsSync(thumbnailPath)) {
+            return `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+        }
+        
+        // Try to generate thumbnail from first quality segment
+        const hlsInfo = await getHLSInfo(masterPlaylistPath);
+        if (hlsInfo.qualities.length > 0) {
+            const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
+            
+            // Generate thumbnail from first segment
+            const ffmpegPath = getFFmpegPath();
+            const command = `"${ffmpegPath}" -i "${firstQualityPath}" -ss 00:00:01 -vframes 1 -q:v 2 "${thumbnailPath}"`;
+            
+            try {
+                await execAsync(command);
+                if (fs.existsSync(thumbnailPath)) {
+                    return `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+                }
+            } catch (error) {
+                console.log('Could not generate HLS thumbnail:', error.message);
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error generating HLS thumbnail:', error);
+        return null;
+    }
+}
+
+// Helper function to get HLS duration from playlist
+async function getHLSDuration(masterPlaylistPath) {
+    try {
+        const content = await fsPromises.readFile(masterPlaylistPath, 'utf8');
+        const lines = content.split('\n');
+        
+        // Look for #EXT-X-TARGETDURATION
+        for (const line of lines) {
+            if (line.startsWith('#EXT-X-TARGETDURATION:')) {
+                const targetDuration = parseFloat(line.split(':')[1]);
+                // Estimate total duration (this is approximate)
+                const segmentCount = lines.filter(l => l.endsWith('.ts')).length;
+                return segmentCount * targetDuration;
+            }
+        }
+        
+        // Fallback: try to get duration from first quality playlist
+        const hlsInfo = await getHLSInfo(masterPlaylistPath);
+        if (hlsInfo.qualities.length > 0) {
+            const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
+            try {
+                const qualityContent = await fsPromises.readFile(firstQualityPath, 'utf8');
+                const qualityLines = qualityContent.split('\n');
+                
+                let totalDuration = 0;
+                for (const line of qualityLines) {
+                    if (line.startsWith('#EXTINF:')) {
+                        const duration = parseFloat(line.split(':')[1].split(',')[0]);
+                        totalDuration += duration;
+                    }
+                }
+                return totalDuration;
+            } catch (e) {
+                console.log('Could not read quality playlist for duration');
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error getting HLS duration:', error);
+        return null;
+    }
+}
+
+// Helper function to get HLS info from master playlist
+async function getHLSInfo(masterPlaylistPath) {
+    try {
+        const content = await fsPromises.readFile(masterPlaylistPath, 'utf8');
+        const lines = content.split('\n');
+        const qualities = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('#EXT-X-STREAM-INF:')) {
+                const nextLine = lines[i + 1]?.trim();
+                if (nextLine && !nextLine.startsWith('#')) {
+                    // Parse quality info from EXT-X-STREAM-INF line
+                    const bandwidthMatch = line.match(/BANDWIDTH=(\d+)/);
+                    const resolutionMatch = line.match(/RESOLUTION=(\d+x\d+)/);
+                    const codecsMatch = line.match(/CODECS="([^"]+)"/);
+                    
+                    qualities.push({
+                        quality: resolutionMatch ? resolutionMatch[1] : 'unknown',
+                        bandwidth: bandwidthMatch ? parseInt(bandwidthMatch[1]) : 0,
+                        codecs: codecsMatch ? codecsMatch[1] : '',
+                        playlist: nextLine
+                    });
+                }
+            }
+        }
+        
+        return {
+            isMasterPlaylist: true,
+            qualities: qualities,
+            totalQualities: qualities.length
+        };
+    } catch (error) {
+        console.error('Error reading HLS master playlist:', error);
+        return {
+            isMasterPlaylist: false,
+            qualities: [],
+            totalQualities: 0
+        };
+    }
 }
 
 // Helper function to get thumbnail URL (only returns existing thumbnails)
 function getThumbnailUrl(videoPath) {
     try {
         const ext = path.extname(videoPath).toLowerCase();
-        if (!isVideoFile(ext)) {
-            console.log(`  Not a video file: ${ext}`);
+        if (!isVideoOrHLSFile(ext)) {
+            console.log(`  Not a video or HLS file: ${ext}`);
             return null;
         }
 
@@ -485,7 +633,7 @@ async function buildDurationCache() {
                     await scanDirectory(fullPath);
                 } else {
                     const ext = path.extname(item.name).toLowerCase();
-                    if (isVideoFile(ext)) {
+                    if (isVideoOrHLSFile(ext)) {
                         const relativePath = path.relative(VIDEOS_ROOT, fullPath);
                         processedCount++;
                         
@@ -520,7 +668,7 @@ async function buildDurationCache() {
                     await calculateMissingDurations(fullPath);
                 } else {
                     const ext = path.extname(item.name).toLowerCase();
-                    if (isVideoFile(ext)) {
+                    if (isVideoOrHLSFile(ext)) {
                         const relativePath = path.relative(VIDEOS_ROOT, fullPath);
                         
                         if (!durationCache[relativePath]) {
@@ -696,7 +844,7 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                 await findVideosWithoutThumbnails(fullPath, videoList, maxVideos);
             } else if (item.isFile()) {
                 const ext = path.extname(item.name).toLowerCase();
-                if (isVideoFile(ext)) {
+                if (isVideoOrHLSFile(ext)) {
                     // Check if thumbnail exists
                     const videoName = path.basename(fullPath, ext);
                     const cleanVideoName = videoName.replace(/['"]/g, '');
@@ -888,12 +1036,13 @@ app.get('/api/browse', async (req, res) => {
                     size: stats.size,
                     modified: stats.mtime,
                     extension: extension,
-                    isVideo: isVideoFile(extension),
-                    mimeType: isVideoFile(extension) ? getVideoMimeType(extension) : null,
+                    isVideo: isVideoOrHLSFile(extension),
+                    isHLS: isHLSFile(extension),
+                    mimeType: isVideoOrHLSFile(extension) ? getVideoMimeType(extension) : null,
                     fileCount: fileCount
                 };
 
-                // Add thumbnail URL and duration for video files
+                // Add thumbnail URL and duration for video files (not HLS)
                 if (isVideoFile(extension)) {
                     result.thumbnailUrl = getThumbnailUrl(fullPath);
                     result.duration = await getVideoDuration(fullPath);
@@ -997,19 +1146,38 @@ app.get('/api/video-info', async (req, res) => {
         const stats = await fsPromises.stat(videoPath);
         const ext = path.extname(videoPath).toLowerCase();
 
-        if (!isVideoFile(ext)) {
-            return res.status(400).json({ error: 'File is not a supported video format' });
+        if (!isVideoOrHLSFile(ext)) {
+            return res.status(400).json({ error: 'File is not a supported video or HLS format' });
         }
 
-        res.json({
+        const result = {
             path: path.relative(VIDEOS_ROOT, videoPath), // Return relative path
             size: stats.size,
             modified: stats.mtime,
             name: path.basename(videoPath),
             extension: ext,
             mimeType: getVideoMimeType(ext),
-            isVideo: true
-        });
+            isVideo: isVideoOrHLSFile(ext),
+            isHLS: isHLSFile(ext)
+        };
+
+        // For HLS files, check if it's a master playlist and get available qualities
+        if (isHLSFile(ext) && ext === '.m3u8') {
+            result.hlsInfo = await getHLSInfo(videoPath);
+        }
+
+        // For regular video files, get duration and thumbnail
+        if (isVideoFile(ext)) {
+            result.duration = await getVideoDuration(videoPath);
+            result.thumbnailUrl = getThumbnailUrl(videoPath);
+        } else if (isHLSFile(ext) && ext === '.m3u8') {
+            // For HLS master playlists, try to get duration from first quality
+            result.duration = await getHLSDuration(videoPath);
+            // Try to generate thumbnail for HLS
+            result.thumbnailUrl = await getHLSThumbnail(videoPath);
+        }
+
+        res.json(result);
     } catch (error) {
         console.error('Video info error:', error);
         if (error.message.includes('Access denied')) {
@@ -1042,8 +1210,8 @@ app.get('/api/video-stream-info', async (req, res) => {
         const stats = await fsPromises.stat(videoPath);
         const ext = path.extname(videoPath).toLowerCase();
 
-        if (!isVideoFile(ext)) {
-            return res.status(400).json({ error: 'File is not a supported video format' });
+        if (!isVideoOrHLSFile(ext)) {
+            return res.status(400).json({ error: 'File is not a supported video or HLS format' });
         }
 
         const fileSizeGB = stats.size / (1024 * 1024 * 1024);
@@ -1082,8 +1250,8 @@ app.get('/api/thumbnail-status', (req, res) => {
         const videoPath = resolveSafePath(relativePath);
         const ext = path.extname(videoPath).toLowerCase();
 
-        if (!isVideoFile(ext)) {
-            return res.status(400).json({ error: 'File is not a supported video format' });
+        if (!isVideoOrHLSFile(ext)) {
+            return res.status(400).json({ error: 'File is not a supported video or HLS format' });
         }
 
         const videoName = path.basename(videoPath, ext);
@@ -1150,7 +1318,7 @@ app.get('/api/search', async (req, res) => {
                         const ext = path.extname(item.name).toLowerCase();
                         const stats = await fsPromises.stat(fullPath);
 
-                        const isVideo = isVideoFile(ext);
+                        const isVideo = isVideoOrHLSFile(ext);
                         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
 
                         if (matchesSearch && isVideo) {
@@ -1209,7 +1377,7 @@ app.get('/api/playlists', async (req, res) => {
                         await Promise.all(playlist.videos.map(async video => {
                             if (video.path) {
                                 const ext = path.extname(video.path).toLowerCase();
-                                if (isVideoFile(ext)) {
+                                if (isVideoOrHLSFile(ext)) {
                                     // Convert relative path to absolute path for thumbnail generation
                                     const absolutePath = path.isAbsolute(video.path) ? video.path : path.join(VIDEOS_ROOT, video.path);
                                     video.thumbnailUrl = getThumbnailUrl(absolutePath);

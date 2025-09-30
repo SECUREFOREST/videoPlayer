@@ -11,6 +11,7 @@ class ModernVideoPlayerBrowser {
         this.currentPlaylist = null;
         this.currentPlaylistIndex = 0;
         this.selectedPlaylistId = null;
+        this.hls = null; // HLS instance for streaming
 
         // Video player state management
         this.videoState = {
@@ -315,7 +316,7 @@ class ModernVideoPlayerBrowser {
         div.innerHTML = `
             ${thumbnailHtml}
             <div class="file-info flex-grow-1">
-                <div class="file-name">${this.formatFileName(item.name, item.isVideo)}</div>
+                <div class="file-name">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ?
                 `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` :
@@ -354,7 +355,7 @@ class ModernVideoPlayerBrowser {
 
         div.innerHTML = `
             <div class="file-icon">${icon}</div>
-            <div class="file-name">${this.formatFileName(item.name, item.isVideo)}</div>
+            <div class="file-name">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
             <div class="file-details">
                 ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size)}
             </div>
@@ -456,9 +457,12 @@ class ModernVideoPlayerBrowser {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    formatFileName(name, isVideo = false) {
+    formatFileName(name, isVideo = false, isHLS = false) {
         if (isVideo && name.toLowerCase().endsWith('.mp4')) {
             return name.slice(0, -4); // Remove .mp4 extension
+        }
+        if (isHLS && name.toLowerCase().endsWith('.m3u8')) {
+            return name.slice(0, -6); // Remove .m3u8 extension
         }
         return name;
     }
@@ -521,14 +525,20 @@ class ModernVideoPlayerBrowser {
 
             if (response.ok) {
                 this.currentVideo = item;
-                this.videoTitle.innerHTML = `${this.formatFileName(videoData.name, videoData.isVideo)}`;
+                this.videoTitle.innerHTML = `${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}`;
 
                 const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
-                this.videoSource.src = videoUrl;
-                this.videoSource.type = videoData.mimeType;
-                this.video.src = videoUrl;
-
-                this.video.load();
+                
+                // Check if it's an HLS file
+                if (videoData.isHLS && videoData.extension === '.m3u8') {
+                    await this.playHLSVideo(videoUrl, videoData);
+                } else {
+                    // Regular video file
+                    this.videoSource.src = videoUrl;
+                    this.videoSource.type = videoData.mimeType;
+                    this.video.src = videoUrl;
+                    this.video.load();
+                }
 
                 // Update video info
                 this.updateVideoInfo(videoData);
@@ -554,12 +564,490 @@ class ModernVideoPlayerBrowser {
         }
     }
 
+    async playHLSVideo(videoUrl, videoData) {
+        try {
+            // Check if HLS is supported
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                console.log('Using HLS.js for HLS playback');
+                
+                // Destroy existing HLS instance if any
+                if (this.hls) {
+                    this.hls.destroy();
+                    this.hls = null;
+                }
+
+                // Create new HLS instance with performance optimizations
+                this.hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    
+                    // Buffer management for memory optimization
+                    backBufferLength: 30, // Reduced for memory efficiency
+                    maxBufferLength: 60, // Limit buffer size
+                    maxMaxBufferLength: 120, // Maximum buffer limit
+                    maxBufferSize: 60 * 1000 * 1000, // 60MB buffer size limit
+                    maxBufferHole: 0.1, // Reduce buffer holes
+                    highBufferWatchdogPeriod: 2, // Monitor buffer health
+                    
+                    // Seeking and playback optimization
+                    nudgeOffset: 0.1, // Fine-tune seeking
+                    nudgeMaxRetry: 3, // Retry failed seeks
+                    maxFragLookUpTolerance: 0.25, // Fragment lookup tolerance
+                    
+                    // Live streaming optimization
+                    liveSyncDurationCount: 3, // Live sync optimization
+                    liveMaxLatencyDurationCount: 10, // Max latency for live
+                    liveDurationInfinity: true, // Handle infinite live streams
+                    
+                    // Network and loading optimization
+                    manifestLoadingTimeOut: 10000, // 10s manifest timeout
+                    manifestLoadingMaxRetry: 4, // Retry manifest loading
+                    manifestLoadingRetryDelay: 1000, // Delay between retries
+                    levelLoadingTimeOut: 10000, // 10s level timeout
+                    levelLoadingMaxRetry: 4, // Retry level loading
+                    levelLoadingRetryDelay: 1000, // Delay between retries
+                    fragLoadingTimeOut: 20000, // 20s fragment timeout
+                    fragLoadingMaxRetry: 6, // Retry fragment loading
+                    fragLoadingRetryDelay: 1000, // Delay between retries
+                    
+                    // Preloading strategies
+                    startFragPrefetch: true, // Prefetch start fragment
+                    testBandwidth: true, // Test bandwidth for quality selection
+                    progressive: false, // Disable progressive for better streaming
+                    
+                    // Quality selection optimization
+                    abrEwmaFastLive: 3.0, // Fast adaptation for live
+                    abrEwmaSlowLive: 9.0, // Slow adaptation for live
+                    abrEwmaFastVoD: 3.0, // Fast adaptation for VoD
+                    abrEwmaSlowVoD: 9.0, // Slow adaptation for VoD
+                    abrEwmaDefaultEstimate: 500000, // Default bandwidth estimate
+                    abrBandWidthFactor: 0.95, // Bandwidth factor
+                    abrBandWidthUpFactor: 0.7, // Bandwidth up factor
+                    abrMaxWithRealBitrate: false, // Don't max with real bitrate
+                    maxStarvationDelay: 4, // Max starvation delay
+                    maxLoadingDelay: 4, // Max loading delay
+                    minAutoBitrate: 0, // Min auto bitrate
+                    
+                    // Security and compatibility
+                    enableSoftwareAES: true, // Software AES for compatibility
+                    emeEnabled: false, // Disable EME for better performance
+                    widevineLicenseUrl: null, // No widevine
+                    drmSystemOptions: {}, // No DRM options
+                    
+                    // Network optimization
+                    xhrSetup: (xhr, url) => {
+                        // Add performance headers
+                        xhr.setRequestHeader('Cache-Control', 'no-cache');
+                        xhr.setRequestHeader('Pragma', 'no-cache');
+                        // Add connection keep-alive for better performance
+                        xhr.setRequestHeader('Connection', 'keep-alive');
+                    }
+                });
+
+                // Load the HLS source
+                this.hls.loadSource(videoUrl);
+                this.hls.attachMedia(this.video);
+                
+                // Implement preloading strategies
+                this.implementHLSPreloadingStrategies();
+
+                // Handle HLS events
+                this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    console.log('HLS manifest parsed, available levels:', this.hls.levels.length);
+                    this.showHLSQualityInfo(videoData);
+                });
+
+                this.hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS error:', data);
+                    if (data.fatal) {
+                        this.handleHLSError(data);
+                    } else {
+                        console.log('HLS non-fatal error:', data.details);
+                    }
+                });
+
+                // Track HLS progress for resume functionality
+                this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                    console.log('HLS quality switched to level:', data.level);
+                    this.updateHLSQualityIndicator(data.level);
+                });
+
+                // Performance monitoring
+                this.hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
+                    this.monitorBufferHealth();
+                });
+
+                this.hls.on(Hls.Events.BUFFER_FLUSHED, (event, data) => {
+                    console.log('HLS buffer flushed:', data);
+                });
+
+                this.hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+                    this.monitorFragmentPerformance(data);
+                });
+
+                // Memory management
+                this.hls.on(Hls.Events.BUFFER_STALLED, () => {
+                    console.warn('HLS buffer stalled - attempting recovery');
+                    this.handleBufferStall();
+                });
+
+                // Save progress for HLS streams
+                this.video.addEventListener('timeupdate', () => {
+                    if (this.currentVideo && this.video.duration) {
+                        const progress = (this.video.currentTime / this.video.duration) * 100;
+                        this.saveProgress(this.currentVideo.path, progress);
+                    }
+                });
+
+                // Initialize performance monitoring
+                this.initializeHLSPerformanceMonitoring();
+
+            } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
+                console.log('Using native HLS support (Safari)');
+                this.video.src = videoUrl;
+                this.video.load();
+                this.showHLSQualityInfo(videoData);
+            } else {
+                throw new Error('HLS is not supported in this browser');
+            }
+        } catch (error) {
+            console.error('HLS playback error:', error);
+            this.showStatusMessage('HLS playback error: ' + error.message, 'error');
+            
+            // Fallback: Try to find and play the original video file
+            this.fallbackToOriginalVideo(videoData);
+        }
+    }
+
+    async fallbackToOriginalVideo(videoData) {
+        try {
+            // Look for original video file in the same directory
+            const hlsPath = videoData.path;
+            const hlsDir = hlsPath.substring(0, hlsPath.lastIndexOf('/'));
+            const videoName = videoData.name.replace('.m3u8', '');
+            
+            // Try common video extensions
+            const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+            
+            for (const ext of videoExtensions) {
+                const originalPath = hlsDir + '/' + videoName + ext;
+                try {
+                    const response = await fetch(`/api/video-info?path=${encodeURIComponent(originalPath)}`);
+                    if (response.ok) {
+                        const originalData = await response.json();
+                        if (originalData.isVideo) {
+                            console.log('Falling back to original video:', originalPath);
+                            this.video.src = `/videos/${encodeURIComponent(originalPath)}`;
+                            this.video.load();
+                            this.showStatusMessage('Playing original video file instead', 'info');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // Continue to next extension
+                }
+            }
+            
+            this.showStatusMessage('No fallback video found', 'error');
+        } catch (error) {
+            console.error('Fallback error:', error);
+            this.showStatusMessage('Fallback failed: ' + error.message, 'error');
+        }
+    }
+
+    handleHLSError(errorData) {
+        console.error('HLS fatal error:', errorData);
+        
+        switch (errorData.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+                this.showStatusMessage('HLS network error - retrying...', 'warning');
+                this.hls.startLoad();
+                break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+                this.showStatusMessage('HLS media error - attempting recovery...', 'warning');
+                this.hls.recoverMediaError();
+                break;
+            default:
+                this.showStatusMessage('HLS playback error: ' + errorData.details, 'error');
+                // Try fallback to original video
+                this.fallbackToOriginalVideo(this.currentVideo);
+                break;
+        }
+    }
+
+    // HLS Performance Monitoring Functions
+    initializeHLSPerformanceMonitoring() {
+        this.hlsPerformanceStats = {
+            bufferHealth: 0,
+            fragmentLoadTimes: [],
+            qualitySwitches: 0,
+            bufferStalls: 0,
+            memoryUsage: 0,
+            bandwidthEstimate: 0,
+            startTime: Date.now()
+        };
+
+        // Monitor memory usage every 30 seconds
+        this.hlsMemoryMonitor = setInterval(() => {
+            this.monitorMemoryUsage();
+        }, 30000);
+
+        // Monitor buffer health every 5 seconds
+        this.hlsBufferMonitor = setInterval(() => {
+            this.monitorBufferHealth();
+        }, 5000);
+    }
+
+    monitorBufferHealth() {
+        if (!this.hls || !this.hls.media) return;
+
+        const media = this.hls.media;
+        const buffered = media.buffered;
+        
+        if (buffered.length > 0) {
+            const currentTime = media.currentTime;
+            const bufferEnd = buffered.end(buffered.length - 1);
+            const bufferAhead = bufferEnd - currentTime;
+            
+            this.hlsPerformanceStats.bufferHealth = bufferAhead;
+            
+            // Warn if buffer is getting low
+            if (bufferAhead < 5) {
+                console.warn('HLS buffer health low:', bufferAhead + 's');
+                this.showStatusMessage('Buffer health low - quality may be reduced', 'warning');
+            }
+            
+            // Update quality indicator
+            this.updateBufferHealthIndicator(bufferAhead);
+        }
+    }
+
+    monitorFragmentPerformance(data) {
+        if (data && data.frag) {
+            const loadTime = data.loading.end - data.loading.start;
+            this.hlsPerformanceStats.fragmentLoadTimes.push(loadTime);
+            
+            // Keep only last 10 load times for average calculation
+            if (this.hlsPerformanceStats.fragmentLoadTimes.length > 10) {
+                this.hlsPerformanceStats.fragmentLoadTimes.shift();
+            }
+            
+            // Calculate average load time
+            const avgLoadTime = this.hlsPerformanceStats.fragmentLoadTimes.reduce((a, b) => a + b, 0) / this.hlsPerformanceStats.fragmentLoadTimes.length;
+            
+            if (avgLoadTime > 5000) { // 5 seconds
+                console.warn('HLS fragment loading slow:', avgLoadTime + 'ms');
+            }
+        }
+    }
+
+    monitorMemoryUsage() {
+        if (performance.memory) {
+            this.hlsPerformanceStats.memoryUsage = performance.memory.usedJSHeapSize / 1024 / 1024; // MB
+            
+            // Warn if memory usage is high
+            if (this.hlsPerformanceStats.memoryUsage > 100) {
+                console.warn('HLS memory usage high:', this.hlsPerformanceStats.memoryUsage + 'MB');
+                this.optimizeMemoryUsage();
+            }
+        }
+    }
+
+    optimizeMemoryUsage() {
+        if (!this.hls) return;
+        
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+        }
+        
+        // Reduce buffer size if memory is high
+        if (this.hlsPerformanceStats.memoryUsage > 150) {
+            this.hls.config.maxBufferLength = Math.max(30, this.hls.config.maxBufferLength - 10);
+            console.log('Reduced HLS buffer length to:', this.hls.config.maxBufferLength);
+        }
+    }
+
+    handleBufferStall() {
+        this.hlsPerformanceStats.bufferStalls++;
+        
+        // Try to recover from buffer stall
+        if (this.hls && this.hls.media) {
+            const media = this.hls.media;
+            
+            // Seek slightly back to trigger rebuffering
+            const currentTime = media.currentTime;
+            media.currentTime = Math.max(0, currentTime - 1);
+            
+            // Restart loading
+            this.hls.startLoad();
+            
+            console.log('Attempted buffer stall recovery');
+        }
+    }
+
+    updateHLSQualityIndicator(level) {
+        const qualityInfo = document.querySelector('.hls-quality-info select');
+        if (qualityInfo && level >= 0) {
+            qualityInfo.value = level;
+        }
+    }
+
+    updateBufferHealthIndicator(bufferAhead) {
+        let qualityInfo = document.querySelector('.hls-quality-info');
+        if (!qualityInfo) return;
+        
+        let bufferIndicator = qualityInfo.querySelector('.buffer-health');
+        if (!bufferIndicator) {
+            bufferIndicator = document.createElement('span');
+            bufferIndicator.className = 'buffer-health ms-2';
+            qualityInfo.appendChild(bufferIndicator);
+        }
+        
+        const healthColor = bufferAhead > 10 ? 'text-success' : bufferAhead > 5 ? 'text-warning' : 'text-danger';
+        bufferIndicator.innerHTML = `<i class="fas fa-circle ${healthColor}" title="Buffer: ${bufferAhead.toFixed(1)}s"></i>`;
+    }
+
+    cleanupHLSPerformanceMonitoring() {
+        if (this.hlsMemoryMonitor) {
+            clearInterval(this.hlsMemoryMonitor);
+            this.hlsMemoryMonitor = null;
+        }
+        
+        if (this.hlsBufferMonitor) {
+            clearInterval(this.hlsBufferMonitor);
+            this.hlsBufferMonitor = null;
+        }
+        
+        this.hlsPerformanceStats = null;
+    }
+
+    implementHLSPreloadingStrategies() {
+        if (!this.hls) return;
+        
+        // Preload next segments when user is near end of current buffer
+        this.hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
+            this.preloadNextSegments();
+        });
+        
+        // Preload on user interaction (play, seek, etc.)
+        this.video.addEventListener('play', () => {
+            this.preloadNextSegments();
+        });
+        
+        this.video.addEventListener('seeked', () => {
+            this.preloadNextSegments();
+        });
+        
+        // Preload on quality change
+        this.hls.on(Hls.Events.LEVEL_SWITCHED, () => {
+            this.preloadNextSegments();
+        });
+    }
+
+    preloadNextSegments() {
+        if (!this.hls || !this.hls.media) return;
+        
+        const media = this.hls.media;
+        const buffered = media.buffered;
+        
+        if (buffered.length > 0) {
+            const currentTime = media.currentTime;
+            const bufferEnd = buffered.end(buffered.length - 1);
+            const bufferAhead = bufferEnd - currentTime;
+            
+            // If buffer is getting low (less than 10 seconds), preload more
+            if (bufferAhead < 10) {
+                // Trigger HLS to load more segments
+                this.hls.startLoad();
+                
+                // Preload specific segments if possible
+                this.preloadSpecificSegments(currentTime, bufferEnd);
+            }
+        }
+    }
+
+    preloadSpecificSegments(currentTime, bufferEnd) {
+        if (!this.hls || !this.hls.levels || this.hls.levels.length === 0) return;
+        
+        const currentLevel = this.hls.currentLevel;
+        const level = this.hls.levels[currentLevel];
+        
+        if (level && level.details) {
+            const fragments = level.details.fragments;
+            const targetTime = bufferEnd + 5; // Preload 5 seconds ahead
+            
+            // Find fragments to preload
+            for (let i = 0; i < fragments.length; i++) {
+                const frag = fragments[i];
+                if (frag.start <= targetTime && frag.end >= bufferEnd) {
+                    // Preload this fragment
+                    this.hls.loadFragment(frag, level, 0);
+                }
+            }
+        }
+    }
+
+    showHLSQualityInfo(videoData) {
+        if (videoData.hlsInfo && videoData.hlsInfo.isMasterPlaylist) {
+            const qualityInfo = document.createElement('div');
+            qualityInfo.className = 'hls-quality-info text-muted small mt-2';
+            
+            // Create quality selector
+            const qualitySelector = document.createElement('select');
+            qualitySelector.className = 'form-select form-select-sm d-inline-block w-auto ms-2';
+            qualitySelector.style.fontSize = '0.75rem';
+            
+            // Add auto option
+            const autoOption = document.createElement('option');
+            autoOption.value = 'auto';
+            autoOption.textContent = 'Auto';
+            qualitySelector.appendChild(autoOption);
+            
+            // Add quality options
+            videoData.hlsInfo.qualities.forEach((quality, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${quality.quality} (${Math.round(quality.bandwidth / 1000)}k)`;
+                qualitySelector.appendChild(option);
+            });
+            
+            // Add change listener
+            qualitySelector.addEventListener('change', (e) => {
+                if (this.hls && this.hls.levels) {
+                    if (e.target.value === 'auto') {
+                        this.hls.currentLevel = -1; // Auto
+                    } else {
+                        this.hls.currentLevel = parseInt(e.target.value);
+                    }
+                }
+            });
+            
+            qualityInfo.innerHTML = `
+                <i class="fas fa-stream me-1"></i>
+                HLS Stream - Quality: 
+            `;
+            qualityInfo.appendChild(qualitySelector);
+            
+            // Add to video info area
+            const videoInfo = document.getElementById('video-info');
+            if (videoInfo) {
+                // Remove existing HLS info
+                const existingHLSInfo = videoInfo.querySelector('.hls-quality-info');
+                if (existingHLSInfo) {
+                    existingHLSInfo.remove();
+                }
+                videoInfo.appendChild(qualityInfo);
+            }
+        }
+    }
+
     updateVideoInfo(videoData = null) {
         if (videoData) {
             const size = this.formatFileSize(videoData.size);
             const date = this.formatDate(videoData.modified);
             this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo)}<br>
+                <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}<br>
                 <strong>Size:</strong> ${size}<br>
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
@@ -567,7 +1055,7 @@ class ModernVideoPlayerBrowser {
         } else if (this.currentVideo && this.video) {
             // Fallback for when called without videoData 
             this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}<br>
+                <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
                 <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
@@ -640,6 +1128,16 @@ class ModernVideoPlayerBrowser {
         this.videoPlayerModal.hide();
         this.video.pause();
         this.video.currentTime = 0;
+        
+        // Clean up HLS instance if exists
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
+        
+        // Clean up performance monitoring
+        this.cleanupHLSPerformanceMonitoring();
+        
         this.currentVideo = null;
     }
 
@@ -843,7 +1341,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
                 </div>
-                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo)}</div>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
                     ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size}
                 </div>
@@ -1150,7 +1648,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
                 </div>
-                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${video.name}">${this.formatFileName(video.name, video.isVideo)}</div>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${video.name}">${this.formatFileName(video.name, video.isVideo, video.isHLS)}</div>
                 <div class="file-details" style="font-size: 0.8rem; color: #9CA3AF;">
                     ${video.isVideo && video.duration ? `Duration: ${this.formatTime(video.duration)}` : this.formatFileSize(video.size)}
                 </div>
@@ -1369,7 +1867,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-icon" style="height: 120px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
                     ${thumbnailHtml}
                 </div>
-                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo)}</div>
+                <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo, favorite.isHLS)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
                     ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • Duration: ${this.formatTime(favorite.duration)}` : ''}
                 </div>
@@ -1477,7 +1975,7 @@ class ModernVideoPlayerBrowser {
         this.showPlaylistModal();
         this.playlistVideos.innerHTML = `
             <div class="alert alert-info">
-                <i class="fas fa-video me-2"></i>${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo)}
+                <i class="fas fa-video me-2"></i>${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}
             </div>
         `;
 
