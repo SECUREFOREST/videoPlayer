@@ -79,7 +79,8 @@ class HLSConverter {
             integrityVerification: true,  // Verify file integrity
             corruptionDetection: true,  // Detect data corruption
             // Smart quality selection
-            smartQualitySelection: true,  // Only generate applicable qualities
+            smartQualitySelection: false,  // Only generate equal quality by default
+            adaptiveStreaming: false,  // Enable multi-quality adaptive streaming
             minQualityRatio: 0.5,  // Minimum quality as ratio of source (0.5 = 50%)
             maxQualityRatio: 1.0,  // Maximum quality as ratio of source (1.0 = 100%)
             // Web optimization settings
@@ -87,6 +88,12 @@ class HLSConverter {
             fastStart: true,  // Enable fast start (moov atom at beginning)
             webCompatible: true,  // Ensure maximum browser compatibility
             mobileOptimized: true,  // Optimize for mobile devices
+            // Advanced compression settings
+            compressionLevel: 'balanced',  // balanced, high, maximum
+            useCRF: true,  // Use Constant Rate Factor for better quality
+            crfValue: 23,  // CRF value (18-28, lower = better quality)
+            twoPassEncoding: false,  // Two-pass encoding for better compression
+            adaptiveBitrate: true,  // Adaptive bitrate based on content
             // Codec options
             enableAV1: false,  // AV1 codec support
             enableHEVC: false,  // HEVC/H.265 support
@@ -531,7 +538,8 @@ class HLSConverter {
 
         console.log(`📁 Input directory: ${this.config.inputDir}`);
         console.log(`📁 Output directory: ${this.config.outputDir}`);
-        console.log(`⚡ Max concurrent conversions: ${this.config.maxConcurrent}\n`);
+        console.log(`⚡ Max concurrent conversions: ${this.config.maxConcurrent}`);
+        console.log(`🎯 Quality mode: ${this.config.adaptiveStreaming ? 'Adaptive streaming (multi-quality)' : 'Equal quality (single quality)'}\n`);
     }
 
     showInstallInstructions() {
@@ -831,43 +839,82 @@ class HLSConverter {
 
     getVideoCodec(quality) {
         const codec = this.config.codecPreference;
+        const compressionSettings = this.getCompressionSettings();
 
         // AV1 codec (best compression, slower encoding)
         if (codec === 'av1' && this.config.enableAV1) {
             if (this.config.useNvidiaGPU) {
-                return ['-c:v', 'av1_nvenc', '-b:v', quality.bitrate, '-preset', 'p4'];
+                return ['-c:v', 'av1_nvenc', ...compressionSettings, '-preset', 'p4'];
             } else {
-                return ['-c:v', 'libaom-av1', '-b:v', quality.bitrate, '-cpu-used', '4'];
+                return ['-c:v', 'libaom-av1', ...compressionSettings, '-cpu-used', '4'];
             }
         }
 
         // HEVC/H.265 codec (better than H.264)
         if (codec === 'hevc' && this.config.enableHEVC) {
             if (this.config.useNvidiaGPU) {
-                return ['-c:v', 'hevc_nvenc', '-b:v', quality.bitrate, '-preset', 'p4', '-rc', 'vbr'];
+                return ['-c:v', 'hevc_nvenc', ...compressionSettings, '-preset', 'p4', '-rc', 'vbr'];
             } else if (this.config.useIntelGPU) {
-                return ['-c:v', 'hevc_qsv', '-b:v', quality.bitrate, '-preset', 'medium'];
+                return ['-c:v', 'hevc_qsv', ...compressionSettings, '-preset', 'medium'];
             } else if (this.config.useVideoToolbox || this.config.useAppleGPU) {
-                return ['-c:v', 'hevc_videotoolbox', '-b:v', quality.bitrate, '-realtime', 'true'];
+                return ['-c:v', 'hevc_videotoolbox', ...compressionSettings, '-realtime', 'true'];
             } else {
-                return ['-c:v', 'libx265', '-b:v', quality.bitrate, '-preset', 'medium', '-crf', '23'];
+                return ['-c:v', 'libx265', ...compressionSettings, '-preset', 'medium'];
             }
         }
 
         // H.264 codec (default, best compatibility)
         if (this.config.useNvidiaGPU) {
-            return ['-c:v', 'h264_nvenc', '-b:v', quality.bitrate, '-preset', 'p4', '-rc', 'vbr'];
+            return ['-c:v', 'h264_nvenc', ...compressionSettings, '-preset', 'p4', '-rc', 'vbr'];
         } else if (this.config.useIntelGPU) {
-            return ['-c:v', 'h264_qsv', '-b:v', quality.bitrate, '-preset', 'medium'];
+            return ['-c:v', 'h264_qsv', ...compressionSettings, '-preset', 'medium'];
         } else if (this.config.useAMDGPU) {
-            return ['-c:v', 'h264_amf', '-b:v', quality.bitrate, '-quality', 'speed'];
+            return ['-c:v', 'h264_amf', ...compressionSettings, '-quality', 'speed'];
         } else if (this.config.useVideoToolbox) {
-            return ['-c:v', 'h264_videotoolbox', '-b:v', quality.bitrate, '-realtime', 'true', '-allow_sw', '1'];
+            return ['-c:v', 'h264_videotoolbox', ...compressionSettings, '-realtime', 'true', '-allow_sw', '1'];
         } else if (this.config.useAppleGPU) {
-            return ['-c:v', 'h264_videotoolbox', '-b:v', quality.bitrate, '-realtime', 'true', '-allow_sw', '1', '-q:v', '75'];
+            return ['-c:v', 'h264_videotoolbox', ...compressionSettings, '-realtime', 'true', '-allow_sw', '1'];
         } else {
-            return ['-c:v', 'libx264', '-b:v', quality.bitrate, '-preset', 'medium', '-crf', '23'];
+            return ['-c:v', 'libx264', ...compressionSettings, '-preset', 'medium'];
         }
+    }
+
+    getCompressionSettings() {
+        const settings = [];
+        
+        // Use CRF (Constant Rate Factor) for better quality-based compression
+        if (this.config.useCRF) {
+            settings.push('-crf', this.config.crfValue.toString());
+        } else {
+            // Fallback to bitrate-based encoding
+            // This will be handled by the quality.bitrate in the main command
+        }
+        
+        // Add compression level presets
+        switch (this.config.compressionLevel) {
+            case 'maximum':
+                settings.push('-preset', 'slow', '-tune', 'film');
+                break;
+            case 'high':
+                settings.push('-preset', 'medium', '-tune', 'film');
+                break;
+            case 'balanced':
+            default:
+                settings.push('-preset', 'fast', '-tune', 'film');
+                break;
+        }
+        
+        // Add adaptive bitrate settings
+        if (this.config.adaptiveBitrate) {
+            settings.push(
+                '-x264opts', 'aq-mode=2:aq-strength=1.0:psy-rd=1.0,0.15',
+                '-me_method', 'hex',
+                '-subq', '7',
+                '-refs', '6'
+            );
+        }
+        
+        return settings;
     }
 
     async runConversion(conversion, videoName) {
@@ -999,6 +1046,11 @@ class HLSConverter {
     }
 
     getApplicableQualities(sourceHeight) {
+        // If adaptive streaming is disabled, return only equal quality (source resolution)
+        if (!this.config.adaptiveStreaming) {
+            return this.getEqualQuality(sourceHeight);
+        }
+        
         // If smart quality selection is disabled, return all qualities
         if (!this.config.smartQualitySelection) {
             return this.config.qualities;
@@ -1034,6 +1086,29 @@ class HLSConverter {
         });
         
         return applicableQualities;
+    }
+
+    getEqualQuality(sourceHeight) {
+        // Find the quality that best matches the source resolution
+        const sourceHeightInt = parseInt(sourceHeight);
+        
+        // Find the closest quality to source resolution
+        let bestMatch = this.config.qualities[0]; // Default to first quality
+        let minDifference = Math.abs(parseInt(bestMatch.resolution.split('x')[1]) - sourceHeightInt);
+        
+        for (const quality of this.config.qualities) {
+            const qualityHeight = parseInt(quality.resolution.split('x')[1]);
+            const difference = Math.abs(qualityHeight - sourceHeightInt);
+            
+            if (difference < minDifference) {
+                minDifference = difference;
+                bestMatch = quality;
+            }
+        }
+        
+        console.log(`🎯 Equal quality mode: Using ${bestMatch.name} (${bestMatch.resolution}) for ${sourceHeight}p source`);
+        
+        return [bestMatch];
     }
 
     async processVideos() {
@@ -1198,6 +1273,9 @@ function parseArguments() {
         codec: 'h264',
         disableSmartQuality: false,
         disableWebOptimization: false,
+        compressionLevel: 'balanced',
+        crfValue: 23,
+        adaptiveStreaming: false,
         help: false
     };
 
@@ -1279,6 +1357,40 @@ function parseArguments() {
             case '--disable-web-optimization':
                 options.disableWebOptimization = true;
                 break;
+            case '--adaptive':
+            case '--adaptive-streaming':
+            case '--multi-quality':
+                options.adaptiveStreaming = true;
+                break;
+            case '--compression':
+            case '--compression-level':
+                if (i + 1 < args.length) {
+                    const level = args[++i];
+                    if (['balanced', 'high', 'maximum'].includes(level)) {
+                        options.compressionLevel = level;
+                    } else {
+                        console.error('❌ Error: --compression must be one of: balanced, high, maximum');
+                        process.exit(1);
+                    }
+                } else {
+                    console.error('❌ Error: --compression requires a level (balanced, high, maximum)');
+                    process.exit(1);
+                }
+                break;
+            case '--crf':
+                if (i + 1 < args.length) {
+                    const crf = parseInt(args[++i]);
+                    if (crf >= 18 && crf <= 28) {
+                        options.crfValue = crf;
+                    } else {
+                        console.error('❌ Error: --crf must be between 18 and 28');
+                        process.exit(1);
+                    }
+                } else {
+                    console.error('❌ Error: --crf requires a value (18-28)');
+                    process.exit(1);
+                }
+                break;
             case '--help':
             case '-h':
                 options.help = true;
@@ -1296,6 +1408,10 @@ function showHelp() {
 USAGE:
   node convert-to-hls.js [OPTIONS]
 
+DEFAULT BEHAVIOR:
+  By default, creates equal quality HLS files (single quality matching source resolution).
+  Use --adaptive to enable multi-quality adaptive streaming.
+
 OPTIONS:
   -i, --input <dir>     Input directory (default: current directory)
   -o, --output <dir>    Output directory (default: ./hls_output)
@@ -1312,19 +1428,23 @@ OPTIONS:
   --codec <codec>       Specify codec: h264, hevc, av1
   --no-smart-quality    Disable smart quality selection (generate all qualities)
   --no-web-optimization Disable web optimization features
+  --adaptive, --adaptive-streaming, --multi-quality  Enable adaptive streaming (multiple qualities)
+  --compression <level> Set compression level: balanced, high, maximum
+  --crf <value>         Set CRF value (18-28, lower = better quality)
   -h, --help            Show this help message
 
 EXAMPLES:
-  node convert-to-hls.js
-  node convert-to-hls.js --input ./videos --output ./hls
-  node convert-to-hls.js --nvidia
-  node convert-to-hls.js --apple-silicon
-  node convert-to-hls.js --videotoolbox
-  node convert-to-hls.js --cpu-only
-  node convert-to-hls.js --dry-run
-  node convert-to-hls.js --resume
-  node convert-to-hls.js --av1
-  node convert-to-hls.js --hevc
+  node convert-to-hls.js                                    # Equal quality (default)
+  node convert-to-hls.js --adaptive                        # Multi-quality adaptive streaming
+  node convert-to-hls.js --input ./videos --output ./hls   # Specify directories
+  node convert-to-hls.js --nvidia                          # GPU acceleration
+  node convert-to-hls.js --apple-silicon                   # Apple Silicon GPU
+  node convert-to-hls.js --videotoolbox                    # macOS VideoToolbox
+  node convert-to-hls.js --cpu-only                        # CPU only
+  node convert-to-hls.js --dry-run                         # Preview mode
+  node convert-to-hls.js --resume                          # Resume interrupted
+  node convert-to-hls.js --av1                             # AV1 codec
+  node convert-to-hls.js --hevc                            # HEVC codec
 
 GPU ACCELERATION:
   The tool automatically detects available GPU acceleration.
@@ -1376,6 +1496,15 @@ if (require.main === module) {
     }
     if (options.disableWebOptimization) {
         converter.config.webOptimized = false;
+    }
+    if (options.adaptiveStreaming) {
+        converter.config.adaptiveStreaming = true;
+    }
+    if (options.compressionLevel) {
+        converter.config.compressionLevel = options.compressionLevel;
+    }
+    if (options.crfValue) {
+        converter.config.crfValue = options.crfValue;
     }
     if (options.disableGPU) {
         converter.config.autoDetectGPU = false;
