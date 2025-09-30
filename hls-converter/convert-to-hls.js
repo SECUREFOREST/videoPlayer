@@ -282,7 +282,12 @@ class HLSConverter {
             }
 
             this.stats.conversionState = state.conversionState || {};
-            console.log('📁 Loaded previous state, resuming conversion...');
+            const completedCount = Object.keys(this.stats.conversionState).length;
+            console.log(`📁 Loaded previous state, resuming conversion...`);
+            console.log(`   Completed conversions: ${completedCount}`);
+            if (completedCount > 0) {
+                console.log(`   Skipping already completed files...`);
+            }
             return true;
         } catch (error) {
             console.log('📁 No previous state found, starting fresh');
@@ -733,6 +738,20 @@ class HLSConverter {
         // Filter qualities to only include those that make sense
         const applicableQualities = this.getApplicableQualities(sourceHeight);
         console.log(`🎯 Generating qualities: ${applicableQualities.map(q => q.name).join(', ')}`);
+
+        // Check if all qualities are already completed (resume mode)
+        if (this.config.resumeMode) {
+            const allQualitiesCompleted = applicableQualities.every(quality => {
+                const qualityDir = path.join(hlsDir, quality.name);
+                const playlistPath = path.join(qualityDir, 'playlist.m3u8');
+                return this.stats.conversionState[playlistPath]?.completed === true;
+            });
+            
+            if (allQualitiesCompleted) {
+                console.log(`⏭️  Skipping ${videoInfo.name} (all qualities already completed)`);
+                return { success: true, hlsDir: hlsDir, skipped: true };
+            }
+        }
 
         const conversions = [];
 
@@ -1204,6 +1223,11 @@ class HLSConverter {
                     if (result.success) {
                         this.stats.processedFiles++;
                         console.log(`✅ Completed: ${videoInfo.name}`);
+                        
+                        // Save state after successful conversion (resume mode)
+                        if (this.config.resumeMode) {
+                            await this.saveState();
+                        }
                     } else {
                         this.stats.failedFiles++;
                         this.stats.errors.push(`${videoInfo.name}: Conversion failed`);
@@ -1216,6 +1240,11 @@ class HLSConverter {
             });
 
             await Promise.all(batchPromises);
+
+            // Save state after each batch (resume mode)
+            if (this.config.resumeMode) {
+                await this.saveState();
+            }
 
             // Progress update
             const processedFiles = Math.min(i + batch.length, videoFiles.length);
