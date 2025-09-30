@@ -83,6 +83,47 @@ const APP_CONFIG = {
     port: config.port
 };
 
+// FFmpeg path resolution functions
+function getFFmpegPath() {
+    if (config.ffmpeg && config.ffmpeg.path) {
+        return config.ffmpeg.path;
+    }
+    return 'ffmpeg'; // Fallback to system PATH
+}
+
+function getFFprobePath() {
+    if (config.ffmpeg && config.ffmpeg.ffprobePath) {
+        return config.ffmpeg.ffprobePath;
+    }
+    return 'ffprobe'; // Fallback to system PATH
+}
+
+// Validate ffmpeg installation
+async function validateFFmpegInstallation() {
+    const ffmpegPath = getFFmpegPath();
+    const ffprobePath = getFFprobePath();
+    
+    try {
+        // Test ffmpeg
+        const ffmpegCommand = `"${ffmpegPath}" -version`;
+        await execAsync(ffmpegCommand);
+        console.log(`✅ FFmpeg found at: ${ffmpegPath}`);
+        
+        // Test ffprobe
+        const ffprobeCommand = `"${ffprobePath}" -version`;
+        await execAsync(ffprobeCommand);
+        console.log(`✅ FFprobe found at: ${ffprobePath}`);
+        
+        return true;
+    } catch (error) {
+        console.error(`❌ FFmpeg validation failed:`);
+        console.error(`   FFmpeg path: ${ffmpegPath}`);
+        console.error(`   FFprobe path: ${ffprobePath}`);
+        console.error(`   Error: ${error.message}`);
+        return false;
+    }
+}
+
 // Check if user is authenticated
 function requireAuth(req, res, next) {
     // Skip auth for login endpoint, config, and static files
@@ -485,7 +526,8 @@ async function buildDurationCache() {
                         if (!durationCache[relativePath]) {
                             // Calculate duration asynchronously for startup
                             try {
-                                const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${fullPath}"`;
+                                const ffprobePath = getFFprobePath();
+                                const durationCommand = `"${ffprobePath}" -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${fullPath}"`;
                                 const durationOutput = await execAsync(durationCommand);
                                 const duration = parseFloat(durationOutput.stdout.trim());
                                 
@@ -532,7 +574,8 @@ async function getVideoDuration(videoPath) {
 
     // Not in cache, calculate using ffprobe
     try {
-        const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+        const ffprobePath = getFFprobePath();
+        const durationCommand = `"${ffprobePath}" -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
         console.log('🔍 Calculating duration for:', path.basename(videoPath));
         
         const durationOutput = await execAsync(durationCommand);
@@ -562,7 +605,8 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         // Get video duration to calculate middle timestamp
         let middleTimestamp = '00:00:30'; // fallback
         try {
-            const durationCommand = `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
+            const ffprobePath = getFFprobePath();
+            const durationCommand = `"${ffprobePath}" -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
             const durationOutput = await execAsync(durationCommand);
             const duration = parseFloat(durationOutput.trim());
 
@@ -592,7 +636,9 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                 }
                 
                 // Generate thumbnail using ffmpeg
-                const command = `ffmpeg -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+                const ffmpegPath = getFFmpegPath();
+                const thumbnailQuality = config.ffmpeg?.options?.thumbnailQuality || 2;
+                const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timestamp} -vframes 1 -q:v ${thumbnailQuality} "${thumbnailPath}"`;
                 await execAsync(command);
 
                 // Validate that thumbnail was actually created and is a valid image
@@ -1620,6 +1666,13 @@ app.listen(config.port, async () => {
     console.log(`🚀 Server running on http://localhost:${config.port}`);
     console.log(`📁 Video directory: ${VIDEOS_ROOT}`);
     console.log(`🎬 ${config.name} ready!`);
+
+    // Validate ffmpeg installation
+    const ffmpegValid = await validateFFmpegInstallation();
+    if (!ffmpegValid) {
+        console.warn('⚠️  FFmpeg validation failed. Thumbnail generation and duration calculation may not work properly.');
+        console.warn('   Please check your FFmpeg installation and configuration.');
+    }
 
     // Load duration cache
     await loadDurationCache();

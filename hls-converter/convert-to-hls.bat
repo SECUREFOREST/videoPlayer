@@ -16,13 +16,46 @@ if %errorlevel% neq 0 (
 )
 
 REM Check if FFmpeg is installed
-ffmpeg -version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: FFmpeg is not installed or not in PATH
-    echo Please install FFmpeg from https://ffmpeg.org/download.html
-    echo Or use: winget install ffmpeg
-    pause
-    exit /b 1
+REM First check if custom path is set in environment
+if defined FFMPEG_PATH (
+    if exist "%FFMPEG_PATH%" (
+        echo Using custom FFmpeg path: %FFMPEG_PATH%
+    ) else (
+        echo ERROR: Custom FFmpeg path not found: %FFMPEG_PATH%
+        pause
+        exit /b 1
+    )
+) else (
+    ffmpeg -version >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo ERROR: FFmpeg is not installed or not in PATH
+        echo Please install FFmpeg from https://ffmpeg.org/download.html
+        echo Or use: winget install ffmpeg
+        echo.
+        echo Alternatively, set FFMPEG_PATH environment variable:
+        echo   set FFMPEG_PATH=C:\path\to\ffmpeg.exe
+        pause
+        exit /b 1
+    )
+)
+
+REM Check if FFprobe is available
+if defined FFPROBE_PATH (
+    if exist "%FFPROBE_PATH%" (
+        echo Using custom FFprobe path: %FFPROBE_PATH%
+    ) else (
+        echo ERROR: Custom FFprobe path not found: %FFPROBE_PATH%
+        pause
+        exit /b 1
+    )
+) else (
+    ffprobe -version >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo ERROR: FFprobe is not installed or not in PATH
+        echo FFprobe is part of FFmpeg package
+        pause
+        exit /b 1
+    )
 )
 
 REM Run the HLS converter

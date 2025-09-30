@@ -20,7 +20,15 @@ if ! command -v node &> /dev/null; then
 fi
 
 # Check if FFmpeg is installed
-if ! command -v ffmpeg &> /dev/null; then
+# First check if custom path is set in environment
+if [ -n "$FFMPEG_PATH" ]; then
+    if [ -f "$FFMPEG_PATH" ]; then
+        echo "Using custom FFmpeg path: $FFMPEG_PATH"
+    else
+        echo "ERROR: Custom FFmpeg path not found: $FFMPEG_PATH"
+        exit 1
+    fi
+elif ! command -v ffmpeg &> /dev/null; then
     echo "ERROR: FFmpeg is not installed or not in PATH"
     echo "Please install FFmpeg:"
     echo "  Ubuntu/Debian: sudo apt install ffmpeg"
@@ -28,6 +36,23 @@ if ! command -v ffmpeg &> /dev/null; then
     echo "  Arch: sudo pacman -S ffmpeg"
     echo "  macOS: brew install ffmpeg"
     echo "  Or visit: https://ffmpeg.org/download.html"
+    echo ""
+    echo "Alternatively, set FFMPEG_PATH environment variable:"
+    echo "  export FFMPEG_PATH=/path/to/ffmpeg"
+    exit 1
+fi
+
+# Check if FFprobe is available
+if [ -n "$FFPROBE_PATH" ]; then
+    if [ -f "$FFPROBE_PATH" ]; then
+        echo "Using custom FFprobe path: $FFPROBE_PATH"
+    else
+        echo "ERROR: Custom FFprobe path not found: $FFPROBE_PATH"
+        exit 1
+    fi
+elif ! command -v ffprobe &> /dev/null; then
+    echo "ERROR: FFprobe is not installed or not in PATH"
+    echo "FFprobe is part of FFmpeg package"
     exit 1
 fi
 

@@ -14,6 +14,35 @@ const os = require('os');
 
 const execAsync = promisify(exec);
 
+// Load configuration for ffmpeg paths
+let config;
+try {
+    config = require('../config.js');
+} catch (error) {
+    // Fallback configuration if config.js doesn't exist
+    config = {
+        ffmpeg: {
+            path: process.env.FFMPEG_PATH || '',
+            ffprobePath: process.env.FFPROBE_PATH || ''
+        }
+    };
+}
+
+// FFmpeg path resolution functions
+function getFFmpegPath() {
+    if (config.ffmpeg && config.ffmpeg.path) {
+        return config.ffmpeg.path;
+    }
+    return 'ffmpeg'; // Fallback to system PATH
+}
+
+function getFFprobePath() {
+    if (config.ffmpeg && config.ffmpeg.ffprobePath) {
+        return config.ffmpeg.ffprobePath;
+    }
+    return 'ffprobe'; // Fallback to system PATH
+}
+
 class HLSConverter {
     constructor() {
         this.platform = os.platform();
@@ -435,12 +464,30 @@ class HLSConverter {
         console.log('=====================================\n');
 
         // Check if FFmpeg is installed
+        const ffmpegPath = getFFmpegPath();
+        const ffprobePath = getFFprobePath();
+        
         try {
-            const { stdout } = await execAsync('ffmpeg -version');
+            const { stdout } = await execAsync(`"${ffmpegPath}" -version`);
             const version = stdout.split('\n')[0];
             console.log(`✅ FFmpeg found: ${version}`);
+            console.log(`   Path: ${ffmpegPath}`);
         } catch (error) {
             console.error('❌ FFmpeg not found. Please install FFmpeg first:');
+            console.error(`   Tried path: ${ffmpegPath}`);
+            this.showInstallInstructions();
+            process.exit(1);
+        }
+
+        // Check if FFprobe is available
+        try {
+            const { stdout } = await execAsync(`"${ffprobePath}" -version`);
+            const version = stdout.split('\n')[0];
+            console.log(`✅ FFprobe found: ${version}`);
+            console.log(`   Path: ${ffprobePath}`);
+        } catch (error) {
+            console.error('❌ FFprobe not found. Please install FFmpeg first:');
+            console.error(`   Tried path: ${ffprobePath}`);
             this.showInstallInstructions();
             process.exit(1);
         }
@@ -580,7 +627,8 @@ class HLSConverter {
 
     async getVideoInfo(videoPath) {
         try {
-            const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${videoPath}"`;
+            const ffprobePath = getFFprobePath();
+            const command = `"${ffprobePath}" -v quiet -print_format json -show_format -show_streams "${videoPath}"`;
             const { stdout } = await execAsync(command);
             const info = JSON.parse(stdout);
 
@@ -664,6 +712,7 @@ class HLSConverter {
     }
 
     buildFFmpegCommand(inputPath, playlistPath, segmentPattern, quality, videoInfo) {
+        const ffmpegPath = getFFmpegPath();
         const args = [
             '-i', `"${inputPath}"`,
             '-c:a', 'aac',
@@ -699,7 +748,7 @@ class HLSConverter {
         // Add playlist path
         args.push(`"${playlistPath}"`);
 
-        return `ffmpeg ${args.join(' ')}`;
+        return `"${ffmpegPath}" ${args.join(' ')}`;
     }
 
     getVideoCodec(quality) {
