@@ -616,7 +616,7 @@ class HLSConverter {
         this.config.inputDir = await this.getInputDirectory();
 
         // Create output directory
-        this.config.outputDir = path.join(this.config.inputDir, 'hls');
+        this.config.outputDir = path.join(this.config.inputDir, 'hls_output');
         await this.ensureDirectoryExists(this.config.outputDir);
 
         console.log(`📁 Input directory: ${this.config.inputDir}`);
@@ -871,7 +871,7 @@ class HLSConverter {
 
                 if (item.isDirectory()) {
                     // Skip system directories
-                    if (item.name.startsWith('.') || item.name === 'hls') {
+                    if (item.name.startsWith('.') || item.name === 'hls_output') {
                         continue;
                     }
                     const subDirVideos = await this.findVideoFiles(fullPath);
@@ -1717,7 +1717,7 @@ DEFAULT BEHAVIOR:
 
 OPTIONS:
   -i, --input <dir>     Input directory (default: current directory)
-  -o, --output <dir>    Output directory (default: ./hls)
+  -o, --output <dir>    Output directory (default: ./hls_output)
   --nvidia, --cuda      Force NVIDIA GPU acceleration
   --intel, --qsv        Force Intel Quick Sync Video
   --amd, --amf          Force AMD AMF acceleration

@@ -60,7 +60,9 @@ router.get('/api/browse', async (req, res) => {
 
             // Check for HLS version if this is a video file
             if (entry.isFile() && isVideoFile(ext)) {
-                const hlsPath = path.join(fullPath, 'hls', entry.name.replace(ext, ''));
+                // Look for HLS files in the separate hls folder at root level
+                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                const hlsPath = path.join(hlsRootPath, relativeItemPath.replace(ext, ''));
                 const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
                 
                 try {
@@ -69,7 +71,7 @@ router.get('/api/browse', async (req, res) => {
                         // Add HLS version as a separate item
                         const hlsItem = {
                             name: entry.name.replace(ext, '') + ' (HLS)',
-                            path: path.relative(VIDEOS_ROOT, masterPlaylistPath),
+                            path: path.relative(hlsRootPath, masterPlaylistPath),
                             size: hlsStats.size,
                             modified: hlsStats.mtime,
                             extension: '.m3u8',

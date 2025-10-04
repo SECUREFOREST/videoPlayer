@@ -316,7 +316,10 @@ class ModernVideoPlayerBrowser {
         div.innerHTML = `
             ${thumbnailHtml}
             <div class="file-info flex-grow-1">
-                <div class="file-name">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
+                <div class="file-name">
+                    ${this.formatFileName(item.name, item.isVideo, item.isHLS)}
+                    ${item.isHLS ? '<span class="badge bg-primary ms-2">HLS</span>' : ''}
+                </div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ?
                 `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` :
@@ -527,13 +530,13 @@ class ModernVideoPlayerBrowser {
                 this.currentVideo = item;
                 this.videoTitle.innerHTML = `${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}`;
 
-                const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
-                
                 // Check if it's an HLS file
                 if (videoData.isHLS && videoData.extension === '.m3u8') {
+                    const videoUrl = `/hls/${encodeURIComponent(item.path)}`;
                     await this.playHLSVideo(videoUrl, videoData);
                 } else {
                     // Regular video file
+                    const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                     this.videoSource.src = videoUrl;
                     this.videoSource.type = videoData.mimeType;
                     this.video.src = videoUrl;

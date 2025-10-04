@@ -128,6 +128,23 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
     maxAge: '1y'
 }));
 
+// Serve HLS files from the separate hls directory
+const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+app.use('/hls', express.static(HLS_ROOT, {
+    setHeaders: (res, filePath) => {
+        if (filePath.match(/\.(m3u8|ts)$/i)) {
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+        }
+    },
+    maxAge: '1y'
+}));
+
 // Use API routes
 app.use(routes);
 
