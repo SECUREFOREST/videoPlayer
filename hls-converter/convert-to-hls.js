@@ -944,7 +944,6 @@ class HLSConverter {
         // Check if this file should be skipped (already completed and validated)
         const baseName = path.parse(videoInfo.name).name;
         if (this.stats.conversionState[baseName]?.completed && this.stats.conversionState[baseName]?.validated) {
-            console.log(`⏭️  Skipping ${videoInfo.name} (already completed and validated)`);
             return { success: true, hlsDir: null, skipped: true };
         }
         
@@ -1426,18 +1425,6 @@ class HLSConverter {
         }
 
         console.log(`📹 Found ${videoFiles.length} video files\n`);
-        
-        // Show first few files for verification
-        if (videoFiles.length > 0) {
-            console.log('📋 Sample files to be processed:');
-            videoFiles.slice(0, 5).forEach((file, index) => {
-                console.log(`   ${index + 1}. ${path.basename(file)}`);
-            });
-            if (videoFiles.length > 5) {
-                console.log(`   ... and ${videoFiles.length - 5} more files`);
-            }
-            console.log('');
-        }
 
         // Process videos in batches to avoid overwhelming the system
         const batchSize = this.config.maxConcurrent;
@@ -1460,9 +1447,7 @@ class HLSConverter {
                     const result = await this.convertVideoToHLS(videoInfo);
 
                     if (result.success) {
-                        if (result.skipped) {
-                            console.log(`⏭️  Skipped: ${videoInfo.name} (already completed)`);
-                        } else {
+                        if (!result.skipped) {
                             this.stats.processedFiles++;
                             console.log(`✅ Completed: ${videoInfo.name}`);
                         }
@@ -1483,10 +1468,12 @@ class HLSConverter {
 
             // State saving disabled
 
-            // Progress update
+            // Progress update (only show every 10 files or at the end)
             const processedFiles = Math.min(i + batch.length, videoFiles.length);
             const progress = videoFiles.length > 0 ? Math.round((processedFiles / videoFiles.length) * 100) : 0;
-            console.log(`\n📊 Progress: ${progress}% (${processedFiles}/${videoFiles.length} files)\n`);
+            if (processedFiles % 10 === 0 || processedFiles === videoFiles.length) {
+                console.log(`📊 Progress: ${progress}% (${processedFiles}/${videoFiles.length} files)`);
+            }
         }
     }
 
