@@ -683,8 +683,7 @@ class ModernVideoPlayerBrowser {
                 // Save progress for HLS streams
                 this.video.addEventListener('timeupdate', () => {
                     if (this.currentVideo && this.video.duration) {
-                        const progress = (this.video.currentTime / this.video.duration) * 100;
-                        this.saveProgress(this.currentVideo.path, progress);
+                        this.saveProgress(this.currentVideo.path, this.video.currentTime);
                     }
                 });
 

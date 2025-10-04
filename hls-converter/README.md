@@ -38,7 +38,8 @@ node convert-to-hls.js --cpu-only  # Force CPU only
 
 # Advanced features:
 node convert-to-hls.js --dry-run   # Preview conversions
-node convert-to-hls.js --resume    # Resume interrupted conversion
+node convert-to-hls.js --resume    # Resume interrupted conversion (default behavior)
+node convert-to-hls.js --validate  # Validate existing HLS files only
 node convert-to-hls.js --av1       # Use AV1 codec (best compression)
 node convert-to-hls.js --hevc      # Use HEVC/H.265 codec
 node convert-to-hls.js --codec av1 # Specify codec
@@ -66,6 +67,14 @@ node convert-to-hls.js --codec av1 # Specify codec
 - **Health Monitoring**: Real-time system resource monitoring
 - **Resume Capability**: Continue interrupted conversions
 - **Partial Recovery**: Resume from failed segments
+
+### 🧠 **Smart Validation & Resuming**
+- **Automatic Validation**: Always validates existing HLS files before conversion
+- **Duration Alignment Check**: Ensures HLS files match original video duration
+- **Smart Skipping**: Automatically skips properly aligned files
+- **Misaligned File Repair**: Automatically cleans up and re-converts problematic files
+- **Intelligent Resuming**: Always resumes from where it left off
+- **Quality Control**: 2-second tolerance for duration differences
 
 ### 🎯 **User Experience**
 - **Dry Run Mode**: Preview conversions without actually converting
@@ -386,13 +395,34 @@ ffmpeg -version
 
 ## 📈 Examples
 
-### Basic Conversion
+### Smart Conversion (Default)
 ```bash
-# Convert all videos in current directory
+# Convert all videos with smart validation and resuming
 node convert-to-hls.js
+
+# This will:
+# 1. Validate existing HLS files for duration alignment
+# 2. Skip properly aligned files
+# 3. Clean up and re-convert misaligned files
+# 4. Convert any new files
 
 # Convert specific directory
 node convert-to-hls.js --input ./videos --output ./hls
+```
+
+### Validation Only
+```bash
+# Check existing HLS files for duration alignment
+node convert-to-hls.js --validate
+
+# Output example:
+# 📊 Validation Summary:
+#    Total HLS directories validated: 28
+#    Properly aligned: 27
+#    Misaligned: 1
+# 
+# 🔧 Files marked for re-conversion:
+#    - Active Torsions Intro
 ```
 
 ### High-Quality Conversion

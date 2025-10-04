@@ -11,6 +11,7 @@ A high-performance Node.js video streaming application with professional-grade f
 
 ### 🎥 Video Support
 - **Multiple Formats**: MP4, AVI, MOV, MKV, WebM, M4V, FLV, WMV, 3GP, OGV
+- **HLS Streaming**: HTTP Live Streaming with adaptive bitrate support
 - **Range Request Support**: Efficient video streaming with partial content delivery
 - **Large File Handling**: Optimized for videos up to 1.6GB+
 - **Thumbnail Generation**: Automatic video thumbnails using FFmpeg
@@ -42,6 +43,13 @@ A high-performance Node.js video streaming application with professional-grade f
 - **Smooth Animations**: Polished user experience
 - **Mobile Responsive**: Works on all device sizes
 - **Custom Styling**: Professional video player appearance
+
+### 🏗️ Modular Architecture
+- **Server Modules**: Clean, maintainable code structure
+- **HLS Converter**: Advanced video conversion with smart validation
+- **Smart Resuming**: Automatic validation and repair of HLS files
+- **Duration Alignment**: Ensures HLS files match original video length
+- **Quality Control**: 2-second tolerance for duration differences
 
 ### ⚡ Performance Optimizations
 - **Async File Operations**: Non-blocking file system operations using fs.promises
@@ -103,12 +111,27 @@ A high-performance Node.js video streaming application with professional-grade f
 
 ```
 videoPlayer/
-├── server.js                    # Main server file with authentication
+├── server.js                    # Main server entry point (modularized)
 ├── config.js                    # Application configuration
-├── package.json                 # Dependencies and scripts
+├── package.json                 # Dependencies and scripts (v2.0.0)
 ├── ecosystem.config.js          # PM2 configuration
 ├── nginx.conf                   # Nginx reverse proxy configuration
 ├── test-performance.js          # Performance testing script
+├── modules/                     # Modular server components
+│   ├── config.js               # Configuration management
+│   ├── ffmpeg.js               # FFmpeg utilities
+│   ├── fileUtils.js            # File system operations
+│   ├── auth.js                 # Authentication system
+│   ├── videoProcessing.js      # Video processing & thumbnails
+│   ├── routes.js               # API route handlers
+│   ├── server.js               # Main server setup
+│   └── README.md               # Module documentation
+├── hls-converter/               # HLS video converter
+│   ├── convert-to-hls.js       # Main converter with smart validation
+│   ├── convert-to-hls.bat      # Windows batch file
+│   ├── convert-to-hls.sh       # Linux/macOS shell script
+│   ├── package.json            # Converter dependencies (v2.0.0)
+│   └── README.md               # Converter documentation
 ├── public/                      # Client-side files
 │   ├── index.html              # Main HTML file with Bootstrap 5
 │   ├── style-bootstrap.css     # Custom styling (v9)

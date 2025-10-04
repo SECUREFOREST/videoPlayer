@@ -69,7 +69,7 @@ class HLSConverter {
             autoDetectGPU: true,
             // Advanced features
             dryRun: false,  // Preview mode without actual conversion
-            resumeMode: false,  // Resume interrupted conversions
+            resumeMode: false,  // Resume mode disabled
             hardwareDecoding: true,  // Use GPU for decoding too
             fileValidation: true,  // Validate converted files
             atomicOperations: true,  // Ensure file completeness
@@ -113,8 +113,8 @@ class HLSConverter {
             currentQuality: null,
             progress: 0,
             eta: null,
-            // State management
-            stateFile: path.join(process.cwd(), '.hls-converter-state.json'),
+            // State management (disabled)
+            stateFile: null,
             conversionState: {},
             // Health monitoring
             systemHealth: {
@@ -254,53 +254,20 @@ class HLSConverter {
         return gpuInfo;
     }
 
-    // State management methods
+    // State management methods (disabled)
     async saveState() {
-        try {
-            const state = {
-                timestamp: Date.now(),
-                config: this.config,
-                stats: this.stats,
-                conversionState: this.stats.conversionState
-            };
-            await fs.writeFile(this.stats.stateFile, JSON.stringify(state, null, 2));
-        } catch (error) {
-            console.log('⚠️  Could not save state:', error.message);
-        }
+        // State saving disabled
+        return;
     }
 
     async loadState() {
-        try {
-            const stateData = await fs.readFile(this.stats.stateFile, 'utf8');
-            const state = JSON.parse(stateData);
-
-            // Check if state is recent (within 24 hours)
-            const age = Date.now() - state.timestamp;
-            if (age > 24 * 60 * 60 * 1000) {
-                console.log('🕐 State file is too old, starting fresh');
-                return false;
-            }
-
-            this.stats.conversionState = state.conversionState || {};
-            const completedCount = Object.keys(this.stats.conversionState).length;
-            console.log(`📁 Loaded previous state, resuming conversion...`);
-            console.log(`   Completed conversions: ${completedCount}`);
-            if (completedCount > 0) {
-                console.log(`   Skipping already completed files...`);
-            }
-            return true;
-        } catch (error) {
-            console.log('📁 No previous state found, starting fresh');
-            return false;
-        }
+        // State loading disabled
+        return false;
     }
 
     async clearState() {
-        try {
-            await fs.unlink(this.stats.stateFile);
-        } catch (error) {
-            // State file doesn't exist, that's fine
-        }
+        // State clearing disabled
+        return;
     }
 
     // Progress tracking methods
@@ -473,6 +440,99 @@ class HLSConverter {
         }
     }
 
+    // Duration validation methods
+    async getOriginalVideoDuration(videoPath) {
+        try {
+            const ffprobePath = getFFprobePath();
+            const command = `"${ffprobePath}" -v quiet -show_entries format=duration -of csv="p=0" "${videoPath}"`;
+            const { stdout } = await execAsync(command);
+            const duration = parseFloat(stdout.trim());
+            return isNaN(duration) ? null : duration;
+        } catch (error) {
+            console.error(`Error getting original duration for ${videoPath}:`, error.message);
+            return null;
+        }
+    }
+
+    async getHLSDuration(playlistPath) {
+        try {
+            const content = await fs.readFile(playlistPath, 'utf8');
+            const lines = content.split('\n');
+            
+            let totalDuration = 0;
+            let segmentCount = 0;
+            
+            for (const line of lines) {
+                if (line.startsWith('#EXTINF:')) {
+                    const duration = parseFloat(line.split(':')[1].split(',')[0]);
+                    totalDuration += duration;
+                    segmentCount++;
+                }
+            }
+            
+            return { duration: totalDuration, segmentCount };
+        } catch (error) {
+            console.error(`Error getting HLS duration for ${playlistPath}:`, error.message);
+            return null;
+        }
+    }
+
+    async validateDurationAlignment(originalPath, hlsDir) {
+        try {
+            console.log(`🔍 Validating duration alignment for ${path.basename(originalPath)}...`);
+            
+            // Get original video duration
+            const originalDuration = await this.getOriginalVideoDuration(originalPath);
+            if (!originalDuration) {
+                console.log(`⚠️  Could not get original duration for ${path.basename(originalPath)}`);
+                return false;
+            }
+            
+            console.log(`📹 Original duration: ${originalDuration.toFixed(2)} seconds`);
+            
+            // Check each quality playlist
+            const qualityDirs = await fs.readdir(hlsDir);
+            let allAligned = true;
+            
+            for (const qualityDir of qualityDirs) {
+                const qualityPath = path.join(hlsDir, qualityDir);
+                const stat = await fs.stat(qualityPath);
+                
+                if (stat.isDirectory()) {
+                    const playlistPath = path.join(qualityPath, 'playlist.m3u8');
+                    
+                    try {
+                        const hlsInfo = await this.getHLSDuration(playlistPath);
+                        if (hlsInfo) {
+                            const durationDiff = Math.abs(originalDuration - hlsInfo.duration);
+                            const tolerance = 2.0; // 2 second tolerance
+                            
+                            console.log(`   ${qualityDir}: ${hlsInfo.duration.toFixed(2)}s (${hlsInfo.segmentCount} segments)`);
+                            
+                            if (durationDiff <= tolerance) {
+                                console.log(`   ✅ ${qualityDir} aligned (diff: ${durationDiff.toFixed(2)}s)`);
+                            } else {
+                                console.log(`   ❌ ${qualityDir} misaligned (diff: ${durationDiff.toFixed(2)}s)`);
+                                allAligned = false;
+                            }
+                        } else {
+                            console.log(`   ⚠️  Could not read ${qualityDir} playlist`);
+                            allAligned = false;
+                        }
+                    } catch (error) {
+                        console.log(`   ❌ Error validating ${qualityDir}: ${error.message}`);
+                        allAligned = false;
+                    }
+                }
+            }
+            
+            return allAligned;
+        } catch (error) {
+            console.error(`Error validating duration alignment:`, error.message);
+            return false;
+        }
+    }
+
     // Atomic operations
     async atomicWrite(filePath, content) {
         if (!this.config.atomicOperations) {
@@ -550,22 +610,180 @@ class HLSConverter {
             }
         }
 
-        // Load previous state if resume mode is enabled
-        if (this.config.resumeMode) {
-            await this.loadState();
-        }
+        // State loading disabled
 
         // Get input directory
         this.config.inputDir = await this.getInputDirectory();
 
         // Create output directory
-        this.config.outputDir = path.join(this.config.inputDir, 'hls_output');
+        this.config.outputDir = path.join(this.config.inputDir, 'hls');
         await this.ensureDirectoryExists(this.config.outputDir);
 
         console.log(`📁 Input directory: ${this.config.inputDir}`);
         console.log(`📁 Output directory: ${this.config.outputDir}`);
         console.log(`⚡ Max concurrent conversions: ${this.config.maxConcurrent}`);
         console.log(`🎯 Quality mode: ${this.config.adaptiveStreaming ? 'Adaptive streaming (multi-quality)' : 'Equal quality (single quality)'}\n`);
+
+        // If validation-only mode, validate existing HLS files and exit
+        if (this.config.validateOnly) {
+            await this.validateExistingHLSFiles();
+            return;
+        }
+
+        // Normal mode: Always validate first, then resume with problematic files
+        console.log('🔍 Validating existing HLS files before conversion...\n');
+        await this.validateExistingHLSFiles();
+        console.log('\n🔄 Starting smart conversion (will skip aligned files)...\n');
+    }
+
+    async validateExistingHLSFiles() {
+        console.log('🔍 Validating existing HLS files...\n');
+        
+        try {
+            const hlsOutputDir = this.config.outputDir;
+            const hlsDirs = await fs.readdir(hlsOutputDir);
+            
+            let totalValidated = 0;
+            let totalAligned = 0;
+            let misalignedFiles = [];
+            
+            for (const hlsDir of hlsDirs) {
+                const hlsPath = path.join(hlsOutputDir, hlsDir);
+                const stat = await fs.stat(hlsPath);
+                
+                if (stat.isDirectory()) {
+                    // Look for subdirectories with master playlists
+                    const subDirs = await fs.readdir(hlsPath);
+                    
+                    for (const subDir of subDirs) {
+                        const subPath = path.join(hlsPath, subDir);
+                        const subStat = await fs.stat(subPath);
+                        
+                        if (subStat.isDirectory()) {
+                            const masterPlaylistPath = path.join(subPath, 'master.m3u8');
+                            
+                            try {
+                                await fs.access(masterPlaylistPath);
+                                
+                                // Find corresponding original video
+                                const originalVideoPath = await this.findOriginalVideo(subDir);
+                                if (originalVideoPath) {
+                                    const isAligned = await this.validateDurationAlignment(originalVideoPath, subPath);
+                                    totalValidated++;
+                                    if (isAligned) {
+                                        totalAligned++;
+                                        // Mark as completed to skip during conversion
+                                        this.stats.conversionState[subDir] = {
+                                            completed: true,
+                                            timestamp: Date.now(),
+                                            validated: true
+                                        };
+                                    } else {
+                                        misalignedFiles.push({
+                                            name: subDir,
+                                            hlsPath: subPath,
+                                            originalPath: originalVideoPath
+                                        });
+                                    }
+                                } else {
+                                    console.log(`⚠️  Could not find original video for ${subDir}`);
+                                }
+                            } catch (error) {
+                                // No master playlist in this subdirectory, continue
+                            }
+                        }
+                    }
+                }
+            }
+            
+            console.log(`\n📊 Validation Summary:`);
+            console.log(`   Total HLS directories validated: ${totalValidated}`);
+            console.log(`   Properly aligned: ${totalAligned}`);
+            console.log(`   Misaligned: ${totalValidated - totalAligned}`);
+            
+            if (misalignedFiles.length > 0) {
+                console.log(`\n🔧 Files marked for re-conversion:`);
+                misalignedFiles.forEach(file => {
+                    console.log(`   - ${file.name}`);
+                });
+            }
+            
+            // Store misaligned files for processing
+            this.misalignedFiles = misalignedFiles;
+            
+        } catch (error) {
+            console.error('Error validating HLS files:', error.message);
+        }
+    }
+
+    async findOriginalVideo(hlsDirName) {
+        try {
+            const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
+            
+            // First try direct search in input directory
+            for (const ext of videoExtensions) {
+                const videoName = hlsDirName + ext;
+                const videoPath = path.join(this.config.inputDir, videoName);
+                
+                try {
+                    await fs.access(videoPath);
+                    return videoPath;
+                } catch (error) {
+                    // Try with different case
+                    const lowerVideoPath = path.join(this.config.inputDir, hlsDirName.toLowerCase() + ext);
+                    try {
+                        await fs.access(lowerVideoPath);
+                        return lowerVideoPath;
+                    } catch (error2) {
+                        // Continue searching
+                    }
+                }
+            }
+            
+            // If not found directly, search in subdirectories
+            const inputDirs = await fs.readdir(this.config.inputDir);
+            for (const inputDir of inputDirs) {
+                const inputPath = path.join(this.config.inputDir, inputDir);
+                const stat = await fs.stat(inputPath);
+                
+                if (stat.isDirectory()) {
+                    for (const ext of videoExtensions) {
+                        const videoName = hlsDirName + ext;
+                        const videoPath = path.join(inputPath, videoName);
+                        
+                        try {
+                            await fs.access(videoPath);
+                            return videoPath;
+                        } catch (error) {
+                            // Try with different case
+                            const lowerVideoPath = path.join(inputPath, hlsDirName.toLowerCase() + ext);
+                            try {
+                                await fs.access(lowerVideoPath);
+                                return lowerVideoPath;
+                            } catch (error2) {
+                                // Continue searching
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // markAsCompleted method removed - state management disabled
+
+    async cleanupHLSDirectory(hlsPath) {
+        try {
+            // Remove the entire HLS directory
+            await fs.rm(hlsPath, { recursive: true, force: true });
+            console.log(`   ✅ Cleaned up: ${path.basename(hlsPath)}`);
+        } catch (error) {
+            console.log(`   ⚠️  Could not clean up ${path.basename(hlsPath)}: ${error.message}`);
+        }
     }
 
     showInstallInstructions() {
@@ -653,7 +871,7 @@ class HLSConverter {
 
                 if (item.isDirectory()) {
                     // Skip system directories
-                    if (item.name.startsWith('.') || item.name === 'hls_output') {
+                    if (item.name.startsWith('.') || item.name === 'hls') {
                         continue;
                     }
                     const subDirVideos = await this.findVideoFiles(fullPath);
@@ -719,9 +937,19 @@ class HLSConverter {
     }
 
     async convertVideoToHLS(videoInfo) {
+        if (!videoInfo) {
+            throw new Error('videoInfo is required but was not provided');
+        }
+        
+        // Check if this file should be skipped (already completed and validated)
+        const baseName = path.parse(videoInfo.name).name;
+        if (this.stats.conversionState[baseName]?.completed && this.stats.conversionState[baseName]?.validated) {
+            console.log(`⏭️  Skipping ${videoInfo.name} (already completed and validated)`);
+            return { success: true, hlsDir: null, skipped: true };
+        }
+        
         const relativePath = path.relative(this.config.inputDir, videoInfo.path);
         const outputDir = path.join(this.config.outputDir, path.dirname(relativePath));
-        const baseName = path.parse(videoInfo.name).name;
 
         await this.ensureDirectoryExists(outputDir);
 
@@ -739,19 +967,7 @@ class HLSConverter {
         const applicableQualities = this.getApplicableQualities(sourceHeight);
         console.log(`🎯 Generating qualities: ${applicableQualities.map(q => q.name).join(', ')}`);
 
-        // Check if all qualities are already completed (resume mode)
-        if (this.config.resumeMode) {
-            const allQualitiesCompleted = applicableQualities.every(quality => {
-                const qualityDir = path.join(hlsDir, quality.name);
-                const playlistPath = path.join(qualityDir, 'playlist.m3u8');
-                return this.stats.conversionState[playlistPath]?.completed === true;
-            });
-            
-            if (allQualitiesCompleted) {
-                console.log(`⏭️  Skipping ${videoInfo.name} (all qualities already completed)`);
-                return { success: true, hlsDir: hlsDir, skipped: true };
-            }
-        }
+        // Resume mode disabled - always convert
 
         const conversions = [];
 
@@ -793,7 +1009,8 @@ class HLSConverter {
         });
 
         // Create master playlist
-        await this.createMasterPlaylist(hlsDir, processedConversions, videoInfo.name);
+        console.log(`📋 Creating master playlist for ${videoInfo.name}...`);
+        await this.createMasterPlaylist(hlsDir, processedConversions, videoInfo.name, videoInfo);
 
         return {
             success: results.every(result => result.status === 'fulfilled'),
@@ -976,11 +1193,7 @@ class HLSConverter {
                 throw new Error('System health check failed');
             }
 
-            // Check if already completed (resume mode)
-            if (this.config.resumeMode && this.stats.conversionState[conversion.playlistPath]) {
-                console.log(`⏭️  Skipping ${conversion.quality} (already completed)`);
-                return { success: true, quality: conversion.quality, skipped: true };
-            }
+            // Resume mode disabled - always convert
 
             console.log(`🔄 Converting ${videoName} to ${conversion.quality}...`);
             console.log(`   Command: ${conversion.command}`);
@@ -999,15 +1212,7 @@ class HLSConverter {
                 }
             }
 
-            // Mark as completed in state
-            if (this.config.resumeMode) {
-                this.stats.conversionState[conversion.playlistPath] = {
-                    completed: true,
-                    timestamp: Date.now(),
-                    quality: conversion.quality
-                };
-                await this.saveState();
-            }
+            // State saving disabled
 
             // Update progress
             this.updateProgress(videoName, conversion.quality, 100);
@@ -1029,7 +1234,12 @@ class HLSConverter {
         }
     }
 
-    async createMasterPlaylist(hlsDir, conversions, videoName) {
+    async createMasterPlaylist(hlsDir, conversions, videoName, videoInfo) {
+        if (!videoInfo) {
+            console.error(`❌ createMasterPlaylist called without videoInfo for ${videoName}`);
+            return;
+        }
+        
         const masterPlaylistPath = path.join(hlsDir, 'master.m3u8');
 
         let masterContent = '#EXTM3U\n#EXT-X-VERSION:6\n\n';
@@ -1064,6 +1274,14 @@ class HLSConverter {
             const isValid = await this.validateHLSFile(masterPlaylistPath);
             if (!isValid) {
                 throw new Error('Master playlist validation failed');
+            }
+        }
+
+        // Validate duration alignment
+        if (this.config.fileValidation && videoInfo) {
+            const isAligned = await this.validateDurationAlignment(videoInfo.path, hlsDir);
+            if (!isAligned) {
+                console.log(`⚠️  Duration alignment issues detected for ${videoInfo.name}`);
             }
         }
     }
@@ -1167,6 +1385,22 @@ class HLSConverter {
         this.stats.totalFiles = videoFiles.length;
         this.stats.startTime = Date.now();
 
+        // If we have misaligned files, prioritize them
+        if (this.misalignedFiles && this.misalignedFiles.length > 0) {
+            console.log('🔧 Prioritizing misaligned files for re-conversion...\n');
+            
+            // Clean up misaligned files first
+            for (const misalignedFile of this.misalignedFiles) {
+                console.log(`🗑️  Cleaning up misaligned HLS directory: ${misalignedFile.name}`);
+                try {
+                    await this.cleanupHLSDirectory(misalignedFile.hlsPath);
+                } catch (error) {
+                    console.log(`⚠️  Could not clean up ${misalignedFile.name}: ${error.message}`);
+                }
+            }
+            console.log('');
+        }
+
         // Dry run mode - show what would be converted
         if (this.config.dryRun) {
             console.log('🔍 DRY RUN MODE - Preview of conversions:\n');
@@ -1213,7 +1447,12 @@ class HLSConverter {
 
             const batchPromises = batch.map(async (videoPath) => {
                 const videoInfo = await this.getVideoInfo(videoPath);
-                if (!videoInfo) return;
+                if (!videoInfo) {
+                    this.stats.failedFiles++;
+                    this.stats.errors.push(`${path.basename(videoPath)}: Could not get video info`);
+                    console.error(`❌ Failed: ${path.basename(videoPath)} - Could not get video info`);
+                    return;
+                }
 
                 this.stats.totalSize += videoInfo.size;
 
@@ -1221,13 +1460,14 @@ class HLSConverter {
                     const result = await this.convertVideoToHLS(videoInfo);
 
                     if (result.success) {
-                        this.stats.processedFiles++;
-                        console.log(`✅ Completed: ${videoInfo.name}`);
-                        
-                        // Save state after successful conversion (resume mode)
-                        if (this.config.resumeMode) {
-                            await this.saveState();
+                        if (result.skipped) {
+                            console.log(`⏭️  Skipped: ${videoInfo.name} (already completed)`);
+                        } else {
+                            this.stats.processedFiles++;
+                            console.log(`✅ Completed: ${videoInfo.name}`);
                         }
+                        
+                        // State saving disabled
                     } else {
                         this.stats.failedFiles++;
                         this.stats.errors.push(`${videoInfo.name}: Conversion failed`);
@@ -1241,10 +1481,7 @@ class HLSConverter {
 
             await Promise.all(batchPromises);
 
-            // Save state after each batch (resume mode)
-            if (this.config.resumeMode) {
-                await this.saveState();
-            }
+            // State saving disabled
 
             // Progress update
             const processedFiles = Math.min(i + batch.length, videoFiles.length);
@@ -1295,15 +1532,18 @@ class HLSConverter {
         console.log('\n🎬 HLS Conversion Complete!');
         console.log('You can now use these files with HLS.js or any HLS-compatible player.');
 
-        // Clean up state file if conversion completed successfully
-        if (this.stats.failedFiles === 0) {
-            await this.clearState();
-        }
+        // State management disabled
     }
 
     async run() {
         try {
             await this.initialize();
+            
+            // If validation-only mode, don't process videos
+            if (this.config.validateOnly) {
+                return;
+            }
+            
             await this.processVideos();
             await this.generateReport();
         } catch (error) {
@@ -1330,6 +1570,7 @@ function parseArguments() {
         enableAV1: false,
         enableHEVC: false,
         codec: 'h264',
+        validateOnly: false,
         disableSmartQuality: false,
         disableWebOptimization: false,
         compressionLevel: 'balanced',
@@ -1390,6 +1631,9 @@ function parseArguments() {
                 break;
             case '--resume':
                 options.resume = true;
+                break;
+            case '--validate':
+                options.validateOnly = true;
                 break;
             case '--av1':
                 options.enableAV1 = true;
@@ -1473,7 +1717,7 @@ DEFAULT BEHAVIOR:
 
 OPTIONS:
   -i, --input <dir>     Input directory (default: current directory)
-  -o, --output <dir>    Output directory (default: ./hls_output)
+  -o, --output <dir>    Output directory (default: ./hls)
   --nvidia, --cuda      Force NVIDIA GPU acceleration
   --intel, --qsv        Force Intel Quick Sync Video
   --amd, --amf          Force AMD AMF acceleration
@@ -1481,7 +1725,8 @@ OPTIONS:
   --videotoolbox, --vt  Force macOS VideoToolbox acceleration
   --no-gpu, --cpu-only  Disable GPU acceleration (CPU only)
   --dry-run, --preview  Preview conversions without actually converting
-  --resume              Resume interrupted conversions
+  --resume              Resume interrupted conversions (default behavior)
+  --validate            Validate existing HLS files for duration alignment only
   --av1                 Use AV1 codec (best compression)
   --hevc, --h265        Use HEVC/H.265 codec (better than H.264)
   --codec <codec>       Specify codec: h264, hevc, av1
@@ -1538,6 +1783,9 @@ if (require.main === module) {
     }
     if (options.resume) {
         converter.config.resumeMode = true;
+    }
+    if (options.validateOnly) {
+        converter.config.validateOnly = true;
     }
     if (options.enableAV1) {
         converter.config.enableAV1 = true;
