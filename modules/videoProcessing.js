@@ -220,8 +220,14 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             const optimalTime = getOptimalThumbnailTime(duration);
             console.log('🔄 Using HLS thumbnail time:', optimalTime, 'seconds');
             
-            // Ensure seek time is within video duration
-            const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+            // Ensure seek time is within video duration and avoid first few seconds
+            let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+            
+            // Avoid first 5 seconds which often contain intro screens or logos
+            if (seekTime < 5 && duration > 10) {
+                seekTime = 5;
+            }
+            
             console.log('🔄 Final HLS seek time:', seekTime, 'seconds');
             
             // Generate thumbnail from first segment
@@ -316,19 +322,23 @@ function getThumbnailUrl(videoPath) {
 // Get optimal thumbnail time based on video duration
 function getOptimalThumbnailTime(duration) {
     if (!duration || duration <= 0) {
-        return 10; // Default to 10 seconds if duration is unknown
+        return 15; // Default to 15 seconds if duration is unknown (avoid first few seconds)
     }
     
     if (duration >= 300) { // 5 minutes or longer
-        return 30;
+        return Math.min(60, Math.max(30, Math.floor(duration * 0.1))); // 10% of duration, max 60s, min 30s
     } else if (duration >= 120) { // 2 minutes or longer
-        return 20;
-    } else if (duration >= 30) { // 30 seconds to 2 minutes
-        return 10;
-    } else if (duration >= 10) { // 10-30 seconds
-        return Math.max(1, Math.floor(duration / 2)); // Use middle of video
+        return Math.min(30, Math.max(20, Math.floor(duration * 0.15))); // 15% of duration, max 30s, min 20s
+    } else if (duration >= 60) { // 1-2 minutes
+        return Math.min(20, Math.max(15, Math.floor(duration * 0.2))); // 20% of duration, max 20s, min 15s
+    } else if (duration >= 30) { // 30 seconds to 1 minute
+        return Math.min(15, Math.max(10, Math.floor(duration * 0.25))); // 25% of duration, max 15s, min 10s
+    } else if (duration >= 15) { // 15-30 seconds
+        return Math.max(5, Math.floor(duration * 0.3)); // 30% of duration, min 5s
+    } else if (duration >= 10) { // 10-15 seconds
+        return Math.max(3, Math.floor(duration * 0.4)); // 40% of duration, min 3s
     } else {
-        return Math.max(1, Math.floor(duration / 2)); // For very short videos, use middle
+        return Math.max(2, Math.floor(duration * 0.5)); // 50% of duration, min 2s
     }
 }
 
@@ -351,8 +361,14 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         const optimalTime = getOptimalThumbnailTime(duration);
         console.log('🔄 Using thumbnail time:', optimalTime, 'seconds');
         
-        // Ensure seek time is within video duration
-        const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+        // Ensure seek time is within video duration and avoid first few seconds
+        let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+        
+        // Avoid first 5 seconds which often contain intro screens or logos
+        if (seekTime < 5 && duration > 10) {
+            seekTime = 5;
+        }
+        
         console.log('🔄 Final seek time:', seekTime, 'seconds');
         
         const ffmpegPath = getFFmpegPath();
