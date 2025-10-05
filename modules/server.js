@@ -177,11 +177,15 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     try {
         // Construct the correct quality playlist path
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
+        console.log('🔍 Constructed quality playlist path:', correctPath);
         
         // Check if the file exists
         if (!fs.existsSync(correctPath)) {
+            console.log('❌ Quality playlist file not found:', correctPath);
             return res.status(404).json({ error: 'Quality playlist not found' });
         }
+        
+        console.log('✅ Quality playlist file found, serving...');
         
         // Set appropriate headers
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
