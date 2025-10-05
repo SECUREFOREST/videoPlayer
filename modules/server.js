@@ -171,7 +171,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     
     // Convert master playlist path to directory path
     // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> Active Bottoming/Active Facedown Introduction/
-    const masterDir = masterPath.replace('/hls/', '').replace('/master.m3u8', '');
+    const masterDir = decodeURIComponent(masterPath.replace('/hls/', '').replace('/master.m3u8', ''));
     console.log('🔍 Master directory:', masterDir);
     
     try {
@@ -227,7 +227,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     
     // Convert master playlist path to directory path
     // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> Active Bottoming/Active Facedown Introduction/
-    const masterDir = masterPath.replace('/hls/', '').replace('/master.m3u8', '');
+    const masterDir = decodeURIComponent(masterPath.replace('/hls/', '').replace('/master.m3u8', ''));
     console.log('🔍 Segment master directory:', masterDir);
     
     try {
