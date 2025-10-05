@@ -131,7 +131,7 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 // Serve HLS files from the separate hls directory
 const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 
-// HLS quality playlist proxy middleware - more specific pattern
+// HLS quality playlist proxy middleware - MUST come before static file serving
 app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     console.log('🔍 HLS Quality Playlist Proxy triggered:', req.path);
     console.log('🔍 Referer:', req.get('Referer'));
@@ -180,7 +180,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     }
 });
 
-// HLS video segment proxy middleware
+// HLS video segment proxy middleware - MUST come before static file serving
 app.get('/hls/:quality/:segment', async (req, res) => {
     console.log('🔍 HLS Video Segment Proxy triggered:', req.path);
     console.log('🔍 Referer:', req.get('Referer'));
@@ -229,6 +229,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     }
 });
 
+// Static file serving for HLS files - MUST come after proxy middleware
 app.use('/hls', express.static(HLS_ROOT, {
     setHeaders: (res, filePath) => {
         if (filePath.match(/\.(m3u8|ts)$/i)) {
