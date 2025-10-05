@@ -266,8 +266,19 @@ router.get('/api/video-info', async (req, res) => {
             return res.status(400).json({ error: 'File is not a supported video or HLS format' });
         }
 
+        // For HLS files, use the directory name as the video name instead of master.m3u8
+        let videoName;
+        if (isHLSFile(ext) && ext === '.m3u8') {
+            // For HLS master playlists, use the parent directory name
+            const parentDir = path.basename(path.dirname(videoPath));
+            videoName = parentDir;
+        } else {
+            // For regular video files, use the filename
+            videoName = path.basename(videoPath);
+        }
+
         const result = {
-            name: path.basename(videoPath),
+            name: videoName,
             extension: ext,
             mimeType: getVideoMimeType(ext),
             isVideo: isVideoOrHLSFile(ext),
