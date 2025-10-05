@@ -7,7 +7,7 @@ const { VIDEO_EXTENSIONS, HLS_EXTENSIONS, VIDEOS_ROOT } = require('./config');
 function resolveSafePath(requestedPath) {
     // Handle empty, undefined, or null path
     if (!requestedPath || requestedPath === '' || requestedPath === 'undefined' || requestedPath === 'null') {
-        console.warn('Invalid path provided to resolveSafePath:', requestedPath);
+        // Don't log warning for empty paths as this is expected behavior
         return VIDEOS_ROOT;
     }
 

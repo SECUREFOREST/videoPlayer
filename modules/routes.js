@@ -98,6 +98,7 @@ router.get('/api/browse', async (req, res) => {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLSFile(ext) && ext === '.m3u8') {
+                        console.log(`⚠️ Skipping HLS file in videos directory: ${itemPath} - HLS files should be in hls directory`);
                         continue; // Skip this item entirely
                     } else if (isVideoFile(ext)) {
                         // For regular video files, get thumbnail and duration
@@ -146,8 +147,9 @@ router.get('/api/browse', async (req, res) => {
                             hlsItem.thumbnailUrl = await getHLSThumbnail(masterPlaylistPath);
                             hlsItem.duration = await getHLSDuration(masterPlaylistPath);
                         } catch (error) {
-                            console.warn(`Warning: Could not get HLS thumbnail for ${masterPlaylistPath}:`, error.message);
+                            console.warn(`Warning: Could not get HLS info for ${masterPlaylistPath}:`, error.message);
                             hlsItem.thumbnailUrl = null;
+                            hlsItem.duration = null;
                         }
                         
                         items.push(hlsItem);
@@ -284,18 +286,38 @@ router.get('/api/video-info', async (req, res) => {
 
         // For HLS files, check if it's a master playlist and get available qualities
         if (isHLSFile(ext) && ext === '.m3u8') {
-            result.hlsInfo = await getHLSInfo(videoPath);
+            try {
+                result.hlsInfo = await getHLSInfo(videoPath);
+            } catch (error) {
+                console.warn(`Warning: Could not get HLS info for ${videoPath}:`, error.message);
+                result.hlsInfo = {
+                    isMasterPlaylist: false,
+                    qualities: [],
+                    totalQualities: 0
+                };
+            }
         }
 
         // For regular video files, get duration and thumbnail
         if (isVideoFile(ext)) {
-            result.duration = await getVideoDuration(videoPath);
-            result.thumbnailUrl = getThumbnailUrl(videoPath);
+            try {
+                result.duration = await getVideoDuration(videoPath);
+                result.thumbnailUrl = getThumbnailUrl(videoPath);
+            } catch (error) {
+                console.warn(`Warning: Could not get video info for ${videoPath}:`, error.message);
+                result.duration = null;
+                result.thumbnailUrl = null;
+            }
         } else if (isHLSFile(ext) && ext === '.m3u8') {
             // For HLS master playlists, try to get duration from first quality
-            result.duration = await getHLSDuration(videoPath);
-            // Try to generate thumbnail for HLS
-            result.thumbnailUrl = await getHLSThumbnail(videoPath);
+            try {
+                result.duration = await getHLSDuration(videoPath);
+                result.thumbnailUrl = await getHLSThumbnail(videoPath);
+            } catch (error) {
+                console.warn(`Warning: Could not get HLS info for ${videoPath}:`, error.message);
+                result.duration = null;
+                result.thumbnailUrl = null;
+            }
         }
 
         res.json(result);
@@ -385,8 +407,14 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                             result.duration = await getVideoDuration(fullPath);
                             result.thumbnailUrl = getThumbnailUrl(fullPath);
                         } else if (isHLSFile(ext)) {
-                            result.duration = await getHLSDuration(fullPath);
-                            result.thumbnailUrl = await getHLSThumbnail(fullPath);
+                            try {
+                                result.duration = await getHLSDuration(fullPath);
+                                result.thumbnailUrl = await getHLSThumbnail(fullPath);
+                            } catch (hlsError) {
+                                console.warn(`Warning: Could not get HLS info for ${fullPath}:`, hlsError.message);
+                                result.duration = null;
+                                result.thumbnailUrl = null;
+                            }
                         }
                     } catch (error) {
                         console.warn(`Warning: Could not get duration/thumbnail for ${fullPath}:`, error.message);
@@ -421,9 +449,19 @@ router.get('/api/playlists', async (req, res) => {
                             
                             // Add duration for video files
                             if (isVideoFile(ext)) {
-                                video.duration = await getVideoDuration(absolutePath);
+                                try {
+                                    video.duration = await getVideoDuration(absolutePath);
+                                } catch (error) {
+                                    console.warn(`Warning: Could not get duration for ${absolutePath}:`, error.message);
+                                    video.duration = null;
+                                }
                             } else if (isHLSFile(ext)) {
-                                video.duration = await getHLSDuration(absolutePath);
+                                try {
+                                    video.duration = await getHLSDuration(absolutePath);
+                                } catch (error) {
+                                    console.warn(`Warning: Could not get HLS duration for ${absolutePath}:`, error.message);
+                                    video.duration = null;
+                                }
                             }
                         }
                     }

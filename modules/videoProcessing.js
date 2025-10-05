@@ -65,6 +65,14 @@ async function getVideoDuration(videoPath) {
 // Get HLS duration from playlist
 async function getHLSDuration(masterPlaylistPath) {
     try {
+        // Check if file exists before trying to read it
+        try {
+            await fsPromises.access(masterPlaylistPath);
+        } catch (error) {
+            console.warn(`HLS file not found: ${masterPlaylistPath}`);
+            return null;
+        }
+        
         const content = await fsPromises.readFile(masterPlaylistPath, 'utf8');
         const lines = content.split('\n');
         
@@ -106,6 +114,18 @@ async function getHLSDuration(masterPlaylistPath) {
 // Get HLS info from master playlist
 async function getHLSInfo(masterPlaylistPath) {
     try {
+        // Check if file exists before trying to read it
+        try {
+            await fsPromises.access(masterPlaylistPath);
+        } catch (error) {
+            console.warn(`HLS file not found: ${masterPlaylistPath}`);
+            return {
+                isMasterPlaylist: false,
+                qualities: [],
+                totalQualities: 0
+            };
+        }
+        
         const content = await fsPromises.readFile(masterPlaylistPath, 'utf8');
         const lines = content.split('\n');
         const qualities = [];
