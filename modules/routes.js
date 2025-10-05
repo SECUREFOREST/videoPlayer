@@ -93,7 +93,7 @@ router.get('/api/browse', async (req, res) => {
                 fileCount: fileCount
             };
 
-            // Add thumbnail URL for video files
+            // Add thumbnail URL and duration for video files
             if (isVideoOrHLSFile(ext)) {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
@@ -101,8 +101,9 @@ router.get('/api/browse', async (req, res) => {
                         console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
                         continue; // Skip this item entirely
                     } else if (isVideoFile(ext)) {
-                        // For regular video files, get thumbnail
+                        // For regular video files, get thumbnail and duration
                         item.thumbnailUrl = getThumbnailUrl(itemPath);
+                        item.duration = await getVideoDuration(itemPath);
                     }
                     
                     // If no thumbnail exists, log it
@@ -141,9 +142,10 @@ router.get('/api/browse', async (req, res) => {
                             originalVideo: relativeItemPath // Reference to original video
                         };
                         
-                        // Add thumbnail URL for HLS item
+                        // Add thumbnail URL and duration for HLS item
                         try {
                             hlsItem.thumbnailUrl = await getHLSThumbnail(masterPlaylistPath);
+                            hlsItem.duration = await getHLSDuration(masterPlaylistPath);
                         } catch (error) {
                             console.warn(`Warning: Could not get HLS thumbnail for ${masterPlaylistPath}:`, error.message);
                             hlsItem.thumbnailUrl = null;
