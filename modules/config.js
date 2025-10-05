@@ -17,7 +17,7 @@ const DURATIONS_CACHE_FILE = path.join(__dirname, '..', 'video-durations.json');
 
 // Supported file extensions
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
-const HLS_EXTENSIONS = ['.m3u8', '.ts'];
+const HLS_EXTENSIONS = ['.m3u8'];
 
 module.exports = {
     APP_CONFIG,
