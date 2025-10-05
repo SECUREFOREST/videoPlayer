@@ -43,6 +43,8 @@ function getLoginPageHTML(error = null) {
             <title>Login - ${APP_CONFIG.name}</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="/style-bootstrap.css?v=12">
             <style>
                 body {
                     background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
@@ -68,22 +70,36 @@ function getLoginPageHTML(error = null) {
                     border-radius: 1rem 1rem 0 0; 
                     padding: 2rem;
                 }
-                /* Login-specific styles - main styles come from style-bootstrap.css */
+                /* Login-specific styles - enhanced with main app styles */
                 .login-card {
                     background: rgba(33, 37, 41, 0.95) !important;
+                    backdrop-filter: blur(10px);
+                }
+                .form-control {
+                    background-color: #212529 !important;
+                    border-color: #495057 !important;
+                    color: #ffffff !important;
                 }
                 .form-control:focus {
-                    border-color: #B91C1C;
-                    box-shadow: 0 0 0 0.2rem rgba(185, 28, 28, 0.25);
+                    border-color: #B91C1C !important;
+                    box-shadow: 0 0 0 0.2rem rgba(185, 28, 28, 0.25) !important;
+                    background-color: #212529 !important;
+                }
+                .form-control::placeholder {
+                    color: #6c757d !important;
                 }
                 .btn-primary {
-                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%);
-                    border: none;
+                    background: linear-gradient(135deg, #B91C1C 0%, #DC2626 100%) !important;
+                    border: none !important;
                     transition: all 0.3s ease;
                 }
                 .btn-primary:hover {
                     transform: translateY(-2px);
                     box-shadow: 0 5px 15px rgba(185, 28, 28, 0.4);
+                }
+                .form-label {
+                    color: #ffffff !important;
+                    font-weight: 500;
                 }
             </style>
         </head>
@@ -103,7 +119,7 @@ function getLoginPageHTML(error = null) {
                                             <i class="fas fa-key me-2"></i>Password
                                         </label>
                                         <input type="password" 
-                                               class="form-control bg-dark" 
+                                               class="form-control" 
                                                id="password" 
                                                name="password" 
                                                placeholder="Enter your password..."
