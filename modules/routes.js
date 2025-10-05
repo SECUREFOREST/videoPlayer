@@ -142,6 +142,9 @@ router.get('/api/video-info', async (req, res) => {
         const videoPath = resolveSafePath(relativePath);
         const stats = await fsPromises.stat(videoPath);
         const ext = path.extname(videoPath).toLowerCase();
+        
+        // Debug: Log the path being accessed
+        console.log(`Video info requested for: ${relativePath} -> ${videoPath}`);
 
         if (!isVideoOrHLSFile(ext)) {
             return res.status(400).json({ error: 'File is not a supported video or HLS format' });
@@ -173,7 +176,10 @@ router.get('/api/video-info', async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        console.error('Video info error:', error);
+        // Only log errors that aren't "file not found" to reduce spam
+        if (error.code !== 'ENOENT') {
+            console.error('Video info error:', error);
+        }
         if (error.message.includes('Access denied')) {
             res.status(403).json({ error: error.message });
         } else {
