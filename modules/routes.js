@@ -95,18 +95,10 @@ router.get('/api/browse', async (req, res) => {
             // Add thumbnail URL for video files
             if (isVideoOrHLSFile(ext)) {
                 try {
+                    // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLSFile(ext) && ext === '.m3u8') {
-                        // For HLS files, try to get thumbnail
-                        item.thumbnailUrl = await getHLSThumbnail(itemPath);
-                        
-                        // If no HLS thumbnail exists, try to generate one in background
-                        if (!item.thumbnailUrl) {
-                            console.log(`📸 No HLS thumbnail found for: ${entry.name}, triggering background generation`);
-                            // Trigger background generation (don't await to avoid blocking)
-                            generateHLSThumbnail(itemPath).catch(error => {
-                                console.warn(`Background HLS thumbnail generation failed for ${entry.name}:`, error.message);
-                            });
-                        }
+                        console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                        continue; // Skip this item entirely
                     } else if (isVideoFile(ext)) {
                         // For regular video files, get thumbnail
                         item.thumbnailUrl = getThumbnailUrl(itemPath);

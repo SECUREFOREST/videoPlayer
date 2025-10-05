@@ -244,8 +244,14 @@ function getThumbnailUrl(videoPath) {
             return null;
         }
 
-        // For HLS files, use hls folder as base, otherwise use videos folder
+        // Skip HLS files in videos directory - they should only be in hls directory
         const isHLS = isHLSFile(ext);
+        if (isHLS && videoPath.includes(VIDEOS_ROOT)) {
+            console.log(`⚠️ Skipping HLS file in videos directory: ${videoPath} - HLS files should be in hls directory`);
+            return null;
+        }
+
+        // For HLS files, use hls folder as base, otherwise use videos folder
         const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
         const relativePath = path.relative(basePath, videoPath);
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
@@ -360,6 +366,12 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                     const isHLS = isHLSFile(ext);
                     if (isHLS && entry.name !== 'master.m3u8') {
                         continue; // Skip quality playlist files
+                    }
+                    
+                    // Skip HLS files in videos directory - they should only be in hls directory
+                    if (isHLS && fullPath.includes(VIDEOS_ROOT)) {
+                        console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                        continue;
                     }
                     
                     // For HLS files, use hls folder as base, otherwise use videos folder
