@@ -203,6 +203,14 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     }
 });
 
+// Debug route to catch any HLS requests that don't match our specific patterns
+app.get('/hls/*', (req, res, next) => {
+    console.log('🔍 General HLS request caught:', req.path);
+    console.log('🔍 Method:', req.method);
+    console.log('🔍 Headers:', req.headers);
+    next();
+});
+
 // HLS video segment proxy middleware - MUST come before static file serving
 app.get('/hls/:quality/:segment', async (req, res) => {
     console.log('🔍 HLS Video Segment Proxy triggered:', req.path);
