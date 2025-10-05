@@ -12,6 +12,7 @@ const {
     generateHLSThumbnail,
     getThumbnailUrl,
     generateThumbnailAsync,
+    findVideosWithoutThumbnails,
     durationCache
 } = require('./videoProcessing');
 
@@ -815,6 +816,69 @@ router.get('/api/thumbnail-status', (req, res) => {
         } else {
             res.status(500).json({ error: 'Failed to get thumbnail status' });
         }
+    }
+});
+
+// API endpoint to generate HLS thumbnails
+router.post('/api/generate-hls-thumbnails', async (req, res) => {
+    try {
+        console.log('🔄 Manually triggering HLS thumbnail generation...');
+        
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        
+        if (!fs.existsSync(hlsRootPath)) {
+            return res.json({ 
+                success: false, 
+                message: 'HLS directory not found' 
+            });
+        }
+        
+        // Find all HLS files without thumbnails
+        const hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
+        
+        if (hlsVideosWithoutThumbnails.length === 0) {
+            return res.json({ 
+                success: true, 
+                message: 'All HLS videos already have thumbnails',
+                generated: 0
+            });
+        }
+        
+        console.log(`📸 Found ${hlsVideosWithoutThumbnails.length} HLS videos without thumbnails`);
+        
+        let generated = 0;
+        let failed = 0;
+        
+        for (const video of hlsVideosWithoutThumbnails) {
+            try {
+                console.log(`🔄 Generating thumbnail for HLS: ${video.name}`);
+                const success = await generateHLSThumbnail(video.path);
+                if (success) {
+                    generated++;
+                    console.log(`✅ Generated thumbnail for: ${video.name}`);
+                } else {
+                    failed++;
+                    console.log(`❌ Failed to generate thumbnail for: ${video.name}`);
+                }
+            } catch (error) {
+                console.error(`Error generating thumbnail for ${video.name}:`, error.message);
+                failed++;
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `HLS thumbnail generation complete: ${generated} generated, ${failed} failed`,
+            generated: generated,
+            failed: failed
+        });
+        
+    } catch (error) {
+        console.error('Error generating HLS thumbnails:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to generate HLS thumbnails' 
+        });
     }
 });
 
