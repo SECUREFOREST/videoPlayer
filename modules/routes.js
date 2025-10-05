@@ -429,7 +429,8 @@ router.post('/api/playlists', async (req, res) => {
         }
 
         const playlistsData = await fsPromises.readFile(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         const newPlaylist = {
             id: Date.now().toString(),
@@ -442,7 +443,7 @@ router.post('/api/playlists', async (req, res) => {
         
         await fsPromises.writeFile(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true, playlist: newPlaylist });
@@ -567,7 +568,8 @@ router.put('/api/playlists/:id', (req, res) => {
         }
 
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
@@ -583,7 +585,7 @@ router.put('/api/playlists/:id', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true, playlist: playlists[playlistIndex] });
@@ -598,7 +600,8 @@ router.delete('/api/playlists/:id', (req, res) => {
         const { id } = req.params;
         
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
@@ -609,7 +612,7 @@ router.delete('/api/playlists/:id', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true });
@@ -629,7 +632,7 @@ router.put('/api/playlists', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true });
