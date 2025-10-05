@@ -580,13 +580,16 @@ class ModernVideoPlayerBrowser {
 
                 // Create new HLS instance with performance optimizations
                 this.hls = new Hls({
-                    debug: true,  // Enable debug mode to get more detailed error info
+                    debug: false,  // Disable debug mode to reduce logging
                     enableWorker: true,
                     
                     // Buffer management for memory optimization and smooth seeking
                     backBufferLength: 30, // Reduced for memory efficiency
                     maxBufferLength: 60, // Limit buffer size
                     maxMaxBufferLength: 120, // Maximum buffer limit
+                    
+                    // Additional logging control
+                    verbose: false,
                     maxBufferSize: 60 * 1000 * 1000, // 60MB buffer size limit
                     maxBufferHole: 0.1, // Reduce buffer holes
                     highBufferWatchdogPeriod: 2, // Monitor buffer health
