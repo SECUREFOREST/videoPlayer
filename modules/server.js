@@ -131,15 +131,18 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 // Serve HLS files from the separate hls directory
 const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 
-// HLS quality playlist proxy middleware
-app.get('/hls/*/playlist.m3u8', async (req, res) => {
+// HLS quality playlist proxy middleware - more specific pattern
+app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
+    console.log('🔍 HLS Quality Playlist Proxy triggered:', req.path);
+    console.log('🔍 Referer:', req.get('Referer'));
+    
     // Extract the quality from the URL (e.g., /hls/720p/playlist.m3u8 -> 720p)
-    const urlParts = req.path.split('/');
-    const quality = urlParts[2]; // Should be like "720p"
+    const quality = req.params.quality; // Should be like "720p"
     
     // Get the referer to find the original master playlist path
     const referer = req.get('Referer');
     if (!referer) {
+        console.log('❌ No referer header found');
         return res.status(400).json({ error: 'No referer header found' });
     }
     
@@ -178,15 +181,18 @@ app.get('/hls/*/playlist.m3u8', async (req, res) => {
 });
 
 // HLS video segment proxy middleware
-app.get('/hls/*/*.ts', async (req, res) => {
+app.get('/hls/:quality/:segment', async (req, res) => {
+    console.log('🔍 HLS Video Segment Proxy triggered:', req.path);
+    console.log('🔍 Referer:', req.get('Referer'));
+    
     // Extract the quality and segment from the URL (e.g., /hls/720p/segment_001.ts -> 720p, segment_001.ts)
-    const urlParts = req.path.split('/');
-    const quality = urlParts[2]; // Should be like "720p"
-    const segmentFile = urlParts[3]; // Should be like "segment_001.ts"
+    const quality = req.params.quality; // Should be like "720p"
+    const segmentFile = req.params.segment; // Should be like "segment_001.ts"
     
     // Get the referer to find the original master playlist path
     const referer = req.get('Referer');
     if (!referer) {
+        console.log('❌ No referer header found for segment');
         return res.status(400).json({ error: 'No referer header found' });
     }
     
