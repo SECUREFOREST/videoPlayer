@@ -244,7 +244,10 @@ function getThumbnailUrl(videoPath) {
             return null;
         }
 
-        const relativePath = path.relative(VIDEOS_ROOT, videoPath);
+        // For HLS files, use hls folder as base, otherwise use videos folder
+        const isHLS = isHLSFile(ext);
+        const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+        const relativePath = path.relative(basePath, videoPath);
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
