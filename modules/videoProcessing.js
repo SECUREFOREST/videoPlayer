@@ -355,6 +355,15 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         console.log('🔄 Time points to try:', timePoints);
         console.log('🔄 Video duration:', duration, 'seconds');
         console.log('🔄 Optimal time:', optimalTime, 'seconds');
+        console.log('🔄 Video path:', videoPath);
+        
+        // Special handling for very short videos
+        if (duration && duration < 15) {
+            console.log('⚠️ Video is shorter than 15 seconds, using middle of video');
+            const middleTime = Math.max(1, Math.floor(duration / 2));
+            timePoints.unshift(middleTime); // Add to beginning of array
+            console.log('🔄 Added middle time for short video:', middleTime, 'seconds');
+        }
         
         for (let i = 0; i < timePoints.length; i++) {
             const currentTime = timePoints[i];
@@ -381,12 +390,25 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                     console.log('  📁 File size:', stats.size, 'bytes');
                     console.log('  ⏱️ Generation time:', executionTime, 'ms');
                     console.log('  🎯 Used time point:', currentTime, 'seconds');
+                    
+                    // Additional verification: check if thumbnail is not just a black frame
+                    if (stats.size < 1000) {
+                        console.log('⚠️ Thumbnail file is very small, might be black frame, trying next time point...');
+                        continue;
+                    }
+                    
                     return true;
                 } else {
                     console.log(`❌ Thumbnail file was not created at ${currentTime}s, trying next time point...`);
                 }
             } catch (error) {
                 console.log(`❌ FFmpeg failed at ${currentTime}s:`, error.message);
+                console.log(`❌ FFmpeg error details:`, {
+                    code: error.code,
+                    signal: error.signal,
+                    stderr: error.stderr,
+                    stdout: error.stdout
+                });
                 if (i === timePoints.length - 1) {
                     console.log('❌ All thumbnail generation attempts failed');
                     return false;
