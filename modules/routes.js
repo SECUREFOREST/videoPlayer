@@ -49,7 +49,10 @@ router.get('/api/browse', async (req, res) => {
 
         for (const entry of entries) {
             const itemPath = path.join(fullPath, entry.name);
-            const relativeItemPath = path.relative(VIDEOS_ROOT, itemPath);
+            const ext = path.extname(entry.name).toLowerCase();
+            const isHLS = isHLSFile(ext);
+            const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+            const relativeItemPath = path.relative(basePath, itemPath);
             
             let stats;
             let size = 0;
@@ -66,8 +69,6 @@ router.get('/api/browse', async (req, res) => {
                 modified = new Date();
             }
             
-            const ext = path.extname(entry.name).toLowerCase();
-
             let fileCount = null;
             if (entry.isDirectory()) {
                 try {
