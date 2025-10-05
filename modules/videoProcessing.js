@@ -381,6 +381,13 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                     const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
                     
+                    console.log(`🔍 Checking HLS thumbnail: ${fullPath}`);
+                    console.log(`🔍 Base path: ${basePath}`);
+                    console.log(`🔍 Relative path: ${relativePath}`);
+                    console.log(`🔍 Safe name: ${safeName}`);
+                    console.log(`🔍 Thumbnail path: ${thumbnailPath}`);
+                    console.log(`🔍 Thumbnail exists: ${fs.existsSync(thumbnailPath)}`);
+                    
                     if (!fs.existsSync(thumbnailPath)) {
                         videoList.push({
                             path: fullPath,
@@ -412,7 +419,11 @@ async function generateAllMissingThumbnails() {
         let hlsVideosWithoutThumbnails = [];
         if (fs.existsSync(hlsRootPath)) {
             console.log('🔍 Scanning HLS directory for missing thumbnails...');
+            console.log(`🔍 HLS root path: ${hlsRootPath}`);
             hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
+            console.log(`🔍 Found ${hlsVideosWithoutThumbnails.length} HLS files without thumbnails`);
+        } else {
+            console.log('⚠️ HLS directory not found:', hlsRootPath);
         }
         
         const allVideosWithoutThumbnails = [...videosWithoutThumbnails, ...hlsVideosWithoutThumbnails];
