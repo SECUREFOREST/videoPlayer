@@ -724,6 +724,30 @@ class ModernVideoPlayerBrowser {
                     }
                 });
 
+                // Handle HLS stream ending properly
+                this.hls.on(Hls.Events.BUFFER_EOS, () => {
+                    console.log('HLS stream ended - all segments loaded');
+                    // Don't call endOfStream() if MediaSource is already ended
+                    if (this.hls.media && this.hls.media.readyState !== 'ended') {
+                        try {
+                            if (this.hls.mediaSource && this.hls.mediaSource.readyState === 'open') {
+                                this.hls.mediaSource.endOfStream();
+                            }
+                        } catch (error) {
+                            console.log('MediaSource already ended or in invalid state:', error.message);
+                        }
+                    }
+                });
+
+                // Handle MediaSource state changes
+                this.hls.on(Hls.Events.MEDIA_SOURCE_OPENED, () => {
+                    console.log('MediaSource opened successfully');
+                });
+
+                this.hls.on(Hls.Events.MEDIA_SOURCE_ENDED, () => {
+                    console.log('MediaSource ended');
+                });
+
                 // Track HLS progress for resume functionality
                 this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
                     console.log('HLS quality switched to level:', data.level);
@@ -2669,6 +2693,23 @@ class ModernVideoPlayerBrowser {
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
+        }
+
+        // Clean up HLS instance properly
+        if (this.hls) {
+            try {
+                this.hls.destroy();
+            } catch (error) {
+                console.log('HLS cleanup error (non-fatal):', error.message);
+            }
+            this.hls = null;
+        }
+
+        // Clean up video element
+        if (this.video) {
+            this.video.pause();
+            this.video.src = '';
+            this.video.load();
         }
 
         this.loadingStates.clear();

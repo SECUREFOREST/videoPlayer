@@ -1,6 +1,6 @@
 {
   "name": "video-player-browser",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A Node.js app for browsing files and watching videos with HLS streaming support",
   "main": "server.js",
   "scripts": {

@@ -28,6 +28,14 @@ router.get('/api/browse', async (req, res) => {
         const fullPath = resolveSafePath(relativePath);
         const items = [];
 
+        // Check if the path exists and is accessible
+        try {
+            await fsPromises.access(fullPath);
+        } catch (error) {
+            console.warn(`Path not accessible: ${fullPath}`, error.message);
+            return res.status(404).json({ error: 'Directory not found or not accessible' });
+        }
+
         const entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
 
         for (const entry of entries) {
