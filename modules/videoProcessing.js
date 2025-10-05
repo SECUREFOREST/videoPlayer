@@ -376,7 +376,21 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
             const timeString = currentTime.toString();
             
             // Try multiple FFmpeg approaches for better accuracy
-            const commands = [
+            const isHLS = videoPath.includes('.m3u8');
+            const commands = isHLS ? [
+                // HLS-specific approaches - more aggressive seeking
+                // Approach 1: HLS with live seeking disabled
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index 0 "${thumbnailPath}"`,
+                // Approach 2: HLS with no live seeking
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index -1 "${thumbnailPath}"`,
+                // Approach 3: HLS with custom segment duration
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -hls_segment_type mpegts "${thumbnailPath}"`,
+                // Approach 4: HLS with force seeking
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -seek2any 1 "${thumbnailPath}"`,
+                // Approach 5: HLS with timestamp handling
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`
+            ] : [
+                // Regular video approaches
                 // Approach 1: Input seeking with timestamp handling
                 `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`,
                 // Approach 2: Input seeking with more precise seeking
