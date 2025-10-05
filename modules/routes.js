@@ -365,7 +365,7 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                 const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase());
 
                 if (matchesSearch && isVideo) {
-                    results.push({
+                    const result = {
                         name: entry.name,
                         path: relativePath,
                         size: stats.size,
@@ -375,7 +375,22 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                         isHLS: isHLSFile(ext),
                         mimeType: getVideoMimeType(ext),
                         relativePath: relativePath
-                    });
+                    };
+
+                    // Add duration and thumbnail for video files
+                    try {
+                        if (isVideoFile(ext)) {
+                            result.duration = await getVideoDuration(fullPath);
+                            result.thumbnailUrl = getThumbnailUrl(fullPath);
+                        } else if (isHLSFile(ext)) {
+                            result.duration = await getHLSDuration(fullPath);
+                            result.thumbnailUrl = await getHLSThumbnail(fullPath);
+                        }
+                    } catch (error) {
+                        console.warn(`Warning: Could not get duration/thumbnail for ${fullPath}:`, error.message);
+                    }
+
+                    results.push(result);
                 }
             }
         }
@@ -392,7 +407,7 @@ router.get('/api/playlists', async (req, res) => {
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
         
-        // Add thumbnail URLs to videos in playlists
+        // Add thumbnail URLs and duration to videos in playlists
         for (const playlist of playlists) {
             if (playlist.videos) {
                 await Promise.all(playlist.videos.map(async video => {
@@ -402,6 +417,13 @@ router.get('/api/playlists', async (req, res) => {
                             // Convert relative path to absolute path for thumbnail generation
                             const absolutePath = path.isAbsolute(video.path) ? video.path : path.join(VIDEOS_ROOT, video.path);
                             video.thumbnailUrl = getThumbnailUrl(absolutePath);
+                            
+                            // Add duration for video files
+                            if (isVideoFile(ext)) {
+                                video.duration = await getVideoDuration(absolutePath);
+                            } else if (isHLSFile(ext)) {
+                                video.duration = await getHLSDuration(absolutePath);
+                            }
                         }
                     }
                 }));
