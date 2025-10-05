@@ -337,6 +337,7 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
         console.log('🔄 Generating thumbnail for:', videoPath);
         console.log('🔄 Thumbnail will be saved to:', thumbnailPath);
+        console.log('🔄 Regular video thumbnail generation started at:', new Date().toISOString());
         
         // Get video duration first to determine optimal thumbnail time
         let duration = null;
@@ -359,14 +360,28 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
         
         console.log('🔄 FFmpeg command:', command);
+        console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
+        
+        const startTime = Date.now();
         await execAsync(command);
+        const endTime = Date.now();
+        const executionTime = endTime - startTime;
+        
+        console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
+        console.log('🔄 Checking if thumbnail file was created...');
         
         // Verify the thumbnail was created
         if (fs.existsSync(thumbnailPath)) {
-            console.log('✅ Thumbnail generated successfully:', thumbnailPath);
+            const stats = fs.statSync(thumbnailPath);
+            console.log('✅ Thumbnail generated successfully!');
+            console.log('  📁 File path:', thumbnailPath);
+            console.log('  📁 File size:', stats.size, 'bytes');
+            console.log('  ⏱️ Generation time:', executionTime, 'ms');
             return true;
         } else {
             console.log('❌ Thumbnail file was not created:', thumbnailPath);
+            console.log('  📁 Expected path:', thumbnailPath);
+            console.log('  📁 Path exists:', fs.existsSync(thumbnailPath));
             return false;
         }
     } catch (error) {
@@ -477,12 +492,22 @@ async function generateAllMissingThumbnails() {
         
         console.log(`📸 Found ${allVideosWithoutThumbnails.length} videos without thumbnails (${videosWithoutThumbnails.length} regular, ${hlsVideosWithoutThumbnails.length} HLS)`);
         console.log('🔄 Generating thumbnails in background...');
+        const startTime = new Date().toISOString();
+        console.log('🔄 Background generation started at:', startTime);
         
         // Log HLS files that need thumbnails
         if (hlsVideosWithoutThumbnails.length > 0) {
             console.log('📸 HLS files needing thumbnails:');
-            hlsVideosWithoutThumbnails.forEach(video => {
-                console.log(`  - ${video.name} (${video.path})`);
+            hlsVideosWithoutThumbnails.forEach((video, index) => {
+                console.log(`  ${index + 1}. ${video.name} (${video.path})`);
+            });
+        }
+        
+        // Log regular videos that need thumbnails
+        if (videosWithoutThumbnails.length > 0) {
+            console.log('📸 Regular videos needing thumbnails:');
+            videosWithoutThumbnails.forEach((video, index) => {
+                console.log(`  ${index + 1}. ${video.name} (${video.path})`);
             });
         }
         
@@ -541,10 +566,25 @@ async function generateAllMissingThumbnails() {
             }
         }
         
+        const endTime = new Date().toISOString();
+        const totalTime = Date.now() - new Date(startTime).getTime();
+        
         console.log(`✅ Thumbnail generation complete: ${generated} generated, ${failed} failed`);
+        console.log('📊 Generation summary:');
+        console.log('  ⏱️ Start time:', startTime);
+        console.log('  ⏱️ End time:', endTime);
+        console.log('  ⏱️ Total time:', totalTime, 'ms');
+        console.log('  📸 Generated:', generated);
+        console.log('  ❌ Failed:', failed);
+        console.log('  📊 Success rate:', `${Math.round((generated / (generated + failed)) * 100)}%`);
         
     } catch (error) {
-        console.error('Error during thumbnail generation:', error);
+        console.error('❌ Error during thumbnail generation:', error);
+        console.error('❌ Error details:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
     }
 }
 

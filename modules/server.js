@@ -346,8 +346,16 @@ async function startServer() {
 
         // Generate missing thumbnails in background (including HLS thumbnails)
         console.log('🔄 Starting background thumbnail generation (regular videos + HLS)...');
-        generateAllMissingThumbnails().catch(error => {
-            console.error('Error generating thumbnails:', error);
+        console.log('🔄 Background thumbnail generation initiated at:', new Date().toISOString());
+        generateAllMissingThumbnails().then(() => {
+            console.log('✅ Background thumbnail generation completed successfully');
+        }).catch(error => {
+            console.error('❌ Error generating thumbnails:', error);
+            console.error('❌ Thumbnail generation error details:', {
+                message: error.message,
+                stack: error.stack,
+                code: error.code
+            });
         });
 
         // Build duration cache in background
