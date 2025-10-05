@@ -187,6 +187,10 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
         
         console.log('✅ Quality playlist file found, serving...');
         
+        // Read and log the content to debug
+        const content = fs.readFileSync(correctPath, 'utf8');
+        console.log('🔍 Quality playlist content preview:', content.substring(0, 200) + '...');
+        
         // Set appropriate headers
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');

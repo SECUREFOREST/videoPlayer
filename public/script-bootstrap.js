@@ -585,7 +585,7 @@ class ModernVideoPlayerBrowser {
 
                 // Create new HLS instance with performance optimizations
                 this.hls = new Hls({
-                    debug: false,
+                    debug: true,  // Enable debug mode to get more detailed error info
                     enableWorker: true,
                     
                     // Buffer management for memory optimization
@@ -749,6 +749,13 @@ class ModernVideoPlayerBrowser {
 
     handleHLSError(errorData) {
         console.error('HLS fatal error:', errorData);
+        console.error('HLS error details:', {
+            type: errorData.type,
+            details: errorData.details,
+            fatal: errorData.fatal,
+            error: errorData.error,
+            event: errorData.event
+        });
         
         switch (errorData.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
