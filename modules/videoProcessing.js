@@ -422,17 +422,11 @@ async function generateAllMissingThumbnails() {
                 safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                 const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
                 
-                // For HLS files, try to generate from first quality
+                // For HLS files, use the same logic as generateHLSThumbnail
                 if (video.isHLS && video.extension === '.m3u8') {
-                    const hlsInfo = await getHLSInfo(video.path);
-                    if (hlsInfo.qualities.length > 0) {
-                        const firstQualityPath = path.join(path.dirname(video.path), hlsInfo.qualities[0].playlist);
-                        const success = await generateThumbnailAsync(firstQualityPath, thumbnailPath);
-                        if (success) {
-                            generated++;
-                        } else {
-                            failed++;
-                        }
+                    const success = await generateHLSThumbnail(video.path);
+                    if (success) {
+                        generated++;
                     } else {
                         failed++;
                     }
