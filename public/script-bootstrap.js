@@ -662,12 +662,18 @@ class ModernVideoPlayerBrowser {
                     
                     // Automatically select the best quality (highest bitrate)
                     if (this.hls.levels && this.hls.levels.length > 0) {
-                        const bestLevel = this.hls.levels.reduce((best, current, index) => 
-                            current.bitrate > best.bitrate ? { ...current, index } : best
-                        );
+                        let bestLevelIndex = 0;
+                        let bestBitrate = this.hls.levels[0].bitrate;
                         
-                        console.log('Selecting best quality level:', bestLevel.index, 'bitrate:', bestLevel.bitrate);
-                        this.hls.currentLevel = bestLevel.index;
+                        for (let i = 1; i < this.hls.levels.length; i++) {
+                            if (this.hls.levels[i].bitrate > bestBitrate) {
+                                bestBitrate = this.hls.levels[i].bitrate;
+                                bestLevelIndex = i;
+                            }
+                        }
+                        
+                        console.log('Selecting best quality level:', bestLevelIndex, 'bitrate:', bestBitrate);
+                        this.hls.currentLevel = bestLevelIndex;
                     }
                 });
 
