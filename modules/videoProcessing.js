@@ -224,35 +224,18 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
             console.log('🔄 Final HLS seek time:', seekTime, 'seconds');
             
-            // Generate thumbnail from first segment
-            const ffmpegPath = getFFmpegPath();
-            const timeString = seekTime.toString();
-            const command = `"${ffmpegPath}" -i "${firstQualityPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+            // Use the same thumbnail generation logic as regular videos
+            console.log('🔄 Using shared thumbnail generation logic for HLS');
+            const success = await generateThumbnailAsync(firstQualityPath, thumbnailPath);
             
-            console.log('🔄 FFmpeg command:', command);
-            console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
-            
-            const startTime = Date.now();
-            await execAsync(command);
-            const endTime = Date.now();
-            const executionTime = endTime - startTime;
-            
-            console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
-            console.log('🔄 Checking if thumbnail file was created...');
-            
-            if (fs.existsSync(thumbnailPath)) {
-                const stats = fs.statSync(thumbnailPath);
+            if (success && fs.existsSync(thumbnailPath)) {
                 const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-                console.log('✅ HLS thumbnail generated successfully!');
+                console.log('✅ HLS thumbnail generated successfully using shared logic!');
                 console.log('  📁 File path:', thumbnailPath);
-                console.log('  📁 File size:', stats.size, 'bytes');
                 console.log('  📁 URL:', thumbnailUrl);
-                console.log('  ⏱️ Generation time:', executionTime, 'ms');
                 return thumbnailUrl;
             } else {
-                console.log('❌ HLS thumbnail generation failed - file not created');
-                console.log('  📁 Expected path:', thumbnailPath);
-                console.log('  📁 Path exists:', fs.existsSync(thumbnailPath));
+                console.log('❌ HLS thumbnail generation failed using shared logic');
                 return null;
             }
         } else {
