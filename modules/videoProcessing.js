@@ -377,16 +377,16 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
             
             // Try multiple FFmpeg approaches for better accuracy
             const commands = [
-                // Approach 1: Accurate seek with input seeking
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -accurate_seek "${thumbnailPath}"`,
-                // Approach 2: Input seeking with timestamp handling
+                // Approach 1: Input seeking with timestamp handling
                 `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`,
-                // Approach 3: Input seeking with more precise seeking
+                // Approach 2: Input seeking with more precise seeking
                 `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -seek2any 0 "${thumbnailPath}"`,
-                // Approach 4: Input seeking with no re-encoding
+                // Approach 3: Input seeking with no re-encoding
                 `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -an "${thumbnailPath}"`,
-                // Approach 5: Force keyframe seeking
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -skip_interval 1 "${thumbnailPath}"`
+                // Approach 4: Force keyframe seeking
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -skip_interval 1 "${thumbnailPath}"`,
+                // Approach 5: Input seeking with accurate seek (correct syntax)
+                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 "${thumbnailPath}"`
             ];
             
             for (let cmdIndex = 0; cmdIndex < commands.length; cmdIndex++) {
@@ -420,7 +420,7 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                         }
                         
                         // Verify thumbnail is from the correct time by comparing with a known frame
-                        const verificationResult = await this.verifyThumbnailTime(videoPath, thumbnailPath, currentTime, ffmpegPath);
+                        const verificationResult = await verifyThumbnailTime(videoPath, thumbnailPath, currentTime, ffmpegPath);
                         if (verificationResult) {
                             console.log('✅ Thumbnail time verification passed');
                             return true;
