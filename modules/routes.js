@@ -24,6 +24,12 @@ router.get('/api/browse', async (req, res) => {
     const sortOrder = req.query.sortOrder || 'asc';
     const filterType = req.query.filterType || 'all';
 
+    // Validate path parameter
+    if (relativePath === 'undefined' || relativePath === 'null') {
+        console.warn('Invalid path parameter received:', relativePath);
+        return res.status(400).json({ error: 'Invalid path parameter' });
+    }
+
     try {
         const fullPath = resolveSafePath(relativePath);
         const items = [];
@@ -33,6 +39,8 @@ router.get('/api/browse', async (req, res) => {
             await fsPromises.access(fullPath);
         } catch (error) {
             console.warn(`Path not accessible: ${fullPath}`, error.message);
+            console.warn(`Requested path: ${relativePath}`);
+            console.warn(`Resolved path: ${fullPath}`);
             return res.status(404).json({ error: 'Directory not found or not accessible' });
         }
 
@@ -147,8 +155,18 @@ router.get('/api/browse', async (req, res) => {
         res.json({ items });
     } catch (error) {
         console.error('Browse error:', error);
+        console.error('Request details:', {
+            relativePath: req.query.path,
+            search: req.query.search,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder,
+            filterType: req.query.filterType
+        });
+        
         if (error.message.includes('Access denied')) {
             res.status(403).json({ error: error.message });
+        } else if (error.code === 'ENOENT') {
+            res.status(404).json({ error: 'Directory not found' });
         } else {
             res.status(500).json({ error: 'Failed to browse directory' });
         }

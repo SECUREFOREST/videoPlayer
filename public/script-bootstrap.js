@@ -214,8 +214,13 @@ class ModernVideoPlayerBrowser {
 
         return this.safeAsyncOperation(async () => {
             this.showLoading();
+            
+            // Ensure path is valid
+            const validPath = (path === undefined || path === null) ? '' : path;
+            console.log('Loading directory with path:', validPath);
+            
             const params = new URLSearchParams({
-                path: path,
+                path: validPath,
                 search: this.searchInput.value,
                 sortBy: this.sortBy.value || 'name',
                 sortOrder: this.sortOrder.value || 'asc',
@@ -732,10 +737,15 @@ class ModernVideoPlayerBrowser {
                         try {
                             if (this.hls.mediaSource && this.hls.mediaSource.readyState === 'open') {
                                 this.hls.mediaSource.endOfStream();
+                                console.log('MediaSource ended successfully');
+                            } else {
+                                console.log('MediaSource not in open state, skipping endOfStream()');
                             }
                         } catch (error) {
                             console.log('MediaSource already ended or in invalid state:', error.message);
                         }
+                    } else {
+                        console.log('Media already ended, skipping endOfStream()');
                     }
                 });
 
@@ -973,7 +983,9 @@ class ModernVideoPlayerBrowser {
     async playNextInDirectory() {
         try {
             // Get current directory videos
-            const response = await fetch(`/api/browse?path=${encodeURIComponent(this.currentPath)}`);
+            const pathToUse = this.currentPath || '';
+            console.log('Loading directory for path:', pathToUse);
+            const response = await fetch(`/api/browse?path=${encodeURIComponent(pathToUse)}`);
             const data = await response.json();
             
             if (response.ok && data.items) {
