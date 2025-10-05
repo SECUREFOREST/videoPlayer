@@ -425,6 +425,14 @@ async function generateAllMissingThumbnails() {
         console.log(`📸 Found ${allVideosWithoutThumbnails.length} videos without thumbnails (${videosWithoutThumbnails.length} regular, ${hlsVideosWithoutThumbnails.length} HLS)`);
         console.log('🔄 Generating thumbnails in background...');
         
+        // Log HLS files that need thumbnails
+        if (hlsVideosWithoutThumbnails.length > 0) {
+            console.log('📸 HLS files needing thumbnails:');
+            hlsVideosWithoutThumbnails.forEach(video => {
+                console.log(`  - ${video.name} (${video.path})`);
+            });
+        }
+        
         let generated = 0;
         let failed = 0;
         
@@ -447,6 +455,7 @@ async function generateAllMissingThumbnails() {
                 
                 // For HLS files, use the same logic as generateHLSThumbnail
                 if (video.isHLS && video.extension === '.m3u8') {
+                    console.log(`🔄 Processing HLS file: ${video.name}`);
                     const result = await generateHLSThumbnail(video.path);
                     if (result && typeof result === 'string') {
                         generated++;
@@ -457,11 +466,14 @@ async function generateAllMissingThumbnails() {
                     }
                 } else {
                     // Regular video file
+                    console.log(`🔄 Processing regular video: ${video.name}`);
                     const success = await generateThumbnailAsync(video.path, thumbnailPath);
                     if (success) {
                         generated++;
+                        console.log(`✅ Generated thumbnail for: ${video.name}`);
                     } else {
                         failed++;
+                        console.log(`❌ Failed to generate thumbnail for: ${video.name}`);
                     }
                 }
                 
