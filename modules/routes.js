@@ -33,7 +33,22 @@ router.get('/api/browse', async (req, res) => {
         for (const entry of entries) {
             const itemPath = path.join(fullPath, entry.name);
             const relativeItemPath = path.relative(VIDEOS_ROOT, itemPath);
-            const stats = await fsPromises.stat(itemPath);
+            
+            let stats;
+            let size = 0;
+            let modified = new Date();
+            
+            try {
+                stats = await fsPromises.stat(itemPath);
+                size = stats.size || 0;
+                modified = stats.mtime || new Date();
+            } catch (error) {
+                console.warn(`Warning: Could not get stats for ${itemPath}:`, error.message);
+                // Use fallback values for corrupted files
+                size = 0;
+                modified = new Date();
+            }
+            
             const ext = path.extname(entry.name).toLowerCase();
 
             let fileCount = null;
@@ -49,8 +64,8 @@ router.get('/api/browse', async (req, res) => {
             const item = {
                 name: entry.name,
                 path: relativeItemPath,
-                size: stats.size,
-                modified: stats.mtime,
+                size: size,
+                modified: modified,
                 extension: ext,
                 isDirectory: entry.isDirectory(),
                 isVideo: isVideoOrHLSFile(ext),
@@ -169,7 +184,13 @@ router.get('/api/video-info', async (req, res) => {
             videoPath = resolveSafePath(relativePath);
         }
         
-        const stats = await fsPromises.stat(videoPath);
+        let stats;
+        try {
+            stats = await fsPromises.stat(videoPath);
+        } catch (error) {
+            console.warn(`Warning: Could not get stats for ${videoPath}:`, error.message);
+            return res.status(404).json({ error: 'File not found or inaccessible' });
+        }
         
         // Debug: Log the path being accessed
         console.log(`Video info requested for: ${relativePath} -> ${videoPath}`);
@@ -651,7 +672,13 @@ router.get('/api/video-stream-info', async (req, res) => {
 
     try {
         const videoPath = resolveSafePath(relativePath);
-        const stats = await fsPromises.stat(videoPath);
+        let stats;
+        try {
+            stats = await fsPromises.stat(videoPath);
+        } catch (error) {
+            console.warn(`Warning: Could not get stats for ${videoPath}:`, error.message);
+            return res.status(404).json({ error: 'File not found or inaccessible' });
+        }
         const ext = path.extname(videoPath).toLowerCase();
 
         if (!isVideoOrHLSFile(ext)) {
