@@ -147,6 +147,15 @@ router.get('/api/browse', async (req, res) => {
                             fileCount: null,
                             originalVideo: relativeItemPath // Reference to original video
                         };
+                        
+                        // Add thumbnail URL for HLS item
+                        try {
+                            hlsItem.thumbnailUrl = await getHLSThumbnail(masterPlaylistPath);
+                        } catch (error) {
+                            console.warn(`Warning: Could not get HLS thumbnail for ${masterPlaylistPath}:`, error.message);
+                            hlsItem.thumbnailUrl = null;
+                        }
+                        
                         items.push(hlsItem);
                     }
                 } catch (error) {
