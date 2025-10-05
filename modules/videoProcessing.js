@@ -220,14 +220,8 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             const optimalTime = getOptimalThumbnailTime(duration);
             console.log('🔄 Using HLS thumbnail time:', optimalTime, 'seconds');
             
-            // Ensure seek time is within video duration and avoid first few seconds
-            let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
-            
-            // Avoid first 5 seconds which often contain intro screens or logos
-            if (seekTime < 5 && duration > 10) {
-                seekTime = 5;
-            }
-            
+            // Ensure seek time is within video duration
+            const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
             console.log('🔄 Final HLS seek time:', seekTime, 'seconds');
             
             // Generate thumbnail from first segment
@@ -322,23 +316,21 @@ function getThumbnailUrl(videoPath) {
 // Get optimal thumbnail time based on video duration
 function getOptimalThumbnailTime(duration) {
     if (!duration || duration <= 0) {
-        return 15; // Default to 15 seconds if duration is unknown (avoid first few seconds)
+        return 15; // Default to 15 seconds if duration is unknown
     }
     
     if (duration >= 300) { // 5 minutes or longer
-        return Math.min(60, Math.max(30, Math.floor(duration * 0.1))); // 10% of duration, max 60s, min 30s
+        return 30;
     } else if (duration >= 120) { // 2 minutes or longer
-        return Math.min(30, Math.max(20, Math.floor(duration * 0.15))); // 15% of duration, max 30s, min 20s
+        return 20;
     } else if (duration >= 60) { // 1-2 minutes
-        return Math.min(20, Math.max(15, Math.floor(duration * 0.2))); // 20% of duration, max 20s, min 15s
+        return 15;
     } else if (duration >= 30) { // 30 seconds to 1 minute
-        return Math.min(15, Math.max(10, Math.floor(duration * 0.25))); // 25% of duration, max 15s, min 10s
+        return 15;
     } else if (duration >= 15) { // 15-30 seconds
-        return Math.max(5, Math.floor(duration * 0.3)); // 30% of duration, min 5s
-    } else if (duration >= 10) { // 10-15 seconds
-        return Math.max(3, Math.floor(duration * 0.4)); // 40% of duration, min 3s
+        return 15;
     } else {
-        return Math.max(2, Math.floor(duration * 0.5)); // 50% of duration, min 2s
+        return Math.max(1, Math.floor(duration / 2)); // For very short videos, use middle
     }
 }
 
@@ -361,45 +353,55 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         const optimalTime = getOptimalThumbnailTime(duration);
         console.log('🔄 Using thumbnail time:', optimalTime, 'seconds');
         
-        // Ensure seek time is within video duration and avoid first few seconds
-        let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
-        
-        // Avoid first 5 seconds which often contain intro screens or logos
-        if (seekTime < 5 && duration > 10) {
-            seekTime = 5;
-        }
-        
+        // Ensure seek time is within video duration
+        const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
         console.log('🔄 Final seek time:', seekTime, 'seconds');
         
         const ffmpegPath = getFFmpegPath();
-        const timeString = seekTime.toString();
-        const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
         
-        console.log('🔄 FFmpeg command:', command);
-        console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
+        // Try multiple time points if the first attempt fails
+        const timePoints = [seekTime, 15, 20, 25, 30].filter(time => time <= (duration || 60));
         
-        const startTime = Date.now();
-        await execAsync(command);
-        const endTime = Date.now();
-        const executionTime = endTime - startTime;
-        
-        console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
-        console.log('🔄 Checking if thumbnail file was created...');
-        
-        // Verify the thumbnail was created
-        if (fs.existsSync(thumbnailPath)) {
-            const stats = fs.statSync(thumbnailPath);
-            console.log('✅ Thumbnail generated successfully!');
-            console.log('  📁 File path:', thumbnailPath);
-            console.log('  📁 File size:', stats.size, 'bytes');
-            console.log('  ⏱️ Generation time:', executionTime, 'ms');
-            return true;
-        } else {
-            console.log('❌ Thumbnail file was not created:', thumbnailPath);
-            console.log('  📁 Expected path:', thumbnailPath);
-            console.log('  📁 Path exists:', fs.existsSync(thumbnailPath));
-            return false;
+        for (let i = 0; i < timePoints.length; i++) {
+            const currentTime = timePoints[i];
+            const timeString = currentTime.toString();
+            const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+            
+            console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s:`, command);
+            console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
+            
+            const startTime = Date.now();
+            try {
+                await execAsync(command);
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
+                
+                console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
+                console.log('🔄 Checking if thumbnail file was created...');
+                
+                // Verify the thumbnail was created
+                if (fs.existsSync(thumbnailPath)) {
+                    const stats = fs.statSync(thumbnailPath);
+                    console.log('✅ Thumbnail generated successfully!');
+                    console.log('  📁 File path:', thumbnailPath);
+                    console.log('  📁 File size:', stats.size, 'bytes');
+                    console.log('  ⏱️ Generation time:', executionTime, 'ms');
+                    console.log('  🎯 Used time point:', currentTime, 'seconds');
+                    return true;
+                } else {
+                    console.log(`❌ Thumbnail file was not created at ${currentTime}s, trying next time point...`);
+                }
+            } catch (error) {
+                console.log(`❌ FFmpeg failed at ${currentTime}s:`, error.message);
+                if (i === timePoints.length - 1) {
+                    console.log('❌ All thumbnail generation attempts failed');
+                    return false;
+                }
+            }
         }
+        
+        console.log('❌ All thumbnail generation attempts failed');
+        return false;
     } catch (error) {
         console.error(`❌ Error generating thumbnail for ${videoPath}:`, error.message);
         return false;
@@ -472,39 +474,6 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
     }
     
     return videoList;
-}
-
-// Function to force regenerate all thumbnails (delete existing and regenerate)
-async function forceRegenerateAllThumbnails() {
-    console.log('🔄 Force regenerating ALL thumbnails with new logic...');
-    console.log('🔄 Force regeneration started at:', new Date().toISOString());
-    
-    try {
-        const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
-        
-        // Delete all existing thumbnails
-        if (fs.existsSync(thumbnailsDir)) {
-            const files = await fsPromises.readdir(thumbnailsDir);
-            const thumbnailFiles = files.filter(file => file.endsWith('.jpg'));
-            
-            console.log(`🗑️ Deleting ${thumbnailFiles.length} existing thumbnails...`);
-            for (const file of thumbnailFiles) {
-                try {
-                    await fsPromises.unlink(path.join(thumbnailsDir, file));
-                    console.log(`🗑️ Deleted: ${file}`);
-                } catch (error) {
-                    console.error(`Error deleting ${file}:`, error.message);
-                }
-            }
-        }
-        
-        // Now generate all thumbnails with new logic
-        await generateAllMissingThumbnails();
-        
-        console.log('✅ Force regeneration complete');
-    } catch (error) {
-        console.error('❌ Error in force regeneration:', error);
-    }
 }
 
 // Function to generate all missing thumbnails on startup
@@ -751,7 +720,6 @@ module.exports = {
     generateThumbnailAsync,
     findVideosWithoutThumbnails,
     generateAllMissingThumbnails,
-    forceRegenerateAllThumbnails,
     buildDurationCache,
     durationCache
 };

@@ -13,7 +13,6 @@ const {
     getThumbnailUrl,
     generateThumbnailAsync,
     findVideosWithoutThumbnails,
-    forceRegenerateAllThumbnails,
     durationCache
 } = require('./videoProcessing');
 
@@ -1030,30 +1029,6 @@ router.post('/api/generate-hls-thumbnails', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             error: 'Failed to generate HLS thumbnails' 
-        });
-    }
-});
-
-// API endpoint to force regenerate ALL thumbnails with new logic
-router.post('/api/force-regenerate-thumbnails', async (req, res) => {
-    try {
-        console.log('🔄 API: Force regenerating all thumbnails...');
-        
-        // Run in background to avoid timeout
-        forceRegenerateAllThumbnails().catch(error => {
-            console.error('❌ Error in background thumbnail regeneration:', error);
-        });
-        
-        res.json({ 
-            success: true, 
-            message: 'Thumbnail regeneration started in background. Check server logs for progress.',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('❌ Error starting thumbnail regeneration:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Failed to start thumbnail regeneration' 
         });
     }
 });
