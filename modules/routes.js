@@ -144,6 +144,7 @@ router.get('/api/browse', async (req, res) => {
                         
                         // Add thumbnail URL and duration for HLS item
                         try {
+                            console.log(`🔍 Processing HLS item with masterPlaylistPath: ${masterPlaylistPath}`);
                             hlsItem.thumbnailUrl = await getHLSThumbnail(masterPlaylistPath);
                             hlsItem.duration = await getHLSDuration(masterPlaylistPath);
                         } catch (error) {

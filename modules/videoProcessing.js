@@ -65,6 +65,8 @@ async function getVideoDuration(videoPath) {
 // Get HLS duration from playlist
 async function getHLSDuration(masterPlaylistPath) {
     try {
+        console.log(`🔍 getHLSDuration called with path: ${masterPlaylistPath}`);
+        
         // Check if file exists before trying to read it
         try {
             await fsPromises.access(masterPlaylistPath);
