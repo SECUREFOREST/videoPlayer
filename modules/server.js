@@ -130,6 +130,99 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 
 // Serve HLS files from the separate hls directory
 const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+
+// HLS quality playlist proxy middleware
+app.get('/hls/*/playlist.m3u8', async (req, res) => {
+    // Extract the quality from the URL (e.g., /hls/720p/playlist.m3u8 -> 720p)
+    const urlParts = req.path.split('/');
+    const quality = urlParts[2]; // Should be like "720p"
+    
+    // Get the referer to find the original master playlist path
+    const referer = req.get('Referer');
+    if (!referer) {
+        return res.status(400).json({ error: 'No referer header found' });
+    }
+    
+    try {
+        // Extract the master playlist path from referer
+        // e.g., https://domain.com/hls/Active%20Bottoming%2FActive%20Facedown%20Introduction%2Fmaster.m3u8
+        const refererUrl = new URL(referer);
+        const masterPath = decodeURIComponent(refererUrl.pathname);
+        
+        // Convert master playlist path to directory path
+        // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> /hls/Active Bottoming/Active Facedown Introduction/
+        const masterDir = masterPath.replace('/master.m3u8', '');
+        
+        // Construct the correct quality playlist path
+        const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
+        
+        // Check if the file exists
+        if (!fs.existsSync(correctPath)) {
+            return res.status(404).json({ error: 'Quality playlist not found' });
+        }
+        
+        // Set appropriate headers
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+        
+        // Serve the file
+        res.sendFile(correctPath);
+    } catch (error) {
+        console.error('Error processing HLS quality playlist:', error);
+        res.status(500).json({ error: 'Failed to serve quality playlist' });
+    }
+});
+
+// HLS video segment proxy middleware
+app.get('/hls/*/*.ts', async (req, res) => {
+    // Extract the quality and segment from the URL (e.g., /hls/720p/segment_001.ts -> 720p, segment_001.ts)
+    const urlParts = req.path.split('/');
+    const quality = urlParts[2]; // Should be like "720p"
+    const segmentFile = urlParts[3]; // Should be like "segment_001.ts"
+    
+    // Get the referer to find the original master playlist path
+    const referer = req.get('Referer');
+    if (!referer) {
+        return res.status(400).json({ error: 'No referer header found' });
+    }
+    
+    try {
+        // Extract the master playlist path from referer
+        const refererUrl = new URL(referer);
+        const masterPath = decodeURIComponent(refererUrl.pathname);
+        
+        // Convert master playlist path to directory path
+        const masterDir = masterPath.replace('/master.m3u8', '');
+        
+        // Construct the correct segment path
+        const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
+        
+        // Check if the file exists
+        if (!fs.existsSync(correctPath)) {
+            return res.status(404).json({ error: 'Video segment not found' });
+        }
+        
+        // Set appropriate headers for video segments
+        res.setHeader('Content-Type', 'video/mp2t');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+        
+        // Serve the file
+        res.sendFile(correctPath);
+    } catch (error) {
+        console.error('Error processing HLS video segment:', error);
+        res.status(500).json({ error: 'Failed to serve video segment' });
+    }
+});
+
 app.use('/hls', express.static(HLS_ROOT, {
     setHeaders: (res, filePath) => {
         if (filePath.match(/\.(m3u8|ts)$/i)) {
