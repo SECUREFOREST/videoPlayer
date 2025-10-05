@@ -606,16 +606,55 @@ class ModernVideoPlayerBrowser {
                     liveMaxLatencyDurationCount: 10, // Max latency for live
                     liveDurationInfinity: true, // Handle infinite live streams
                     
-                    // Network and loading optimization
-                    manifestLoadingTimeOut: 10000, // 10s manifest timeout
-                    manifestLoadingMaxRetry: 4, // Retry manifest loading
-                    manifestLoadingRetryDelay: 1000, // Delay between retries
-                    levelLoadingTimeOut: 10000, // 10s level timeout
-                    levelLoadingMaxRetry: 4, // Retry level loading
-                    levelLoadingRetryDelay: 1000, // Delay between retries
-                    fragLoadingTimeOut: 20000, // 20s fragment timeout
-                    fragLoadingMaxRetry: 6, // Retry fragment loading
-                    fragLoadingRetryDelay: 1000, // Delay between retries
+                    // Network and loading optimization (modern API)
+                    manifestLoadPolicy: {
+                        default: {
+                            maxTimeToFirstByteMs: 10000,
+                            maxLoadTimeMs: 10000,
+                            timeoutRetry: {
+                                maxNumRetry: 4,
+                                retryDelayMs: 1000,
+                                maxRetryDelayMs: 0
+                            },
+                            errorRetry: {
+                                maxNumRetry: 4,
+                                retryDelayMs: 1000,
+                                maxRetryDelayMs: 8000
+                            }
+                        }
+                    },
+                    playlistLoadPolicy: {
+                        default: {
+                            maxTimeToFirstByteMs: 10000,
+                            maxLoadTimeMs: 10000,
+                            timeoutRetry: {
+                                maxNumRetry: 4,
+                                retryDelayMs: 1000,
+                                maxRetryDelayMs: 0
+                            },
+                            errorRetry: {
+                                maxNumRetry: 4,
+                                retryDelayMs: 1000,
+                                maxRetryDelayMs: 8000
+                            }
+                        }
+                    },
+                    fragLoadPolicy: {
+                        default: {
+                            maxTimeToFirstByteMs: 20000,
+                            maxLoadTimeMs: 20000,
+                            timeoutRetry: {
+                                maxNumRetry: 6,
+                                retryDelayMs: 1000,
+                                maxRetryDelayMs: 0
+                            },
+                            errorRetry: {
+                                maxNumRetry: 6,
+                                retryDelayMs: 1000,
+                                maxRetryDelayMs: 8000
+                            }
+                        }
+                    },
                     
                     // Preloading strategies
                     startFragPrefetch: true, // Prefetch start fragment
@@ -643,11 +682,10 @@ class ModernVideoPlayerBrowser {
                     
                     // Network optimization
                     xhrSetup: (xhr, url) => {
-                        // Add performance headers
+                        // Add performance headers (avoid unsafe headers)
                         xhr.setRequestHeader('Cache-Control', 'no-cache');
                         xhr.setRequestHeader('Pragma', 'no-cache');
-                        // Add connection keep-alive for better performance
-                        xhr.setRequestHeader('Connection', 'keep-alive');
+                        // Note: Connection header is unsafe and removed
                     }
                 });
 

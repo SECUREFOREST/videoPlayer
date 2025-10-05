@@ -1,6 +1,6 @@
 {
   "name": "hls-video-converter",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Cross-platform HLS video converter with multiple quality levels",
   "main": "convert-to-hls.js",
   "scripts": {
