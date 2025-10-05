@@ -465,17 +465,13 @@ async function generateAllMissingThumbnails() {
     console.log('🔍 Videos root directory:', VIDEOS_ROOT);
     
     try {
-        // Scan both videos directory and HLS directory
-        console.log('🔍 Scanning videos directory for missing thumbnails...');
-        const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
-        console.log('🔍 Found', videosWithoutThumbnails.length, 'regular videos without thumbnails');
-        
+        // Always start with HLS directory first
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         console.log('🔍 HLS root directory:', hlsRootPath);
         
         let hlsVideosWithoutThumbnails = [];
         if (fs.existsSync(hlsRootPath)) {
-            console.log('🔍 Scanning HLS directory for missing thumbnails...');
+            console.log('🔍 Scanning HLS directory for missing thumbnails (PRIORITY)...');
             console.log(`🔍 HLS root path: ${hlsRootPath}`);
             hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
             console.log(`🔍 Found ${hlsVideosWithoutThumbnails.length} HLS files without thumbnails`);
@@ -483,29 +479,35 @@ async function generateAllMissingThumbnails() {
             console.log('⚠️ HLS directory not found:', hlsRootPath);
         }
         
-        const allVideosWithoutThumbnails = [...videosWithoutThumbnails, ...hlsVideosWithoutThumbnails];
+        // Then scan videos directory
+        console.log('🔍 Scanning videos directory for missing thumbnails...');
+        const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
+        console.log('🔍 Found', videosWithoutThumbnails.length, 'regular videos without thumbnails');
+        
+        // Combine with HLS first, then regular videos
+        const allVideosWithoutThumbnails = [...hlsVideosWithoutThumbnails, ...videosWithoutThumbnails];
         
         if (allVideosWithoutThumbnails.length === 0) {
             console.log('✅ All videos already have thumbnails');
             return;
         }
         
-        console.log(`📸 Found ${allVideosWithoutThumbnails.length} videos without thumbnails (${videosWithoutThumbnails.length} regular, ${hlsVideosWithoutThumbnails.length} HLS)`);
-        console.log('🔄 Generating thumbnails in background...');
+        console.log(`📸 Found ${allVideosWithoutThumbnails.length} videos without thumbnails (${hlsVideosWithoutThumbnails.length} HLS, ${videosWithoutThumbnails.length} regular)`);
+        console.log('🔄 Generating thumbnails in background (HLS FIRST)...');
         const startTime = new Date().toISOString();
         console.log('🔄 Background generation started at:', startTime);
         
-        // Log HLS files that need thumbnails
+        // Log HLS files that need thumbnails (PRIORITY)
         if (hlsVideosWithoutThumbnails.length > 0) {
-            console.log('📸 HLS files needing thumbnails:');
+            console.log('📸 HLS files needing thumbnails (PRIORITY):');
             hlsVideosWithoutThumbnails.forEach((video, index) => {
                 console.log(`  ${index + 1}. ${video.name} (${video.path})`);
             });
         }
         
-        // Log regular videos that need thumbnails
+        // Log regular videos that need thumbnails (SECONDARY)
         if (videosWithoutThumbnails.length > 0) {
-            console.log('📸 Regular videos needing thumbnails:');
+            console.log('📸 Regular videos needing thumbnails (SECONDARY):');
             videosWithoutThumbnails.forEach((video, index) => {
                 console.log(`  ${index + 1}. ${video.name} (${video.path})`);
             });
@@ -533,7 +535,7 @@ async function generateAllMissingThumbnails() {
                 
                 // For HLS files, use the same logic as generateHLSThumbnail
                 if (video.isHLS && video.extension === '.m3u8') {
-                    console.log(`🔄 Processing HLS file: ${video.name}`);
+                    console.log(`🔄 Processing HLS file (PRIORITY): ${video.name}`);
                     const result = await generateHLSThumbnail(video.path);
                     if (result && typeof result === 'string') {
                         generated++;
@@ -544,7 +546,7 @@ async function generateAllMissingThumbnails() {
                     }
                 } else {
                     // Regular video file
-                    console.log(`🔄 Processing regular video: ${video.name}`);
+                    console.log(`🔄 Processing regular video (SECONDARY): ${video.name}`);
                     const success = await generateThumbnailAsync(video.path, thumbnailPath);
                     if (success) {
                         generated++;

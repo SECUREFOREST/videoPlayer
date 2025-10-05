@@ -344,8 +344,8 @@ async function startServer() {
             console.log(`🔐 Authentication: ${APP_CONFIG.password ? 'Enabled' : 'Disabled'}`);
         });
 
-        // Generate missing thumbnails in background (including HLS thumbnails)
-        console.log('🔄 Starting background thumbnail generation (regular videos + HLS)...');
+        // Generate missing thumbnails in background (HLS FIRST, then regular videos)
+        console.log('🔄 Starting background thumbnail generation (HLS FIRST, then regular videos)...');
         console.log('🔄 Background thumbnail generation initiated at:', new Date().toISOString());
         generateAllMissingThumbnails().then(() => {
             console.log('✅ Background thumbnail generation completed successfully');
