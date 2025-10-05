@@ -147,6 +147,8 @@ async function getHLSInfo(masterPlaylistPath) {
 // Generate HLS thumbnail
 async function getHLSThumbnail(masterPlaylistPath) {
     try {
+        console.log('🔍 Getting HLS thumbnail for:', masterPlaylistPath);
+        
         // Check if thumbnail already exists
         // For HLS files, calculate relative path from hls folder instead of videos folder
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -155,32 +157,76 @@ async function getHLSThumbnail(masterPlaylistPath) {
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
+        console.log('🔍 HLS thumbnail path:', thumbnailPath);
+        console.log('🔍 HLS thumbnail exists:', fs.existsSync(thumbnailPath));
+        
         if (fs.existsSync(thumbnailPath)) {
-            return `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+            const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+            console.log('✅ HLS thumbnail found:', thumbnailUrl);
+            return thumbnailUrl;
         }
+        
+        console.log('❌ HLS thumbnail not found for:', masterPlaylistPath);
+        return null;
+    } catch (error) {
+        console.error('❌ Error getting HLS thumbnail:', error);
+        return null;
+    }
+}
+
+// Generate HLS thumbnail (for background generation)
+async function generateHLSThumbnail(masterPlaylistPath) {
+    try {
+        console.log('🔄 Generating HLS thumbnail for:', masterPlaylistPath);
+        
+        // For HLS files, calculate relative path from hls folder instead of videos folder
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        const relativePath = path.relative(hlsRootPath, masterPlaylistPath);
+        const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
+        const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
         // Try to generate thumbnail from first quality segment
         const hlsInfo = await getHLSInfo(masterPlaylistPath);
         if (hlsInfo.qualities.length > 0) {
             const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
             
+            console.log('🔄 Generating from first quality:', firstQualityPath);
+            
+            // Get HLS duration to determine optimal thumbnail time
+            let duration = null;
+            try {
+                duration = await getHLSDuration(masterPlaylistPath);
+                console.log('🔄 HLS duration:', duration, 'seconds');
+            } catch (error) {
+                console.log('⚠️ Could not get HLS duration, using default time');
+            }
+            
+            const optimalTime = getOptimalThumbnailTime(duration);
+            console.log('🔄 Using HLS thumbnail time:', optimalTime, 'seconds');
+            
             // Generate thumbnail from first segment
             const ffmpegPath = getFFmpegPath();
-            const command = `"${ffmpegPath}" -i "${firstQualityPath}" -ss 00:00:01 -vframes 1 -q:v 2 "${thumbnailPath}"`;
+            const timeString = `${Math.floor(optimalTime / 60)}:${(optimalTime % 60).toString().padStart(2, '0')}:01`;
+            const command = `"${ffmpegPath}" -i "${firstQualityPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
             
-            try {
-                await execAsync(command);
-                if (fs.existsSync(thumbnailPath)) {
-                    return `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-                }
-            } catch (error) {
-                console.log('Could not generate HLS thumbnail:', error.message);
+            console.log('🔄 FFmpeg command:', command);
+            await execAsync(command);
+            
+            if (fs.existsSync(thumbnailPath)) {
+                const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+                console.log('✅ HLS thumbnail generated:', thumbnailUrl);
+                return thumbnailUrl;
+            } else {
+                console.log('❌ HLS thumbnail generation failed - file not created');
+                return null;
             }
+        } else {
+            console.log('❌ No HLS qualities found for thumbnail generation');
+            return null;
         }
-        
-        return null;
     } catch (error) {
-        console.error('Error generating HLS thumbnail:', error);
+        console.error('❌ Error generating HLS thumbnail:', error);
         return null;
     }
 }
@@ -218,14 +264,42 @@ function getThumbnailUrl(videoPath) {
     }
 }
 
+// Get optimal thumbnail time based on video duration
+function getOptimalThumbnailTime(duration) {
+    if (!duration || duration <= 0) {
+        return 10; // Default to 10 seconds if duration is unknown
+    }
+    
+    if (duration >= 300) { // 5 minutes or longer
+        return 30;
+    } else if (duration >= 120) { // 2 minutes or longer
+        return 20;
+    } else {
+        return 10; // Less than 2 minutes
+    }
+}
+
 // Generate thumbnail asynchronously
 async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
         console.log('🔄 Generating thumbnail for:', videoPath);
         console.log('🔄 Thumbnail will be saved to:', thumbnailPath);
         
+        // Get video duration first to determine optimal thumbnail time
+        let duration = null;
+        try {
+            duration = await getVideoDuration(videoPath);
+            console.log('🔄 Video duration:', duration, 'seconds');
+        } catch (error) {
+            console.log('⚠️ Could not get video duration, using default time');
+        }
+        
+        const optimalTime = getOptimalThumbnailTime(duration);
+        console.log('🔄 Using thumbnail time:', optimalTime, 'seconds');
+        
         const ffmpegPath = getFFmpegPath();
-        const command = `"${ffmpegPath}" -i "${videoPath}" -ss 00:00:01 -vframes 1 -q:v 2 "${thumbnailPath}"`;
+        const timeString = `${Math.floor(optimalTime / 60)}:${(optimalTime % 60).toString().padStart(2, '0')}:01`;
+        const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
         
         console.log('🔄 FFmpeg command:', command);
         await execAsync(command);
@@ -465,6 +539,7 @@ module.exports = {
     getHLSDuration,
     getHLSInfo,
     getHLSThumbnail,
+    generateHLSThumbnail,
     getThumbnailUrl,
     generateThumbnailAsync,
     findVideosWithoutThumbnails,
