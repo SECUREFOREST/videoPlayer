@@ -529,7 +529,13 @@ class ModernVideoPlayerBrowser {
                     console.log('Item data:', item);
                     await this.playHLSVideo(videoUrl, videoData);
                 } else {
-                    // Regular video file
+                    // Regular video file - clean up any existing HLS instance
+                    if (this.hls) {
+                        console.log('Cleaning up HLS instance before playing regular video');
+                        this.hls.destroy();
+                        this.hls = null;
+                    }
+                    
                     const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                     this.videoSource.src = videoUrl;
                     this.videoSource.type = videoData.mimeType;
