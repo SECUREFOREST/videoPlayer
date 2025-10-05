@@ -218,6 +218,11 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
 
 // Function to scan all directories and find videos without thumbnails
 async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000) {
+    if (!dirPath) {
+        console.log('Warning: findVideosWithoutThumbnails called with undefined dirPath');
+        return videoList;
+    }
+    
     try {
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
         
@@ -252,7 +257,7 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
             }
         }
     } catch (error) {
-        console.log(`Skipping directory ${dirPath}: ${error.message}`);
+        console.log(`Skipping directory ${dirPath || 'unknown'}: ${error.message}`);
     }
     
     return videoList;
@@ -325,13 +330,54 @@ async function generateAllMissingThumbnails() {
     }
 }
 
+// Function to find all videos (regardless of thumbnail status)
+async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
+    if (!dirPath) {
+        console.log('Warning: findAllVideos called with undefined dirPath');
+        return videoList;
+    }
+    
+    try {
+        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            if (videoList.length >= maxVideos) break;
+            
+            const fullPath = path.join(dirPath, entry.name);
+            
+            if (entry.isDirectory()) {
+                // Skip hidden directories and system directories
+                if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+                    await findAllVideos(fullPath, videoList, maxVideos);
+                }
+            } else {
+                const ext = path.extname(entry.name).toLowerCase();
+                if (isVideoOrHLSFile(ext)) {
+                    const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+                    videoList.push({
+                        path: fullPath,
+                        relativePath: relativePath,
+                        name: entry.name,
+                        extension: ext,
+                        isHLS: isHLSFile(ext)
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.log(`Skipping directory ${dirPath || 'unknown'}: ${error.message}`);
+    }
+    
+    return videoList;
+}
+
 // Function to scan all videos and build duration cache
 async function buildDurationCache() {
     console.log('🚀 Building video duration cache...');
     
     try {
         const allVideos = [];
-        await findVideosWithoutThumbnails(VIDEOS_ROOT, allVideos, 50000); // Get all videos, not just those without thumbnails
+        await findAllVideos(VIDEOS_ROOT, allVideos, 50000);
         
         console.log(`📊 Found ${allVideos.length} videos to process`);
         
