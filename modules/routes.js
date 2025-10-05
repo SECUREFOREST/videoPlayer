@@ -90,6 +90,28 @@ router.get('/api/browse', async (req, res) => {
                 fileCount: fileCount
             };
 
+            // Add thumbnail URL for video files
+            if (isVideoOrHLSFile(ext)) {
+                try {
+                    if (isHLSFile(ext) && ext === '.m3u8') {
+                        // For HLS files, try to get thumbnail
+                        item.thumbnailUrl = await getHLSThumbnail(itemPath);
+                    } else if (isVideoFile(ext)) {
+                        // For regular video files, get thumbnail
+                        item.thumbnailUrl = getThumbnailUrl(itemPath);
+                    }
+                    
+                    // If no thumbnail exists, we could trigger generation in background
+                    // but for now, just return null to avoid blocking the response
+                    if (!item.thumbnailUrl) {
+                        console.log(`📸 No thumbnail found for: ${entry.name}`);
+                    }
+                } catch (error) {
+                    console.warn(`Warning: Could not get thumbnail for ${itemPath}:`, error.message);
+                    item.thumbnailUrl = null;
+                }
+            }
+
             // Check for HLS version if this is a video file
             if (entry.isFile() && isVideoFile(ext)) {
                 // Look for HLS files in the separate hls folder at root level
