@@ -65,7 +65,11 @@ async function getVideoDuration(videoPath) {
 // Get HLS duration from playlist
 async function getHLSDuration(masterPlaylistPath) {
     try {
-        console.log(`🔍 getHLSDuration called with path: ${masterPlaylistPath}`);
+        // Check if this is an HLS file in the videos directory (should be skipped)
+        if (masterPlaylistPath.includes(VIDEOS_ROOT) && masterPlaylistPath.endsWith('.m3u8')) {
+            console.log(`⚠️ Skipping HLS file in videos directory: ${masterPlaylistPath} - HLS files should be in hls directory`);
+            return null;
+        }
         
         // Check if file exists before trying to read it
         try {
@@ -687,7 +691,6 @@ async function buildDurationCache() {
                 // Get duration
                 let duration = null;
                 if (video.isHLS && video.extension === '.m3u8') {
-                    console.log(`🔍 buildDurationCache processing HLS video.path: ${video.path}`);
                     duration = await getHLSDuration(video.path);
                 } else {
                     duration = await getVideoDuration(video.path);
