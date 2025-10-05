@@ -52,6 +52,7 @@ router.get('/api/browse', async (req, res) => {
                 size: stats.size,
                 modified: stats.mtime,
                 extension: ext,
+                isDirectory: entry.isDirectory(),
                 isVideo: isVideoOrHLSFile(ext),
                 isHLS: isHLSFile(ext),
                 mimeType: isVideoOrHLSFile(ext) ? getVideoMimeType(ext) : null,
