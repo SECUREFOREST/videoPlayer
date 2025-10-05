@@ -488,7 +488,8 @@ router.post('/api/favorites', (req, res) => {
         }
 
         const favoritesData = fs.readFileSync(path.join(__dirname, '..', 'favorites.json'), 'utf8');
-        const favorites = JSON.parse(favoritesData);
+        const favoritesJson = JSON.parse(favoritesData);
+        const favorites = favoritesJson.favorites || [];
         
         const newFavorite = {
             id: Date.now().toString(),
@@ -501,7 +502,7 @@ router.post('/api/favorites', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'favorites.json'), 
-            JSON.stringify(favorites, null, 2)
+            JSON.stringify({ favorites }, null, 2)
         );
         
         res.json({ success: true, favorite: newFavorite });
@@ -516,7 +517,8 @@ router.delete('/api/favorites/:id', (req, res) => {
         const { id } = req.params;
         
         const favoritesData = fs.readFileSync(path.join(__dirname, '..', 'favorites.json'), 'utf8');
-        const favorites = JSON.parse(favoritesData);
+        const favoritesJson = JSON.parse(favoritesData);
+        const favorites = favoritesJson.favorites || [];
         
         const favoriteIndex = favorites.findIndex(fav => fav.id === id);
         if (favoriteIndex === -1) {
@@ -527,7 +529,7 @@ router.delete('/api/favorites/:id', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'favorites.json'), 
-            JSON.stringify(favorites, null, 2)
+            JSON.stringify({ favorites }, null, 2)
         );
         
         res.json({ success: true });
@@ -547,7 +549,7 @@ router.put('/api/favorites', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'favorites.json'), 
-            JSON.stringify(favorites, null, 2)
+            JSON.stringify({ favorites }, null, 2)
         );
         
         res.json({ success: true });
