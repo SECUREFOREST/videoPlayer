@@ -139,9 +139,35 @@ router.get('/api/video-info', async (req, res) => {
     }
 
     try {
-        const videoPath = resolveSafePath(relativePath);
+        let videoPath;
+        const ext = path.extname(relativePath).toLowerCase();
+        
+        // Check if this is an HLS file and resolve to hls folder
+        if (isHLSFile(ext)) {
+            // For HLS files, resolve to the hls folder at root level
+            const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+            const normalizedPath = path.normalize(relativePath);
+            
+            // Remove leading slash if present
+            const cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
+            
+            // Check for directory traversal attempts
+            if (cleanPath.includes('..')) {
+                throw new Error('Access denied: Invalid path');
+            }
+            
+            videoPath = path.resolve(hlsRootPath, cleanPath);
+            
+            // Ensure the resolved path is inside hls folder
+            if (!videoPath.startsWith(hlsRootPath)) {
+                throw new Error('Access denied: Path outside hls directory');
+            }
+        } else {
+            // For regular video files, use the standard path resolution
+            videoPath = resolveSafePath(relativePath);
+        }
+        
         const stats = await fsPromises.stat(videoPath);
-        const ext = path.extname(videoPath).toLowerCase();
         
         // Debug: Log the path being accessed
         console.log(`Video info requested for: ${relativePath} -> ${videoPath}`);
