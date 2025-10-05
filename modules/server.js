@@ -131,6 +131,23 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 // Serve HLS files from the separate hls directory
 const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 
+// Store for tracking master playlist paths by session
+const masterPlaylistStore = new Map();
+
+// Route to capture master playlist access and store the path
+app.get('/hls/*/master.m3u8', (req, res, next) => {
+    const masterPath = req.path;
+    const sessionId = req.sessionID || req.ip; // Use session ID or IP as fallback
+    
+    console.log('🔍 Master playlist accessed:', masterPath, 'for session:', sessionId);
+    
+    // Store the master playlist path for this session
+    masterPlaylistStore.set(sessionId, masterPath);
+    
+    // Continue to static file serving
+    next();
+});
+
 // HLS quality playlist proxy middleware - MUST come before static file serving
 app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     console.log('🔍 HLS Quality Playlist Proxy triggered:', req.path);
@@ -139,23 +156,25 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     // Extract the quality from the URL (e.g., /hls/720p/playlist.m3u8 -> 720p)
     const quality = req.params.quality; // Should be like "720p"
     
-    // Get the referer to find the original master playlist path
-    const referer = req.get('Referer');
-    if (!referer) {
-        console.log('❌ No referer header found');
-        return res.status(400).json({ error: 'No referer header found' });
+    // Get the session ID to look up the master playlist path
+    const sessionId = req.sessionID || req.ip;
+    console.log('🔍 Session ID:', sessionId);
+    
+    // Look up the master playlist path from our store
+    const masterPath = masterPlaylistStore.get(sessionId);
+    console.log('🔍 Stored master path:', masterPath);
+    
+    if (!masterPath) {
+        console.log('❌ No master playlist path found for session');
+        return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
+    // Convert master playlist path to directory path
+    // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> /hls/Active Bottoming/Active Facedown Introduction/
+    const masterDir = masterPath.replace('/master.m3u8', '');
+    console.log('🔍 Master directory:', masterDir);
+    
     try {
-        // Extract the master playlist path from referer
-        // e.g., https://domain.com/hls/Active%20Bottoming%2FActive%20Facedown%20Introduction%2Fmaster.m3u8
-        const refererUrl = new URL(referer);
-        const masterPath = decodeURIComponent(refererUrl.pathname);
-        
-        // Convert master playlist path to directory path
-        // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> /hls/Active Bottoming/Active Facedown Introduction/
-        const masterDir = masterPath.replace('/master.m3u8', '');
-        
         // Construct the correct quality playlist path
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
         
@@ -189,20 +208,24 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     const quality = req.params.quality; // Should be like "720p"
     const segmentFile = req.params.segment; // Should be like "segment_001.ts"
     
-    // Get the referer to find the original master playlist path
-    const referer = req.get('Referer');
-    if (!referer) {
-        console.log('❌ No referer header found for segment');
-        return res.status(400).json({ error: 'No referer header found' });
+    // Get the session ID to look up the master playlist path
+    const sessionId = req.sessionID || req.ip;
+    console.log('🔍 Segment Session ID:', sessionId);
+    
+    // Look up the master playlist path from our store
+    const masterPath = masterPlaylistStore.get(sessionId);
+    console.log('🔍 Stored master path for segment:', masterPath);
+    
+    if (!masterPath) {
+        console.log('❌ No master playlist path found for segment session');
+        return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
+    // Convert master playlist path to directory path
+    const masterDir = masterPath.replace('/master.m3u8', '');
+    console.log('🔍 Segment master directory:', masterDir);
+    
     try {
-        // Extract the master playlist path from referer
-        const refererUrl = new URL(referer);
-        const masterPath = decodeURIComponent(refererUrl.pathname);
-        
-        // Convert master playlist path to directory path
-        const masterDir = masterPath.replace('/master.m3u8', '');
         
         // Construct the correct segment path
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
