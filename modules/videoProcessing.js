@@ -353,8 +353,13 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
             } else {
                 const ext = path.extname(entry.name).toLowerCase();
                 if (isVideoOrHLSFile(ext)) {
-                    // For HLS files, use hls folder as base, otherwise use videos folder
+                    // For HLS files, only process master.m3u8 files, not quality playlist files
                     const isHLS = isHLSFile(ext);
+                    if (isHLS && entry.name !== 'master.m3u8') {
+                        continue; // Skip quality playlist files
+                    }
+                    
+                    // For HLS files, use hls folder as base, otherwise use videos folder
                     const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                     const relativePath = path.relative(basePath, fullPath);
                     const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
