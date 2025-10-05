@@ -8,6 +8,9 @@ const { DURATIONS_CACHE_FILE } = require('./config');
 // Duration cache
 let durationCache = {};
 
+// Warning cache to prevent duplicate warnings
+let warnedFiles = new Set();
+
 // Load duration cache from file
 async function loadDurationCache() {
     try {
@@ -67,7 +70,10 @@ async function getHLSDuration(masterPlaylistPath) {
     try {
         // Check if this is an HLS file in the videos directory (should be skipped)
         if (masterPlaylistPath.includes(VIDEOS_ROOT) && masterPlaylistPath.endsWith('.m3u8')) {
-            console.log(`⚠️ Skipping HLS file in videos directory: ${masterPlaylistPath} - HLS files should be in hls directory`);
+            if (!warnedFiles.has(masterPlaylistPath)) {
+                console.log(`⚠️ Skipping HLS file in videos directory: ${masterPlaylistPath} - HLS files should be in hls directory`);
+                warnedFiles.add(masterPlaylistPath);
+            }
             return null;
         }
         
@@ -285,7 +291,10 @@ function getThumbnailUrl(videoPath) {
         // Skip HLS files in videos directory - they should only be in hls directory
         const isHLS = isHLSFile(ext);
         if (isHLS && videoPath.includes(VIDEOS_ROOT)) {
-            console.log(`⚠️ Skipping HLS file in videos directory: ${videoPath} - HLS files should be in hls directory`);
+            if (!warnedFiles.has(videoPath)) {
+                console.log(`⚠️ Skipping HLS file in videos directory: ${videoPath} - HLS files should be in hls directory`);
+                warnedFiles.add(videoPath);
+            }
             return null;
         }
 
@@ -462,7 +471,10 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                     
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLS && fullPath.includes(VIDEOS_ROOT)) {
-                        console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                        if (!warnedFiles.has(fullPath)) {
+                            console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                            warnedFiles.add(fullPath);
+                        }
                         continue;
                     }
                     
@@ -640,7 +652,10 @@ async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
                 if (isVideoOrHLSFile(ext)) {
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLSFile(ext) && fullPath.includes(VIDEOS_ROOT)) {
-                        console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                        if (!warnedFiles.has(fullPath)) {
+                            console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                            warnedFiles.add(fullPath);
+                        }
                         continue;
                     }
                     

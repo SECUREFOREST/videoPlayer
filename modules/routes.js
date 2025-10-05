@@ -98,6 +98,7 @@ router.get('/api/browse', async (req, res) => {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLSFile(ext) && ext === '.m3u8') {
+                        // Note: We can't use the warnedFiles cache here since it's in a different module
                         console.log(`⚠️ Skipping HLS file in videos directory: ${itemPath} - HLS files should be in hls directory`);
                         continue; // Skip this item entirely
                     } else if (isVideoFile(ext)) {
