@@ -632,6 +632,12 @@ async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
             } else {
                 const ext = path.extname(entry.name).toLowerCase();
                 if (isVideoOrHLSFile(ext)) {
+                    // Skip HLS files in videos directory - they should only be in hls directory
+                    if (isHLSFile(ext) && fullPath.includes(VIDEOS_ROOT)) {
+                        console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
+                        continue;
+                    }
+                    
                     const relativePath = path.relative(VIDEOS_ROOT, fullPath);
                     videoList.push({
                         path: fullPath,
