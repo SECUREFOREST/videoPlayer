@@ -687,6 +687,7 @@ async function buildDurationCache() {
                 // Get duration
                 let duration = null;
                 if (video.isHLS && video.extension === '.m3u8') {
+                    console.log(`🔍 buildDurationCache processing HLS video.path: ${video.path}`);
                     duration = await getHLSDuration(video.path);
                 } else {
                     duration = await getVideoDuration(video.path);
