@@ -533,6 +533,7 @@ class ModernVideoPlayerBrowser {
                 // Check if it's an HLS file
                 if (videoData.isHLS && videoData.extension === '.m3u8') {
                     const videoUrl = `/hls/${encodeURIComponent(item.path)}`;
+                    console.log('Constructed HLS URL:', videoUrl, 'for path:', item.path);
                     await this.playHLSVideo(videoUrl, videoData);
                 } else {
                     // Regular video file
@@ -572,6 +573,7 @@ class ModernVideoPlayerBrowser {
             // Check if HLS is supported
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 console.log('Using HLS.js for HLS playback');
+                console.log('HLS Video URL:', videoUrl);
                 
                 // Destroy existing HLS instance if any
                 if (this.hls) {
