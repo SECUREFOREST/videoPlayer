@@ -199,13 +199,21 @@ function getThumbnailUrl(videoPath) {
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
+        console.log('🔍 Checking thumbnail for:', videoPath);
+        console.log('🔍 Safe name:', safeName);
+        console.log('🔍 Thumbnail path:', thumbnailPath);
+        console.log('🔍 Thumbnail exists:', fs.existsSync(thumbnailPath));
+        
         if (fs.existsSync(thumbnailPath)) {
-            return `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+            const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+            console.log('✅ Thumbnail URL:', thumbnailUrl);
+            return thumbnailUrl;
         }
         
+        console.log('❌ Thumbnail not found for:', videoPath);
         return null;
     } catch (error) {
-        console.error('Error getting thumbnail URL:', error);
+        console.error('❌ Error getting thumbnail URL:', error);
         return null;
     }
 }
@@ -213,12 +221,25 @@ function getThumbnailUrl(videoPath) {
 // Generate thumbnail asynchronously
 async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
+        console.log('🔄 Generating thumbnail for:', videoPath);
+        console.log('🔄 Thumbnail will be saved to:', thumbnailPath);
+        
         const ffmpegPath = getFFmpegPath();
         const command = `"${ffmpegPath}" -i "${videoPath}" -ss 00:00:01 -vframes 1 -q:v 2 "${thumbnailPath}"`;
+        
+        console.log('🔄 FFmpeg command:', command);
         await execAsync(command);
-        return true;
+        
+        // Verify the thumbnail was created
+        if (fs.existsSync(thumbnailPath)) {
+            console.log('✅ Thumbnail generated successfully:', thumbnailPath);
+            return true;
+        } else {
+            console.log('❌ Thumbnail file was not created:', thumbnailPath);
+            return false;
+        }
     } catch (error) {
-        console.error(`Error generating thumbnail for ${videoPath}:`, error.message);
+        console.error(`❌ Error generating thumbnail for ${videoPath}:`, error.message);
         return false;
     }
 }

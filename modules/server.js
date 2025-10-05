@@ -79,23 +79,45 @@ app.get('/thumbnails/*', (req, res) => {
     try {
         const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', filename);
+        
+        console.log('🔍 Thumbnail request:', filename);
+        console.log('🔍 Thumbnail path:', thumbnailPath);
+        console.log('🔍 File exists:', fs.existsSync(thumbnailPath));
 
         if (fs.existsSync(thumbnailPath)) {
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             res.sendFile(thumbnailPath);
         } else {
             // Try with quotes around the filename (ffmpeg sometimes adds quotes)
             const quotedFilename = `'${filename}'`;
             const quotedThumbnailPath = path.join(__dirname, '..', 'thumbnails', quotedFilename);
             
+            console.log('🔍 Trying quoted filename:', quotedFilename);
+            console.log('🔍 Quoted path exists:', fs.existsSync(quotedThumbnailPath));
+            
             if (fs.existsSync(quotedThumbnailPath)) {
+                res.setHeader('Content-Type', 'image/jpeg');
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
                 res.sendFile(quotedThumbnailPath);
             } else {
-                console.log('Thumbnail file not found:', thumbnailPath);
+                console.log('❌ Thumbnail file not found:', thumbnailPath);
+                console.log('❌ Quoted thumbnail file not found:', quotedThumbnailPath);
+                
+                // List thumbnails directory for debugging
+                const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
+                if (fs.existsSync(thumbnailsDir)) {
+                    const files = fs.readdirSync(thumbnailsDir);
+                    console.log('📁 Available thumbnails:', files.slice(0, 10)); // Show first 10 files
+                } else {
+                    console.log('❌ Thumbnails directory does not exist:', thumbnailsDir);
+                }
+                
                 res.status(404).send('Thumbnail not found');
             }
         }
     } catch (error) {
-        console.error('Error serving thumbnail:', error);
+        console.error('❌ Error serving thumbnail:', error);
         res.status(500).send('Error serving thumbnail');
     }
 });
