@@ -9,6 +9,7 @@ const {
     getHLSDuration, 
     getHLSInfo, 
     getHLSThumbnail, 
+    generateHLSThumbnail,
     getThumbnailUrl,
     generateThumbnailAsync,
     durationCache
@@ -96,13 +97,21 @@ router.get('/api/browse', async (req, res) => {
                     if (isHLSFile(ext) && ext === '.m3u8') {
                         // For HLS files, try to get thumbnail
                         item.thumbnailUrl = await getHLSThumbnail(itemPath);
+                        
+                        // If no HLS thumbnail exists, try to generate one in background
+                        if (!item.thumbnailUrl) {
+                            console.log(`📸 No HLS thumbnail found for: ${entry.name}, triggering background generation`);
+                            // Trigger background generation (don't await to avoid blocking)
+                            generateHLSThumbnail(itemPath).catch(error => {
+                                console.warn(`Background HLS thumbnail generation failed for ${entry.name}:`, error.message);
+                            });
+                        }
                     } else if (isVideoFile(ext)) {
                         // For regular video files, get thumbnail
                         item.thumbnailUrl = getThumbnailUrl(itemPath);
                     }
                     
-                    // If no thumbnail exists, we could trigger generation in background
-                    // but for now, just return null to avoid blocking the response
+                    // If no thumbnail exists, log it
                     if (!item.thumbnailUrl) {
                         console.log(`📸 No thumbnail found for: ${entry.name}`);
                     }

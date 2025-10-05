@@ -370,24 +370,44 @@ async function generateAllMissingThumbnails() {
     console.log('🔍 Scanning for videos without thumbnails...');
     
     try {
+        // Scan both videos directory and HLS directory
         const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         
-        if (videosWithoutThumbnails.length === 0) {
+        let hlsVideosWithoutThumbnails = [];
+        if (fs.existsSync(hlsRootPath)) {
+            console.log('🔍 Scanning HLS directory for missing thumbnails...');
+            hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
+        }
+        
+        const allVideosWithoutThumbnails = [...videosWithoutThumbnails, ...hlsVideosWithoutThumbnails];
+        
+        if (allVideosWithoutThumbnails.length === 0) {
             console.log('✅ All videos already have thumbnails');
             return;
         }
         
-        console.log(`📸 Found ${videosWithoutThumbnails.length} videos without thumbnails`);
+        console.log(`📸 Found ${allVideosWithoutThumbnails.length} videos without thumbnails (${videosWithoutThumbnails.length} regular, ${hlsVideosWithoutThumbnails.length} HLS)`);
         console.log('🔄 Generating thumbnails in background...');
         
         let generated = 0;
         let failed = 0;
         
-        for (const video of videosWithoutThumbnails) {
+        for (const video of allVideosWithoutThumbnails) {
             try {
-                const relativePath = path.relative(VIDEOS_ROOT, video.path);
+                let relativePath, safeName;
+                
+                if (video.isHLS && video.extension === '.m3u8') {
+                    // For HLS files, calculate relative path from hls folder
+                    const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                    relativePath = path.relative(hlsRootPath, video.path);
+                } else {
+                    // For regular video files, calculate relative path from videos folder
+                    relativePath = path.relative(VIDEOS_ROOT, video.path);
+                }
+                
                 const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
-                const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
+                safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                 const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
                 
                 // For HLS files, try to generate from first quality
@@ -416,7 +436,7 @@ async function generateAllMissingThumbnails() {
                 
                 // Log progress every 10 videos
                 if ((generated + failed) % 10 === 0) {
-                    console.log(`📸 Progress: ${generated + failed}/${videosWithoutThumbnails.length} processed`);
+                    console.log(`📸 Progress: ${generated + failed}/${allVideosWithoutThumbnails.length} processed`);
                 }
                 
             } catch (error) {
