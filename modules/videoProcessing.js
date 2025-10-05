@@ -309,7 +309,6 @@ function getThumbnailUrl(videoPath) {
         
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-            console.log('✅ Thumbnail URL:', thumbnailUrl);
             return thumbnailUrl;
         }
         
