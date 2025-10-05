@@ -890,19 +890,19 @@ class ModernVideoPlayerBrowser {
         if (videoData) {
             const size = this.formatFileSize(videoData.size);
             const date = this.formatDate(videoData.modified);
-            this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}<br>
-                <strong>Size:</strong> ${size}<br>
-                <strong>Modified:</strong> ${date}<br>
-                <strong>Format:</strong> ${videoData.extension.toUpperCase()}
-            `;
+            // this.videoInfo.innerHTML = `
+            //    <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}<br>
+            //    <strong>Size:</strong> ${size}<br>
+            //    <strong>Modified:</strong> ${date}<br>
+            //    <strong>Format:</strong> ${videoData.extension.toUpperCase()}
+            //`;
         } else if (this.currentVideo && this.video) {
             // Fallback for when called without videoData 
-            this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
-                <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
-                <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
-            `;
+            // this.videoInfo.innerHTML = `
+            //    <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
+            //</br>    <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
+            //    <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
+            //`;
         }
     }
 
