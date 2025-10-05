@@ -368,7 +368,9 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         for (let i = 0; i < timePoints.length; i++) {
             const currentTime = timePoints[i];
             const timeString = currentTime.toString();
-            const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
+            // Use more robust FFmpeg command with input seeking for better accuracy
+            // Add -avoid_negative_ts make_zero to handle timestamp issues
+            const command = `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`;
             
             console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s:`, command);
             console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
