@@ -188,7 +188,11 @@ router.get('/api/browse', async (req, res) => {
             return sortOrder === 'desc' ? -comparison : comparison;
         });
 
-        res.json({ items });
+        res.json({ 
+            items,
+            currentPath: relativePath,
+            parentPath: relativePath ? path.dirname(relativePath) : null
+        });
     } catch (error) {
         console.error('Browse error:', error);
         console.error('Request details:', {
