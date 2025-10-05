@@ -353,7 +353,10 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
             } else {
                 const ext = path.extname(entry.name).toLowerCase();
                 if (isVideoOrHLSFile(ext)) {
-                    const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+                    // For HLS files, use hls folder as base, otherwise use videos folder
+                    const isHLS = isHLSFile(ext);
+                    const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+                    const relativePath = path.relative(basePath, fullPath);
                     const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
                     const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
