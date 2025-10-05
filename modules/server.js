@@ -74,15 +74,15 @@ app.get('/api/config', (req, res) => {
 // Apply authentication to all routes except login and config
 app.use(requireAuth);
 
-// Custom thumbnail serving with URL decoding (MUST come before static file serving)
+// ===== STATIC FILE SERVING =====
+
+// Custom thumbnail serving with URL decoding
 app.get('/thumbnails/*', (req, res) => {
     try {
         const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', filename);
         
-        console.log('🔍 Thumbnail request:', filename);
-        console.log('🔍 Thumbnail path:', thumbnailPath);
-        console.log('🔍 File exists:', fs.existsSync(thumbnailPath));
+        // Check if thumbnail exists
 
         if (fs.existsSync(thumbnailPath)) {
             res.setHeader('Content-Type', 'image/jpeg');
@@ -93,26 +93,11 @@ app.get('/thumbnails/*', (req, res) => {
             const quotedFilename = `'${filename}'`;
             const quotedThumbnailPath = path.join(__dirname, '..', 'thumbnails', quotedFilename);
             
-            console.log('🔍 Trying quoted filename:', quotedFilename);
-            console.log('🔍 Quoted path exists:', fs.existsSync(quotedThumbnailPath));
-            
             if (fs.existsSync(quotedThumbnailPath)) {
                 res.setHeader('Content-Type', 'image/jpeg');
                 res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
                 res.sendFile(quotedThumbnailPath);
             } else {
-                console.log('❌ Thumbnail file not found:', thumbnailPath);
-                console.log('❌ Quoted thumbnail file not found:', quotedThumbnailPath);
-                
-                // List thumbnails directory for debugging
-                const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
-                if (fs.existsSync(thumbnailsDir)) {
-                    const files = fs.readdirSync(thumbnailsDir);
-                    console.log('📁 Available thumbnails:', files.slice(0, 10)); // Show first 10 files
-                } else {
-                    console.log('❌ Thumbnails directory does not exist:', thumbnailsDir);
-                }
-                
                 res.status(404).send('Thumbnail not found');
             }
         }
@@ -122,7 +107,7 @@ app.get('/thumbnails/*', (req, res) => {
     }
 });
 
-// Serve static files from the public directory on root path
+// Serve static files from the public directory
 app.use('/', express.static(path.join(__dirname, '..', 'public'), {
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
@@ -131,7 +116,7 @@ app.use('/', express.static(path.join(__dirname, '..', 'public'), {
     }
 }));
 
-// Serve static files on root path with large file support
+// Serve video files with large file support
 app.use('/videos', express.static(VIDEOS_ROOT, {
     setHeaders: (res, filePath) => {
         if (filePath.match(/\.(mp4|avi|mov|mkv|webm|m4v|flv|wmv|3gp|ogv|m3u8|ts)$/i)) {
@@ -150,18 +135,16 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
     maxAge: '1y'
 }));
 
-// Serve HLS files from the separate hls directory
-const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+// ===== HLS STREAMING =====
 
-// Store for tracking master playlist paths by session
+// HLS configuration
+const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 const masterPlaylistStore = new Map();
 
 // Route to capture master playlist access and store the path
 app.get('/hls/*/master.m3u8', (req, res, next) => {
     const masterPath = req.path;
-    const sessionId = req.sessionID || req.ip; // Use session ID or IP as fallback
-    
-    console.log('🔍 Master playlist accessed:', masterPath, 'for session:', sessionId);
+    const sessionId = req.sessionID || req.ip;
     
     // Store the master playlist path for this session
     masterPlaylistStore.set(sessionId, masterPath);
@@ -170,48 +153,25 @@ app.get('/hls/*/master.m3u8', (req, res, next) => {
     next();
 });
 
-// HLS quality playlist proxy middleware - MUST come before static file serving
+// HLS quality playlist proxy middleware
 app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
-    console.log('🔍 HLS Quality Playlist Proxy triggered:', req.path);
-    console.log('🔍 Referer:', req.get('Referer'));
-    
-    // Extract the quality from the URL (e.g., /hls/720p/playlist.m3u8 -> 720p)
-    const quality = req.params.quality; // Should be like "720p"
-    
-    // Get the session ID to look up the master playlist path
+    const quality = req.params.quality;
     const sessionId = req.sessionID || req.ip;
-    console.log('🔍 Session ID:', sessionId);
-    
-    // Look up the master playlist path from our store
     const masterPath = masterPlaylistStore.get(sessionId);
-    console.log('🔍 Stored master path:', masterPath);
     
     if (!masterPath) {
-        console.log('❌ No master playlist path found for session');
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
     // Convert master playlist path to directory path
-    // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> Active Bottoming/Active Facedown Introduction/
     const masterDir = decodeURIComponent(masterPath.replace('/hls/', '').replace('/master.m3u8', ''));
-    console.log('🔍 Master directory:', masterDir);
     
     try {
-        // Construct the correct quality playlist path
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
-        console.log('🔍 Constructed quality playlist path:', correctPath);
         
-        // Check if the file exists
         if (!fs.existsSync(correctPath)) {
-            console.log('❌ Quality playlist file not found:', correctPath);
             return res.status(404).json({ error: 'Quality playlist not found' });
         }
-        
-        console.log('✅ Quality playlist file found, serving...');
-        
-        // Read and log the content to debug
-        const content = fs.readFileSync(correctPath, 'utf8');
-        console.log('🔍 Quality playlist content preview:', content.substring(0, 200) + '...');
         
         // Set appropriate headers
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
@@ -221,7 +181,6 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
         res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
         res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
         
-        // Serve the file
         res.sendFile(correctPath);
     } catch (error) {
         console.error('Error processing HLS quality playlist:', error);
@@ -229,55 +188,31 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     }
 });
 
-// Debug route to catch any HLS requests that don't match our specific patterns
+// General HLS request handler
 app.get('/hls/*', (req, res, next) => {
-    console.log('🔍 General HLS request caught:', req.path);
-    console.log('🔍 Method:', req.method);
-    console.log('🔍 Headers:', req.headers);
     next();
 });
 
-// HLS video segment proxy middleware - MUST come before static file serving
+// HLS video segment proxy middleware
 app.get('/hls/:quality/:segment', async (req, res) => {
-    console.log('🔍 HLS Video Segment Proxy triggered:', req.path);
-    console.log('🔍 Segment params:', req.params);
-    console.log('🔍 Referer:', req.get('Referer'));
-    
-    // Extract the quality and segment from the URL (e.g., /hls/720p/segment_001.ts -> 720p, segment_001.ts)
-    const quality = req.params.quality; // Should be like "720p"
-    const segmentFile = req.params.segment; // Should be like "segment_001.ts"
-    
-    // Get the session ID to look up the master playlist path
+    const quality = req.params.quality;
+    const segmentFile = req.params.segment;
     const sessionId = req.sessionID || req.ip;
-    console.log('🔍 Segment Session ID:', sessionId);
-    
-    // Look up the master playlist path from our store
     const masterPath = masterPlaylistStore.get(sessionId);
-    console.log('🔍 Stored master path for segment:', masterPath);
     
     if (!masterPath) {
-        console.log('❌ No master playlist path found for segment session');
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
     // Convert master playlist path to directory path
-    // e.g., /hls/Active Bottoming/Active Facedown Introduction/master.m3u8 -> Active Bottoming/Active Facedown Introduction/
     const masterDir = decodeURIComponent(masterPath.replace('/hls/', '').replace('/master.m3u8', ''));
-    console.log('🔍 Segment master directory:', masterDir);
     
     try {
-        
-        // Construct the correct segment path
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
-        console.log('🔍 Constructed segment path:', correctPath);
         
-        // Check if the file exists
         if (!fs.existsSync(correctPath)) {
-            console.log('❌ Video segment file not found:', correctPath);
             return res.status(404).json({ error: 'Video segment not found' });
         }
-        
-        console.log('✅ Video segment file found, serving...');
         
         // Set appropriate headers for video segments
         res.setHeader('Content-Type', 'video/mp2t');
@@ -288,7 +223,6 @@ app.get('/hls/:quality/:segment', async (req, res) => {
         res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
         res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
         
-        // Serve the file
         res.sendFile(correctPath);
     } catch (error) {
         console.error('Error processing HLS video segment:', error);
@@ -311,6 +245,8 @@ app.use('/hls', express.static(HLS_ROOT, {
     },
     maxAge: '1y'
 }));
+
+// ===== API ROUTES =====
 
 // Use API routes
 app.use(routes);
@@ -344,18 +280,12 @@ async function startServer() {
             console.log(`🔐 Authentication: ${APP_CONFIG.password ? 'Enabled' : 'Disabled'}`);
         });
 
-        // Generate missing thumbnails in background (HLS FIRST, then regular videos)
-        console.log('🔄 Starting background thumbnail generation (HLS FIRST, then regular videos)...');
-        console.log('🔄 Background thumbnail generation initiated at:', new Date().toISOString());
+        // Generate missing thumbnails in background
+        console.log('🔄 Starting background thumbnail generation...');
         generateAllMissingThumbnails().then(() => {
-            console.log('✅ Background thumbnail generation completed successfully');
+            console.log('✅ Background thumbnail generation completed');
         }).catch(error => {
-            console.error('❌ Error generating thumbnails:', error);
-            console.error('❌ Thumbnail generation error details:', {
-                message: error.message,
-                stack: error.stack,
-                code: error.code
-            });
+            console.error('❌ Error generating thumbnails:', error.message);
         });
 
         // Build duration cache in background
