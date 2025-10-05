@@ -188,54 +188,48 @@ async function generateHLSThumbnail(masterPlaylistPath) {
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
         console.log('🔄 HLS thumbnail details:');
-        console.log('  📁 HLS root path:', hlsRootPath);
-        console.log('  📁 Relative path:', relativePath);
         console.log('  📁 Safe name:', safeName);
-        console.log('  📁 Thumbnail path:', thumbnailPath);
+        
+        // Check if existing thumbnail needs updating
+        if (fs.existsSync(thumbnailPath)) {
+            const stats = fs.statSync(thumbnailPath);
+            const fileAge = Date.now() - stats.mtime.getTime();
+            const isOldThumbnail = fileAge > 24 * 60 * 60 * 1000; // Older than 24 hours
+            const isSmallThumbnail = stats.size < 5000; // Smaller than 5KB
+            
+            if (isOldThumbnail || isSmallThumbnail) {
+                console.log('🔄 HLS thumbnail needs updating');
+                fs.unlinkSync(thumbnailPath);
+            } else {
+                const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
+                return thumbnailUrl; // Return existing thumbnail
+            }
+        }
         
         // Try to generate thumbnail from first quality segment
-        console.log('🔄 Getting HLS info for:', masterPlaylistPath);
         const hlsInfo = await getHLSInfo(masterPlaylistPath);
-        console.log('🔄 HLS info retrieved:', {
-            isMasterPlaylist: hlsInfo.isMasterPlaylist,
-            totalQualities: hlsInfo.totalQualities,
-            qualities: hlsInfo.qualities.map(q => ({ quality: q.quality, bandwidth: q.bandwidth }))
-        });
         
         if (hlsInfo.qualities.length > 0) {
             const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
-            
-            console.log('🔄 Generating from first quality:', firstQualityPath);
-            console.log('🔄 First quality details:', hlsInfo.qualities[0]);
             
             // Get HLS duration to determine optimal thumbnail time
             let duration = null;
             try {
                 duration = await getHLSDuration(masterPlaylistPath);
-                console.log('🔄 HLS duration:', duration, 'seconds');
             } catch (error) {
-                console.log('⚠️ Could not get HLS duration, using default time');
+                // Use default time if duration unavailable
             }
             
             const optimalTime = getOptimalThumbnailTime(duration);
-            console.log('🔄 Using HLS thumbnail time:', optimalTime, 'seconds');
-            
-            // Ensure seek time is within video duration
             const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
-            console.log('🔄 Final HLS seek time:', seekTime, 'seconds');
-            
-            // Use the same thumbnail generation logic as regular videos
-            console.log('🔄 Using shared thumbnail generation logic for HLS');
             const success = await generateThumbnailAsync(firstQualityPath, thumbnailPath);
             
             if (success && fs.existsSync(thumbnailPath)) {
                 const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-                console.log('✅ HLS thumbnail generated successfully using shared logic!');
-                console.log('  📁 File path:', thumbnailPath);
-                console.log('  📁 URL:', thumbnailUrl);
+                console.log('✅ HLS thumbnail generated successfully!');
                 return thumbnailUrl;
             } else {
-                console.log('❌ HLS thumbnail generation failed using shared logic');
+                console.log('❌ HLS thumbnail generation failed');
                 return null;
             }
         } else {
@@ -321,145 +315,82 @@ function getOptimalThumbnailTime(duration) {
 async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
         console.log('🔄 Generating thumbnail for:', videoPath);
-        console.log('🔄 Thumbnail will be saved to:', thumbnailPath);
-        console.log('🔄 Regular video thumbnail generation started at:', new Date().toISOString());
         
         // Force delete existing thumbnail to ensure regeneration
         if (fs.existsSync(thumbnailPath)) {
-            console.log('🔄 Deleting existing thumbnail to force regeneration');
-            fs.unlinkSync(thumbnailPath);
+            const stats = fs.statSync(thumbnailPath);
+            const fileAge = Date.now() - stats.mtime.getTime();
+            const isOldThumbnail = fileAge > 24 * 60 * 60 * 1000; // Older than 24 hours
+            const isSmallThumbnail = stats.size < 5000; // Smaller than 5KB
+            
+            if (isOldThumbnail || isSmallThumbnail) {
+                console.log('🔄 Updating thumbnail');
+                fs.unlinkSync(thumbnailPath);
+            } else {
+                return true; // Skip regeneration
+            }
         }
         
-        // Get video duration first to determine optimal thumbnail time
+        // Get video duration and determine optimal thumbnail time
         let duration = null;
         try {
             duration = await getVideoDuration(videoPath);
-            console.log('🔄 Video duration:', duration, 'seconds');
         } catch (error) {
-            console.log('⚠️ Could not get video duration, using default time');
+            // Use default time if duration unavailable
         }
         
         const optimalTime = getOptimalThumbnailTime(duration);
-        console.log('🔄 Using thumbnail time:', optimalTime, 'seconds');
-        
-        // Ensure seek time is within video duration and never below 15 seconds
         let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
-        seekTime = Math.max(15, seekTime); // Force minimum 15 seconds
-        console.log('🔄 Final seek time (min 15s):', seekTime, 'seconds');
+        seekTime = Math.max(15, seekTime);
         
         const ffmpegPath = getFFmpegPath();
         
         // Try multiple time points if the first attempt fails
-        // Ensure we never go below 15 seconds and always have meaningful fallbacks
         const timePoints = [seekTime, 15, 20, 25, 30].filter(time => time >= 15 && time <= (duration || 60));
-        
-        // If no valid time points, force at least 15 seconds
         if (timePoints.length === 0) {
             timePoints.push(15);
         }
         
-        console.log('🔄 Time points to try:', timePoints);
-        console.log('🔄 Video duration:', duration, 'seconds');
-        console.log('🔄 Optimal time:', optimalTime, 'seconds');
-        console.log('🔄 Video path:', videoPath);
-        
         // Special handling for very short videos
         if (duration && duration < 15) {
-            console.log('⚠️ Video is shorter than 15 seconds, using middle of video');
             const middleTime = Math.max(1, Math.floor(duration / 2));
-            timePoints.unshift(middleTime); // Add to beginning of array
-            console.log('🔄 Added middle time for short video:', middleTime, 'seconds');
+            timePoints.unshift(middleTime);
         }
         
         for (let i = 0; i < timePoints.length; i++) {
             const currentTime = timePoints[i];
             const timeString = currentTime.toString();
             
-            // Try multiple FFmpeg approaches for better accuracy
             const isHLS = videoPath.includes('.m3u8');
-            const commands = isHLS ? [
-                // HLS-specific approaches - more aggressive seeking
-                // Approach 1: HLS with live seeking disabled and accurate seek
-                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index 0 "${thumbnailPath}"`,
-                // Approach 2: HLS with no live seeking and accurate seek
-                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index -1 "${thumbnailPath}"`,
-                // Approach 3: HLS with custom segment duration and accurate seek
-                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -hls_segment_type mpegts "${thumbnailPath}"`,
-                // Approach 4: HLS with force seeking and accurate seek
-                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -seek2any 1 "${thumbnailPath}"`,
-                // Approach 5: HLS with timestamp handling and accurate seek
-                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`
-            ] : [
-                // Regular video approaches
-                // Approach 1: Input seeking with timestamp handling
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`,
-                // Approach 2: Input seeking with more precise seeking
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -seek2any 0 "${thumbnailPath}"`,
-                // Approach 3: Input seeking with no re-encoding
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -an "${thumbnailPath}"`,
-                // Approach 4: Force keyframe seeking
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -skip_interval 1 "${thumbnailPath}"`,
-                // Approach 5: Input seeking with accurate seek (correct syntax)
-                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 "${thumbnailPath}"`
-            ];
+            const command = isHLS ? 
+                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index -1 "${thumbnailPath}"` :
+                `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 "${thumbnailPath}"`;
             
-            for (let cmdIndex = 0; cmdIndex < commands.length; cmdIndex++) {
-                const command = commands[cmdIndex];
-                console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s (method ${cmdIndex + 1}):`, command);
-                console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
+            console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s`);
+            
+            const startTime = Date.now();
+            try {
+                await execAsync(command);
+                const endTime = Date.now();
+                const executionTime = endTime - startTime;
                 
-                const startTime = Date.now();
-                try {
-                    await execAsync(command);
-                    const endTime = Date.now();
-                    const executionTime = endTime - startTime;
+                // Check if thumbnail was created
+                if (fs.existsSync(thumbnailPath)) {
+                    const stats = fs.statSync(thumbnailPath);
+                    console.log('✅ Thumbnail generated successfully!');
                     
-                    console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
-                    console.log('🔄 Checking if thumbnail file was created...');
-                    
-                    // Verify the thumbnail was created
-                    if (fs.existsSync(thumbnailPath)) {
-                        const stats = fs.statSync(thumbnailPath);
-                        console.log('✅ Thumbnail generated successfully!');
-                        console.log('  📁 File path:', thumbnailPath);
-                        console.log('  📁 File size:', stats.size, 'bytes');
-                        console.log('  ⏱️ Generation time:', executionTime, 'ms');
-                        console.log('  🎯 Used time point:', currentTime, 'seconds');
-                        console.log('  🔧 Used method:', cmdIndex + 1);
-                        
-                        // Additional verification: check if thumbnail is not just a black frame
-                        if (stats.size < 1000) {
-                            console.log('⚠️ Thumbnail file is very small, might be black frame, trying next method...');
-                            continue;
-                        }
-                        
-                        // Verify thumbnail is from the correct time by comparing with a known frame
-                        const verificationResult = await verifyThumbnailTime(videoPath, thumbnailPath, currentTime, ffmpegPath);
-                        if (verificationResult) {
-                            console.log('✅ Thumbnail time verification passed');
-                            return true;
-                        } else {
-                            console.log('⚠️ Thumbnail time verification failed, trying next method...');
-                            continue;
-                        }
-                    } else {
-                        console.log(`❌ Thumbnail file was not created with method ${cmdIndex + 1}, trying next method...`);
+                    // Check if thumbnail is not just a black frame
+                    if (stats.size < 1000) {
+                        console.log('⚠️ Thumbnail too small, trying next time point...');
+                        continue;
                     }
-                } catch (error) {
-                    console.log(`❌ FFmpeg failed with method ${cmdIndex + 1}:`, error.message);
-                    console.log(`❌ FFmpeg error details:`, {
-                        code: error.code,
-                        signal: error.signal,
-                        stderr: error.stderr,
-                        stdout: error.stdout
-                    });
                     
-                    // If this is the last method for this time point, try next time point
-                    if (cmdIndex === commands.length - 1) {
-                        console.log(`❌ All methods failed for time point ${currentTime}s, trying next time point...`);
-                        break;
-                    }
+                    return true;
+                } else {
+                    console.log(`❌ Thumbnail not created, trying next time point...`);
                 }
+            } catch (error) {
+                console.log(`❌ FFmpeg failed, trying next time point...`);
             }
             
             // If we've tried all time points, give up
@@ -477,115 +408,6 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
     }
 }
 
-// Verify thumbnail is from the correct time by comparing with a known frame
-async function verifyThumbnailTime(videoPath, thumbnailPath, expectedTime, ffmpegPath) {
-    try {
-        // For HLS streams, use a more lenient verification approach
-        const isHLS = videoPath.includes('.m3u8');
-        
-        if (isHLS) {
-            // For HLS streams, use a much larger time difference and be more lenient
-            const comparisonTime = Math.max(1, expectedTime - 15); // 15 seconds before expected time
-            const comparisonPath = thumbnailPath.replace('.jpg', '_comparison.jpg');
-            
-            console.log(`🔍 Verifying HLS thumbnail time by comparing with frame at ${comparisonTime}s`);
-            
-            try {
-                // Use HLS-specific parameters for comparison
-                const comparisonCommand = `"${ffmpegPath}" -ss ${comparisonTime} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index 0 "${comparisonPath}"`;
-                await execAsync(comparisonCommand);
-                
-                if (fs.existsSync(comparisonPath)) {
-                    const originalStats = fs.statSync(thumbnailPath);
-                    const comparisonStats = fs.statSync(comparisonPath);
-                    
-                    // For HLS, use a much more lenient threshold
-                    const sizeDifference = Math.abs(originalStats.size - comparisonStats.size);
-                    const sizeRatio = sizeDifference / Math.max(originalStats.size, comparisonStats.size);
-                    
-                    console.log(`🔍 Original thumbnail size: ${originalStats.size} bytes`);
-                    console.log(`🔍 Comparison thumbnail size: ${comparisonStats.size} bytes`);
-                    console.log(`🔍 Size difference ratio: ${sizeRatio}`);
-                    
-                    // Clean up comparison file
-                    fs.unlinkSync(comparisonPath);
-                    
-                    // For HLS, use a much lower threshold (2% instead of 10%)
-                    if (sizeRatio > 0.02) {
-                        console.log('✅ HLS thumbnails appear to be from different times - verification passed');
-                        return true;
-                    } else {
-                        console.log('⚠️ HLS thumbnails appear to be from similar times - trying alternative verification...');
-                        
-                        // Try alternative verification: check if thumbnail is not too small (likely black frame)
-                        if (originalStats.size > 5000) { // At least 5KB
-                            console.log('✅ HLS thumbnail has reasonable size - accepting despite similar comparison');
-                            return true;
-                        } else {
-                            console.log('⚠️ HLS thumbnail is very small - might be black frame, but accepting anyway due to HLS limitations');
-                            return true; // Accept HLS thumbnails even if verification fails
-                        }
-                    }
-                } else {
-                    console.log('⚠️ Could not generate HLS comparison thumbnail for verification - accepting original');
-                    return true; // Accept if we can't verify
-                }
-            } catch (error) {
-                console.log('⚠️ HLS thumbnail verification failed:', error.message, '- accepting anyway');
-                return true; // Accept HLS thumbnails even if verification fails
-            }
-        } else {
-            // For regular videos, use the original logic but with better parameters
-            const comparisonTime = Math.max(1, expectedTime - 10); // 10 seconds before expected time
-            const comparisonPath = thumbnailPath.replace('.jpg', '_comparison.jpg');
-            
-            console.log(`🔍 Verifying regular video thumbnail time by comparing with frame at ${comparisonTime}s`);
-            
-            const comparisonCommand = `"${ffmpegPath}" -ss ${comparisonTime} -i "${videoPath}" -vframes 1 -q:v 2 "${comparisonPath}"`;
-            
-            await execAsync(comparisonCommand);
-            
-            if (fs.existsSync(comparisonPath)) {
-                const originalStats = fs.statSync(thumbnailPath);
-                const comparisonStats = fs.statSync(comparisonPath);
-                
-                // If thumbnails are very similar in size, they might be from the same time
-                const sizeDifference = Math.abs(originalStats.size - comparisonStats.size);
-                const sizeRatio = sizeDifference / Math.max(originalStats.size, comparisonStats.size);
-                
-                console.log(`🔍 Original thumbnail size: ${originalStats.size} bytes`);
-                console.log(`🔍 Comparison thumbnail size: ${comparisonStats.size} bytes`);
-                console.log(`🔍 Size difference ratio: ${sizeRatio}`);
-                
-                // Clean up comparison file
-                fs.unlinkSync(comparisonPath);
-                
-                // If sizes are very different, thumbnails are likely from different times
-                if (sizeRatio > 0.1) { // 10% difference threshold
-                    console.log('✅ Thumbnails appear to be from different times - verification passed');
-                    return true;
-                } else {
-                    console.log('⚠️ Thumbnails appear to be from similar times - trying alternative verification...');
-                    
-                    // Try alternative verification: check if thumbnail is not too small (likely black frame)
-                    if (originalStats.size > 5000) { // At least 5KB
-                        console.log('✅ Thumbnail has reasonable size - accepting despite similar comparison');
-                        return true;
-                    } else {
-                        console.log('⚠️ Thumbnail is very small - might be black frame, verification failed');
-                        return false;
-                    }
-                }
-            } else {
-                console.log('⚠️ Could not generate comparison thumbnail for verification');
-                return true; // Assume it's correct if we can't verify
-            }
-        }
-    } catch (error) {
-        console.log('⚠️ Thumbnail verification failed:', error.message);
-        return true; // Assume it's correct if verification fails
-    }
-}
 
 // Function to scan all directories and find videos without thumbnails
 async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 10000) {
