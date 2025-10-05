@@ -217,7 +217,7 @@ class ModernVideoPlayerBrowser {
             
             // Ensure path is valid
             const validPath = (path === undefined || path === null) ? '' : path;
-            console.log('Loading directory with path:', validPath);
+            // Loading directory
             
             const params = new URLSearchParams({
                 path: validPath,
@@ -410,7 +410,7 @@ class ModernVideoPlayerBrowser {
             }
         } catch (error) {
             // Server status check failed, but that's okay
-            console.log('Server status check failed:', error.message);
+            // Server status check failed
         }
     }
 
@@ -466,7 +466,7 @@ class ModernVideoPlayerBrowser {
     }
 
     createClickablePath(relativePath, fullPath) {
-        console.log('createClickablePath called with:', { relativePath, fullPath });
+        // Create clickable path
         if (!relativePath) return '';
         
         // Split the path into parts
@@ -504,11 +504,11 @@ class ModernVideoPlayerBrowser {
             // If the original text is too long, truncate the clickable path
             // Use a much higher limit to account for HTML tags
             const truncated = clickablePath.substring(0, 200) + '...';
-            console.log('Path truncated:', { original: clickablePath, truncated });
+            // Path truncated for display
             return truncated;
         }
         
-        console.log('Final clickable path:', clickablePath);
+        // Return final clickable path
         return clickablePath;
     }
 
@@ -524,14 +524,13 @@ class ModernVideoPlayerBrowser {
                 // Check if it's an HLS file
                 if (videoData.isHLS && videoData.extension === '.m3u8') {
                     const videoUrl = `/hls/${encodeURIComponent(item.path)}`;
-                    console.log('Constructed HLS URL:', videoUrl, 'for path:', item.path);
-                    console.log('Video data:', videoData);
-                    console.log('Item data:', item);
+                    // Constructed HLS URL for video
+                    // Item data available
                     await this.playHLSVideo(videoUrl, videoData);
                 } else {
                     // Regular video file - clean up any existing HLS instance
                     if (this.hls) {
-                        console.log('Cleaning up HLS instance before playing regular video');
+                        // Cleaning up HLS instance before playing regular video
                         this.hls.destroy();
                         this.hls = null;
                     }
@@ -557,7 +556,7 @@ class ModernVideoPlayerBrowser {
 
                 // Autoplay the video
                 this.video.play().catch(error => {
-                    console.log('Autoplay failed:', error);
+                    // Autoplay failed
                 });
             } else {
                 this.showStatusMessage('Error loading video: ' + videoData.error, 'error');
@@ -571,8 +570,7 @@ class ModernVideoPlayerBrowser {
         try {
             // Check if HLS is supported
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-                console.log('Using HLS.js for HLS playback');
-                console.log('HLS Video URL:', videoUrl);
+                // Using HLS.js for HLS playback
                 
                 // Destroy existing HLS instance if any
                 if (this.hls) {
@@ -703,11 +701,11 @@ class ModernVideoPlayerBrowser {
                 
                 // Enhanced seeking behavior for HLS
                 this.video.addEventListener('seeking', () => {
-                    console.log('Video seeking to:', this.video.currentTime);
+                    // Video seeking
                 });
                 
                 this.video.addEventListener('seeked', () => {
-                    console.log('Video seeked to:', this.video.currentTime);
+                    // Video seeked
                 });
 
                 // Add custom seeking method for better HLS scrubbing
@@ -719,7 +717,7 @@ class ModernVideoPlayerBrowser {
 
                 // Handle HLS events
                 this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    console.log('HLS manifest parsed, available levels:', this.hls.levels.length);
+                    // HLS manifest parsed
                     
                     // Automatically select the best quality (highest bitrate)
                     if (this.hls.levels && this.hls.levels.length > 0) {
@@ -733,7 +731,7 @@ class ModernVideoPlayerBrowser {
                             }
                         }
                         
-                        console.log('Selecting best quality level:', bestLevelIndex, 'bitrate:', bestBitrate);
+                        // Selecting best quality level
                         this.hls.currentLevel = bestLevelIndex;
                     }
                 });
@@ -743,51 +741,51 @@ class ModernVideoPlayerBrowser {
                     if (data.fatal) {
                         this.handleHLSError(data);
                     } else {
-                        console.log('HLS non-fatal error:', data.details);
+                        // HLS non-fatal error
                     }
                 });
 
                 // Handle HLS stream ending properly
                 this.hls.on(Hls.Events.BUFFER_EOS, () => {
-                    console.log('HLS stream ended - all segments loaded');
+                    // HLS stream ended
                     // Don't call endOfStream() if MediaSource is already ended
                     if (this.hls.media && this.hls.media.readyState !== 'ended') {
                         try {
                             if (this.hls.mediaSource && this.hls.mediaSource.readyState === 'open') {
                                 this.hls.mediaSource.endOfStream();
-                                console.log('MediaSource ended successfully');
+                                // MediaSource ended successfully
                             } else {
-                                console.log('MediaSource not in open state, skipping endOfStream()');
+                                // MediaSource not in open state
                             }
                         } catch (error) {
-                            console.log('MediaSource already ended or in invalid state:', error.message);
+                            // MediaSource already ended or in invalid state
                         }
                     } else {
-                        console.log('Media already ended, skipping endOfStream()');
+                        // Media already ended
                     }
                 });
 
                 // Handle MediaSource state changes
                 this.hls.on(Hls.Events.MEDIA_SOURCE_OPENED, () => {
-                    console.log('MediaSource opened successfully');
+                    // MediaSource opened successfully
                 });
 
                 this.hls.on(Hls.Events.MEDIA_SOURCE_ENDED, () => {
-                    console.log('MediaSource ended');
+                    // MediaSource ended
                 });
 
                 // Enhanced seeking events for better scrubbing
                 this.hls.on(Hls.Events.FRAG_LOADING, (event, data) => {
-                    console.log('Loading fragment for seeking:', data.frag.sn, 'at', data.frag.start);
+                    // Loading fragment for seeking
                 });
 
                 this.hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
-                    console.log('Fragment loaded for seeking:', data.frag.sn, 'duration:', data.frag.duration);
+                    // Fragment loaded for seeking
                 });
 
                 // Track HLS progress for resume functionality
                 this.hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-                    console.log('HLS quality switched to level:', data.level);
+                    // HLS quality switched
                     // Quality switching is disabled - always use best quality
                 });
 
@@ -801,7 +799,7 @@ class ModernVideoPlayerBrowser {
 
 
             } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
-                console.log('Using native HLS support (Safari)');
+                // Using native HLS support (Safari)
                 this.video.src = videoUrl;
                 this.video.load();
             } else {
@@ -833,7 +831,7 @@ class ModernVideoPlayerBrowser {
                     if (response.ok) {
                         const originalData = await response.json();
                         if (originalData.isVideo) {
-                            console.log('Falling back to original video:', originalPath);
+                            // Falling back to original video
                             this.video.src = `/videos/${encodeURIComponent(originalPath)}`;
                             this.video.load();
                             this.showStatusMessage('Playing original video file instead', 'info');
@@ -1011,7 +1009,7 @@ class ModernVideoPlayerBrowser {
         try {
             // Get current directory videos
             const pathToUse = this.currentPath || '';
-            console.log('Loading directory for path:', pathToUse);
+            // Loading directory for path
             const response = await fetch(`/api/browse?path=${encodeURIComponent(pathToUse)}`);
             const data = await response.json();
             
@@ -2739,7 +2737,7 @@ class ModernVideoPlayerBrowser {
             try {
                 this.hls.destroy();
             } catch (error) {
-                console.log('HLS cleanup error (non-fatal):', error.message);
+                // HLS cleanup error (non-fatal)
             }
             this.hls = null;
         }
