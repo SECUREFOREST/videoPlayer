@@ -652,7 +652,8 @@ router.post('/api/playlists/:id/add-video', (req, res) => {
         }
 
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
@@ -667,7 +668,7 @@ router.post('/api/playlists/:id/add-video', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true, playlist: playlists[playlistIndex] });
@@ -687,7 +688,8 @@ router.post('/api/playlists/:id/remove-video', (req, res) => {
         }
 
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
@@ -702,7 +704,7 @@ router.post('/api/playlists/:id/remove-video', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true, playlist: playlists[playlistIndex] });
@@ -718,7 +720,8 @@ router.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
         const decodedVideoPath = decodeURIComponent(videoPath);
         
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
@@ -733,7 +736,7 @@ router.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
         
         fs.writeFileSync(
             path.join(__dirname, '..', 'playlists.json'), 
-            JSON.stringify(playlists, null, 2)
+            JSON.stringify({ playlists }, null, 2)
         );
         
         res.json({ success: true, playlist: playlists[playlistIndex] });
