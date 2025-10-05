@@ -13,9 +13,9 @@ async function loadDurationCache() {
     try {
         const data = await fsPromises.readFile(DURATIONS_CACHE_FILE, 'utf8');
         durationCache = JSON.parse(data);
-        console.log(`📊 Loaded duration cache with ${Object.keys(durationCache).length} entries`);
+        // Duration cache loaded
     } catch (error) {
-        console.log('📊 No duration cache found, starting fresh');
+        // No duration cache found, starting fresh
         durationCache = {};
     }
 }
@@ -92,7 +92,7 @@ async function getHLSDuration(masterPlaylistPath) {
                 }
                 return totalDuration;
             } catch (e) {
-                console.log('Could not read quality playlist for duration');
+                // Could not read quality playlist for duration
             }
         }
         
@@ -147,7 +147,7 @@ async function getHLSInfo(masterPlaylistPath) {
 // Generate HLS thumbnail
 async function getHLSThumbnail(masterPlaylistPath) {
     try {
-        console.log('🔍 Getting HLS thumbnail for:', masterPlaylistPath);
+        // Get HLS thumbnail
         
         // Check if thumbnail already exists
         // For HLS files, calculate relative path from hls folder instead of videos folder
@@ -157,8 +157,7 @@ async function getHLSThumbnail(masterPlaylistPath) {
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
-        console.log('🔍 HLS thumbnail path:', thumbnailPath);
-        console.log('🔍 HLS thumbnail exists:', fs.existsSync(thumbnailPath));
+        // Check if thumbnail exists
         
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
@@ -271,10 +270,7 @@ function getThumbnailUrl(videoPath) {
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
-        console.log('🔍 Checking thumbnail for:', videoPath);
-        console.log('🔍 Safe name:', safeName);
-        console.log('🔍 Thumbnail path:', thumbnailPath);
-        console.log('🔍 Thumbnail exists:', fs.existsSync(thumbnailPath));
+        // Check if thumbnail exists
         
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
@@ -451,12 +447,7 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                     const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
                     
-                    console.log(`🔍 Checking HLS thumbnail: ${fullPath}`);
-                    console.log(`🔍 Base path: ${basePath}`);
-                    console.log(`🔍 Relative path: ${relativePath}`);
-                    console.log(`🔍 Safe name: ${safeName}`);
-                    console.log(`🔍 Thumbnail path: ${thumbnailPath}`);
-                    console.log(`🔍 Thumbnail exists: ${fs.existsSync(thumbnailPath)}`);
+                    // Check if HLS thumbnail exists
                     
                     if (!fs.existsSync(thumbnailPath)) {
                         videoList.push({
@@ -480,28 +471,17 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
 // Function to generate all missing thumbnails on startup
 async function generateAllMissingThumbnails() {
     console.log('🔍 Scanning for videos without thumbnails...');
-    console.log('🔍 Startup thumbnail generation started at:', new Date().toISOString());
-    console.log('🔍 Videos root directory:', VIDEOS_ROOT);
     
     try {
         // Always start with HLS directory first
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-        console.log('🔍 HLS root directory:', hlsRootPath);
-        
         let hlsVideosWithoutThumbnails = [];
         if (fs.existsSync(hlsRootPath)) {
-            console.log('🔍 Scanning HLS directory for missing thumbnails (PRIORITY)...');
-            console.log(`🔍 HLS root path: ${hlsRootPath}`);
             hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
-            console.log(`🔍 Found ${hlsVideosWithoutThumbnails.length} HLS files without thumbnails`);
-        } else {
-            console.log('⚠️ HLS directory not found:', hlsRootPath);
         }
         
         // Then scan videos directory
-        console.log('🔍 Scanning videos directory for missing thumbnails...');
         const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
-        console.log('🔍 Found', videosWithoutThumbnails.length, 'regular videos without thumbnails');
         
         // Combine with HLS first, then regular videos
         const allVideosWithoutThumbnails = [...hlsVideosWithoutThumbnails, ...videosWithoutThumbnails];

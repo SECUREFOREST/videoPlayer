@@ -98,7 +98,6 @@ router.get('/api/browse', async (req, res) => {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLSFile(ext) && ext === '.m3u8') {
-                        console.log(`⚠️ Skipping HLS file in videos directory: ${entry.name} - HLS files should be in hls directory`);
                         continue; // Skip this item entirely
                     } else if (isVideoFile(ext)) {
                         // For regular video files, get thumbnail and duration
@@ -106,9 +105,9 @@ router.get('/api/browse', async (req, res) => {
                         item.duration = await getVideoDuration(itemPath);
                     }
                     
-                    // If no thumbnail exists, log it
+                    // Check if thumbnail exists
                     if (!item.thumbnailUrl) {
-                        console.log(`📸 No thumbnail found for: ${entry.name}`);
+                        // No thumbnail available
                     }
                 } catch (error) {
                     console.warn(`Warning: Could not get thumbnail for ${itemPath}:`, error.message);
@@ -258,8 +257,7 @@ router.get('/api/video-info', async (req, res) => {
             return res.status(404).json({ error: 'File not found or inaccessible' });
         }
         
-        // Debug: Log the path being accessed
-        console.log(`Video info requested for: ${relativePath} -> ${videoPath}`);
+        // Get video info for the requested path
 
         if (!isVideoOrHLSFile(ext)) {
             return res.status(400).json({ error: 'File is not a supported video or HLS format' });
@@ -400,7 +398,6 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
         }
     } catch (error) {
         // Skip directories we can't access
-        console.log(`Skipping directory ${dirPath}: ${error.message}`);
     }
 }
 
@@ -850,21 +847,16 @@ router.get('/api/thumbnail-status', (req, res) => {
 // API endpoint to clean up incorrectly named HLS thumbnails
 router.post('/api/cleanup-hls-thumbnails', async (req, res) => {
     try {
-        console.log('🧹 Cleaning up incorrectly named HLS thumbnails...');
-        
         const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
         const files = await fsPromises.readdir(thumbnailsDir);
         
         let cleaned = 0;
         const incorrectFiles = files.filter(file => file.startsWith('.._hls_'));
         
-        console.log(`🔍 Found ${incorrectFiles.length} incorrectly named HLS thumbnails`);
-        
         for (const file of incorrectFiles) {
             const filePath = path.join(thumbnailsDir, file);
             try {
                 await fsPromises.unlink(filePath);
-                console.log(`🗑️ Deleted incorrect thumbnail: ${file}`);
                 cleaned++;
             } catch (error) {
                 console.error(`Error deleting ${file}:`, error.message);
@@ -889,7 +881,6 @@ router.post('/api/cleanup-hls-thumbnails', async (req, res) => {
 // API endpoint to clean up and regenerate HLS thumbnails
 router.post('/api/fix-hls-thumbnails', async (req, res) => {
     try {
-        console.log('🔧 Fixing HLS thumbnails (cleanup + regenerate)...');
         
         // Step 1: Clean up incorrectly named thumbnails
         const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
@@ -901,14 +892,12 @@ router.post('/api/fix-hls-thumbnails', async (req, res) => {
             const filePath = path.join(thumbnailsDir, file);
             try {
                 await fsPromises.unlink(filePath);
-                console.log(`🗑️ Deleted incorrect thumbnail: ${file}`);
                 cleaned++;
             } catch (error) {
                 console.error(`Error deleting ${file}:`, error.message);
             }
         }
         
-        console.log(`🧹 Cleaned up ${cleaned} incorrectly named thumbnails`);
         
         // Step 2: Generate HLS thumbnails with correct names
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -931,21 +920,17 @@ router.post('/api/fix-hls-thumbnails', async (req, res) => {
             });
         }
         
-        console.log(`📸 Found ${hlsVideosWithoutThumbnails.length} HLS videos without thumbnails`);
         
         let generated = 0;
         let failed = 0;
         
         for (const video of hlsVideosWithoutThumbnails) {
             try {
-                console.log(`🔄 Generating thumbnail for HLS: ${video.name}`);
                 const result = await generateHLSThumbnail(video.path);
                 if (result && typeof result === 'string') {
                     generated++;
-                    console.log(`✅ Generated thumbnail for: ${video.name}`);
                 } else {
                     failed++;
-                    console.log(`❌ Failed to generate thumbnail for: ${video.name}`);
                 }
             } catch (error) {
                 console.error(`Error generating thumbnail for ${video.name}:`, error.message);
@@ -973,7 +958,6 @@ router.post('/api/fix-hls-thumbnails', async (req, res) => {
 // API endpoint to generate HLS thumbnails
 router.post('/api/generate-hls-thumbnails', async (req, res) => {
     try {
-        console.log('🔄 Manually triggering HLS thumbnail generation...');
         
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         
@@ -995,21 +979,17 @@ router.post('/api/generate-hls-thumbnails', async (req, res) => {
             });
         }
         
-        console.log(`📸 Found ${hlsVideosWithoutThumbnails.length} HLS videos without thumbnails`);
         
         let generated = 0;
         let failed = 0;
         
         for (const video of hlsVideosWithoutThumbnails) {
             try {
-                console.log(`🔄 Generating thumbnail for HLS: ${video.name}`);
                 const result = await generateHLSThumbnail(video.path);
                 if (result && typeof result === 'string') {
                     generated++;
-                    console.log(`✅ Generated thumbnail for: ${video.name}`);
                 } else {
                     failed++;
-                    console.log(`❌ Failed to generate thumbnail for: ${video.name}`);
                 }
             } catch (error) {
                 console.error(`Error generating thumbnail for ${video.name}:`, error.message);
