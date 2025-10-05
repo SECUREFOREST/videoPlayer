@@ -593,7 +593,7 @@ class ModernVideoPlayerBrowser {
                     debug: true,  // Enable debug mode to get more detailed error info
                     enableWorker: true,
                     
-                    // Buffer management for memory optimization
+                    // Buffer management for memory optimization and smooth seeking
                     backBufferLength: 30, // Reduced for memory efficiency
                     maxBufferLength: 60, // Limit buffer size
                     maxMaxBufferLength: 120, // Maximum buffer limit
@@ -601,10 +601,21 @@ class ModernVideoPlayerBrowser {
                     maxBufferHole: 0.1, // Reduce buffer holes
                     highBufferWatchdogPeriod: 2, // Monitor buffer health
                     
+                    // Enhanced buffer management for seeking
+                    maxBufferStarvationDelay: 1, // Minimal delay for buffer starvation
+                    
                     // Seeking and playback optimization
                     nudgeOffset: 0.1, // Fine-tune seeking
                     nudgeMaxRetry: 3, // Retry failed seeks
                     maxFragLookUpTolerance: 0.25, // Fragment lookup tolerance
+                    
+                    // Enhanced seeking for smooth scrubbing
+                    seekHole: 0.1, // Allow seeking within segments
+                    seekMode: 'accurate', // Use accurate seeking mode
+                    seekRangeStart: 0, // Allow seeking from start
+                    seekRangeEnd: Infinity, // Allow seeking to end
+                    seekToStart: true, // Allow seeking to start
+                    seekToEnd: true, // Allow seeking to end
                     
                     // Live streaming optimization
                     liveSyncDurationCount: 3, // Live sync optimization
@@ -698,6 +709,21 @@ class ModernVideoPlayerBrowser {
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
                 
+                // Enhanced seeking behavior for HLS
+                this.video.addEventListener('seeking', () => {
+                    console.log('Video seeking to:', this.video.currentTime);
+                });
+                
+                this.video.addEventListener('seeked', () => {
+                    console.log('Video seeked to:', this.video.currentTime);
+                });
+
+                // Add custom seeking method for better HLS scrubbing
+                this.video.addEventListener('timeupdate', () => {
+                    // Update progress display more frequently for smoother scrubbing
+                    this.updateVideoInfo();
+                });
+                
 
                 // Handle HLS events
                 this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -756,6 +782,15 @@ class ModernVideoPlayerBrowser {
 
                 this.hls.on(Hls.Events.MEDIA_SOURCE_ENDED, () => {
                     console.log('MediaSource ended');
+                });
+
+                // Enhanced seeking events for better scrubbing
+                this.hls.on(Hls.Events.FRAG_LOADING, (event, data) => {
+                    console.log('Loading fragment for seeking:', data.frag.sn, 'at', data.frag.start);
+                });
+
+                this.hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+                    console.log('Fragment loaded for seeking:', data.frag.sn, 'duration:', data.frag.duration);
                 });
 
                 // Track HLS progress for resume functionality
