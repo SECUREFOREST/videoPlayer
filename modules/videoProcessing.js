@@ -474,6 +474,39 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
     return videoList;
 }
 
+// Function to force regenerate all thumbnails (delete existing and regenerate)
+async function forceRegenerateAllThumbnails() {
+    console.log('🔄 Force regenerating ALL thumbnails with new logic...');
+    console.log('🔄 Force regeneration started at:', new Date().toISOString());
+    
+    try {
+        const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
+        
+        // Delete all existing thumbnails
+        if (fs.existsSync(thumbnailsDir)) {
+            const files = await fsPromises.readdir(thumbnailsDir);
+            const thumbnailFiles = files.filter(file => file.endsWith('.jpg'));
+            
+            console.log(`🗑️ Deleting ${thumbnailFiles.length} existing thumbnails...`);
+            for (const file of thumbnailFiles) {
+                try {
+                    await fsPromises.unlink(path.join(thumbnailsDir, file));
+                    console.log(`🗑️ Deleted: ${file}`);
+                } catch (error) {
+                    console.error(`Error deleting ${file}:`, error.message);
+                }
+            }
+        }
+        
+        // Now generate all thumbnails with new logic
+        await generateAllMissingThumbnails();
+        
+        console.log('✅ Force regeneration complete');
+    } catch (error) {
+        console.error('❌ Error in force regeneration:', error);
+    }
+}
+
 // Function to generate all missing thumbnails on startup
 async function generateAllMissingThumbnails() {
     console.log('🔍 Scanning for videos without thumbnails...');
@@ -718,6 +751,7 @@ module.exports = {
     generateThumbnailAsync,
     findVideosWithoutThumbnails,
     generateAllMissingThumbnails,
+    forceRegenerateAllThumbnails,
     buildDurationCache,
     durationCache
 };
