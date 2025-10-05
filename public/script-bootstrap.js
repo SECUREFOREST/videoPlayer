@@ -328,7 +328,7 @@ class ModernVideoPlayerBrowser {
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ?
                 `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` :
-                `<span class="file-size">${size}</span>`
+                (item.isVideo ? `<span class="file-size">${item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown'}</span>` : `<span class="file-size">${size}</span>`)
             }
                     <span class="file-date">${date}</span>
                 </div>
@@ -365,7 +365,7 @@ class ModernVideoPlayerBrowser {
             <div class="file-icon">${icon}</div>
             <div class="file-name">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
             <div class="file-details">
-                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size)}
+                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo ? (item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown') : size)}
             </div>
         `;
 
@@ -1194,7 +1194,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo && item.duration ? `Duration: ${this.formatTime(item.duration)}` : size}
+                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo ? (item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown') : size}
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath || item.path}">
                     ${this.createClickablePath(item.relativePath || item.path, item.path)}
@@ -1501,7 +1501,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${video.name}">${this.formatFileName(video.name, video.isVideo, video.isHLS)}</div>
                 <div class="file-details" style="font-size: 0.8rem; color: #9CA3AF;">
-                    ${video.isVideo && video.duration ? `Duration: ${this.formatTime(video.duration)}` : this.formatFileSize(video.size)}
+                    ${video.isVideo ? (video.duration ? `Duration: ${this.formatTime(video.duration)}` : 'Duration: Unknown') : this.formatFileSize(video.size)}
                 </div>
                 <button class="btn btn-sm btn-danger position-absolute" 
                         style="top: 8px; right: 8px; z-index: 10;"
@@ -1720,7 +1720,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;">${this.formatFileName(favorite.name, favorite.isVideo, favorite.isHLS)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo && favorite.duration ? ` • Duration: ${this.formatTime(favorite.duration)}` : ''}
+                    ${favorite.isVideo ? 'Video' : 'File'}${favorite.isVideo ? (favorite.duration ? ` • Duration: ${this.formatTime(favorite.duration)}` : ' • Duration: Unknown') : ''}
                 </div>
             `;
 
