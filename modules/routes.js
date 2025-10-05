@@ -819,6 +819,129 @@ router.get('/api/thumbnail-status', (req, res) => {
     }
 });
 
+// API endpoint to clean up incorrectly named HLS thumbnails
+router.post('/api/cleanup-hls-thumbnails', async (req, res) => {
+    try {
+        console.log('🧹 Cleaning up incorrectly named HLS thumbnails...');
+        
+        const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
+        const files = await fsPromises.readdir(thumbnailsDir);
+        
+        let cleaned = 0;
+        const incorrectFiles = files.filter(file => file.startsWith('.._hls_'));
+        
+        console.log(`🔍 Found ${incorrectFiles.length} incorrectly named HLS thumbnails`);
+        
+        for (const file of incorrectFiles) {
+            const filePath = path.join(thumbnailsDir, file);
+            try {
+                await fsPromises.unlink(filePath);
+                console.log(`🗑️ Deleted incorrect thumbnail: ${file}`);
+                cleaned++;
+            } catch (error) {
+                console.error(`Error deleting ${file}:`, error.message);
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `Cleaned up ${cleaned} incorrectly named HLS thumbnails`,
+            cleaned: cleaned
+        });
+        
+    } catch (error) {
+        console.error('Error cleaning up HLS thumbnails:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to clean up HLS thumbnails' 
+        });
+    }
+});
+
+// API endpoint to clean up and regenerate HLS thumbnails
+router.post('/api/fix-hls-thumbnails', async (req, res) => {
+    try {
+        console.log('🔧 Fixing HLS thumbnails (cleanup + regenerate)...');
+        
+        // Step 1: Clean up incorrectly named thumbnails
+        const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
+        const files = await fsPromises.readdir(thumbnailsDir);
+        const incorrectFiles = files.filter(file => file.startsWith('.._hls_'));
+        
+        let cleaned = 0;
+        for (const file of incorrectFiles) {
+            const filePath = path.join(thumbnailsDir, file);
+            try {
+                await fsPromises.unlink(filePath);
+                console.log(`🗑️ Deleted incorrect thumbnail: ${file}`);
+                cleaned++;
+            } catch (error) {
+                console.error(`Error deleting ${file}:`, error.message);
+            }
+        }
+        
+        console.log(`🧹 Cleaned up ${cleaned} incorrectly named thumbnails`);
+        
+        // Step 2: Generate HLS thumbnails with correct names
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        
+        if (!fs.existsSync(hlsRootPath)) {
+            return res.json({ 
+                success: false, 
+                message: 'HLS directory not found' 
+            });
+        }
+        
+        const hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
+        
+        if (hlsVideosWithoutThumbnails.length === 0) {
+            return res.json({ 
+                success: true, 
+                message: 'All HLS videos already have correct thumbnails',
+                cleaned: cleaned,
+                generated: 0
+            });
+        }
+        
+        console.log(`📸 Found ${hlsVideosWithoutThumbnails.length} HLS videos without thumbnails`);
+        
+        let generated = 0;
+        let failed = 0;
+        
+        for (const video of hlsVideosWithoutThumbnails) {
+            try {
+                console.log(`🔄 Generating thumbnail for HLS: ${video.name}`);
+                const result = await generateHLSThumbnail(video.path);
+                if (result && typeof result === 'string') {
+                    generated++;
+                    console.log(`✅ Generated thumbnail for: ${video.name}`);
+                } else {
+                    failed++;
+                    console.log(`❌ Failed to generate thumbnail for: ${video.name}`);
+                }
+            } catch (error) {
+                console.error(`Error generating thumbnail for ${video.name}:`, error.message);
+                failed++;
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            message: `HLS thumbnail fix complete: ${cleaned} cleaned, ${generated} generated, ${failed} failed`,
+            cleaned: cleaned,
+            generated: generated,
+            failed: failed
+        });
+        
+    } catch (error) {
+        console.error('Error fixing HLS thumbnails:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fix HLS thumbnails' 
+        });
+    }
+});
+
 // API endpoint to generate HLS thumbnails
 router.post('/api/generate-hls-thumbnails', async (req, res) => {
     try {
