@@ -206,6 +206,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
 // HLS video segment proxy middleware - MUST come before static file serving
 app.get('/hls/:quality/:segment', async (req, res) => {
     console.log('🔍 HLS Video Segment Proxy triggered:', req.path);
+    console.log('🔍 Segment params:', req.params);
     console.log('🔍 Referer:', req.get('Referer'));
     
     // Extract the quality and segment from the URL (e.g., /hls/720p/segment_001.ts -> 720p, segment_001.ts)
@@ -234,11 +235,15 @@ app.get('/hls/:quality/:segment', async (req, res) => {
         
         // Construct the correct segment path
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
+        console.log('🔍 Constructed segment path:', correctPath);
         
         // Check if the file exists
         if (!fs.existsSync(correctPath)) {
+            console.log('❌ Video segment file not found:', correctPath);
             return res.status(404).json({ error: 'Video segment not found' });
         }
+        
+        console.log('✅ Video segment file found, serving...');
         
         // Set appropriate headers for video segments
         res.setHeader('Content-Type', 'video/mp2t');
