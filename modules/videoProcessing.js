@@ -178,6 +178,7 @@ async function getHLSThumbnail(masterPlaylistPath) {
 async function generateHLSThumbnail(masterPlaylistPath) {
     try {
         console.log('🔄 Generating HLS thumbnail for:', masterPlaylistPath);
+        console.log('🔄 HLS thumbnail generation started at:', new Date().toISOString());
         
         // For HLS files, calculate relative path from hls folder instead of videos folder
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -186,12 +187,26 @@ async function generateHLSThumbnail(masterPlaylistPath) {
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
         
+        console.log('🔄 HLS thumbnail details:');
+        console.log('  📁 HLS root path:', hlsRootPath);
+        console.log('  📁 Relative path:', relativePath);
+        console.log('  📁 Safe name:', safeName);
+        console.log('  📁 Thumbnail path:', thumbnailPath);
+        
         // Try to generate thumbnail from first quality segment
+        console.log('🔄 Getting HLS info for:', masterPlaylistPath);
         const hlsInfo = await getHLSInfo(masterPlaylistPath);
+        console.log('🔄 HLS info retrieved:', {
+            isMasterPlaylist: hlsInfo.isMasterPlaylist,
+            totalQualities: hlsInfo.totalQualities,
+            qualities: hlsInfo.qualities.map(q => ({ quality: q.quality, bandwidth: q.bandwidth }))
+        });
+        
         if (hlsInfo.qualities.length > 0) {
             const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
             
             console.log('🔄 Generating from first quality:', firstQualityPath);
+            console.log('🔄 First quality details:', hlsInfo.qualities[0]);
             
             // Get HLS duration to determine optimal thumbnail time
             let duration = null;
@@ -215,14 +230,29 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             const command = `"${ffmpegPath}" -i "${firstQualityPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
             
             console.log('🔄 FFmpeg command:', command);
+            console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
+            
+            const startTime = Date.now();
             await execAsync(command);
+            const endTime = Date.now();
+            const executionTime = endTime - startTime;
+            
+            console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
+            console.log('🔄 Checking if thumbnail file was created...');
             
             if (fs.existsSync(thumbnailPath)) {
+                const stats = fs.statSync(thumbnailPath);
                 const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-                console.log('✅ HLS thumbnail generated:', thumbnailUrl);
+                console.log('✅ HLS thumbnail generated successfully!');
+                console.log('  📁 File path:', thumbnailPath);
+                console.log('  📁 File size:', stats.size, 'bytes');
+                console.log('  📁 URL:', thumbnailUrl);
+                console.log('  ⏱️ Generation time:', executionTime, 'ms');
                 return thumbnailUrl;
             } else {
                 console.log('❌ HLS thumbnail generation failed - file not created');
+                console.log('  📁 Expected path:', thumbnailPath);
+                console.log('  📁 Path exists:', fs.existsSync(thumbnailPath));
                 return null;
             }
         } else {
@@ -231,6 +261,12 @@ async function generateHLSThumbnail(masterPlaylistPath) {
         }
     } catch (error) {
         console.error('❌ Error generating HLS thumbnail:', error);
+        console.error('❌ Error details:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            path: masterPlaylistPath
+        });
         return null;
     }
 }
@@ -410,11 +446,17 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
 // Function to generate all missing thumbnails on startup
 async function generateAllMissingThumbnails() {
     console.log('🔍 Scanning for videos without thumbnails...');
+    console.log('🔍 Startup thumbnail generation started at:', new Date().toISOString());
+    console.log('🔍 Videos root directory:', VIDEOS_ROOT);
     
     try {
         // Scan both videos directory and HLS directory
+        console.log('🔍 Scanning videos directory for missing thumbnails...');
         const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
+        console.log('🔍 Found', videosWithoutThumbnails.length, 'regular videos without thumbnails');
+        
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        console.log('🔍 HLS root directory:', hlsRootPath);
         
         let hlsVideosWithoutThumbnails = [];
         if (fs.existsSync(hlsRootPath)) {
