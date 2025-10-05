@@ -205,9 +205,13 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             const optimalTime = getOptimalThumbnailTime(duration);
             console.log('🔄 Using HLS thumbnail time:', optimalTime, 'seconds');
             
+            // Ensure seek time is within video duration
+            const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+            console.log('🔄 Final HLS seek time:', seekTime, 'seconds');
+            
             // Generate thumbnail from first segment
             const ffmpegPath = getFFmpegPath();
-            const timeString = `${Math.floor(optimalTime / 60)}:${(optimalTime % 60).toString().padStart(2, '0')}:01`;
+            const timeString = seekTime.toString();
             const command = `"${ffmpegPath}" -i "${firstQualityPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
             
             console.log('🔄 FFmpeg command:', command);
@@ -274,8 +278,12 @@ function getOptimalThumbnailTime(duration) {
         return 30;
     } else if (duration >= 120) { // 2 minutes or longer
         return 20;
+    } else if (duration >= 30) { // 30 seconds to 2 minutes
+        return 10;
+    } else if (duration >= 10) { // 10-30 seconds
+        return Math.max(1, Math.floor(duration / 2)); // Use middle of video
     } else {
-        return 10; // Less than 2 minutes
+        return Math.max(1, Math.floor(duration / 2)); // For very short videos, use middle
     }
 }
 
@@ -297,8 +305,12 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         const optimalTime = getOptimalThumbnailTime(duration);
         console.log('🔄 Using thumbnail time:', optimalTime, 'seconds');
         
+        // Ensure seek time is within video duration
+        const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+        console.log('🔄 Final seek time:', seekTime, 'seconds');
+        
         const ffmpegPath = getFFmpegPath();
-        const timeString = `${Math.floor(optimalTime / 60)}:${(optimalTime % 60).toString().padStart(2, '0')}:01`;
+        const timeString = seekTime.toString();
         const command = `"${ffmpegPath}" -i "${videoPath}" -ss ${timeString} -vframes 1 -q:v 2 "${thumbnailPath}"`;
         
         console.log('🔄 FFmpeg command:', command);
