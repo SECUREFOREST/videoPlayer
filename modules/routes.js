@@ -260,7 +260,8 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
 router.get('/api/playlists', async (req, res) => {
     try {
         const playlistsData = await fsPromises.readFile(path.join(__dirname, '..', 'playlists.json'), 'utf8');
-        const playlists = JSON.parse(playlistsData);
+        const playlistsJson = JSON.parse(playlistsData);
+        const playlists = playlistsJson.playlists || [];
         
         // Add thumbnail URLs to videos in playlists
         for (const playlist of playlists) {
@@ -321,7 +322,8 @@ router.post('/api/playlists', async (req, res) => {
 router.get('/api/favorites', async (req, res) => {
     try {
         const favoritesData = await fsPromises.readFile(path.join(__dirname, '..', 'favorites.json'), 'utf8');
-        const favorites = JSON.parse(favoritesData);
+        const favoritesJson = JSON.parse(favoritesData);
+        const favorites = favoritesJson.favorites || [];
         
         // Add thumbnail URLs to favorites
         for (const favorite of favorites) {

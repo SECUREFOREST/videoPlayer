@@ -112,5 +112,6 @@ module.exports = {
     getVideoMimeType,
     ensureDirectoryExists,
     readFileIfExists,
-    writeFileIfNotExists
+    writeFileIfNotExists,
+    VIDEOS_ROOT
 };
