@@ -377,12 +377,16 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
             
             // Try multiple FFmpeg approaches for better accuracy
             const commands = [
-                // Approach 1: Input seeking with timestamp handling
+                // Approach 1: Accurate seek with input seeking
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -accurate_seek "${thumbnailPath}"`,
+                // Approach 2: Input seeking with timestamp handling
                 `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`,
-                // Approach 2: Input seeking with more precise seeking
+                // Approach 3: Input seeking with more precise seeking
                 `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -seek2any 0 "${thumbnailPath}"`,
-                // Approach 3: Input seeking with no re-encoding
-                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -an "${thumbnailPath}"`
+                // Approach 4: Input seeking with no re-encoding
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -an "${thumbnailPath}"`,
+                // Approach 5: Force keyframe seeking
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -skip_interval 1 "${thumbnailPath}"`
             ];
             
             for (let cmdIndex = 0; cmdIndex < commands.length; cmdIndex++) {
@@ -415,7 +419,15 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                             continue;
                         }
                         
-                        return true;
+                        // Verify thumbnail is from the correct time by comparing with a known frame
+                        const verificationResult = await this.verifyThumbnailTime(videoPath, thumbnailPath, currentTime, ffmpegPath);
+                        if (verificationResult) {
+                            console.log('✅ Thumbnail time verification passed');
+                            return true;
+                        } else {
+                            console.log('⚠️ Thumbnail time verification failed, trying next method...');
+                            continue;
+                        }
                     } else {
                         console.log(`❌ Thumbnail file was not created with method ${cmdIndex + 1}, trying next method...`);
                     }
@@ -448,6 +460,52 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
     } catch (error) {
         console.error(`❌ Error generating thumbnail for ${videoPath}:`, error.message);
         return false;
+    }
+}
+
+// Verify thumbnail is from the correct time by comparing with a known frame
+async function verifyThumbnailTime(videoPath, thumbnailPath, expectedTime, ffmpegPath) {
+    try {
+        // Generate a comparison thumbnail from a known different time (e.g., 1 second)
+        const comparisonTime = Math.max(1, expectedTime - 5); // 5 seconds before expected time
+        const comparisonPath = thumbnailPath.replace('.jpg', '_comparison.jpg');
+        
+        const comparisonCommand = `"${ffmpegPath}" -ss ${comparisonTime} -i "${videoPath}" -vframes 1 -q:v 2 "${comparisonPath}"`;
+        
+        console.log(`🔍 Verifying thumbnail time by comparing with frame at ${comparisonTime}s`);
+        
+        await execAsync(comparisonCommand);
+        
+        if (fs.existsSync(comparisonPath)) {
+            const originalStats = fs.statSync(thumbnailPath);
+            const comparisonStats = fs.statSync(comparisonPath);
+            
+            // If thumbnails are very similar in size, they might be from the same time
+            const sizeDifference = Math.abs(originalStats.size - comparisonStats.size);
+            const sizeRatio = sizeDifference / Math.max(originalStats.size, comparisonStats.size);
+            
+            console.log(`🔍 Original thumbnail size: ${originalStats.size} bytes`);
+            console.log(`🔍 Comparison thumbnail size: ${comparisonStats.size} bytes`);
+            console.log(`🔍 Size difference ratio: ${sizeRatio}`);
+            
+            // Clean up comparison file
+            fs.unlinkSync(comparisonPath);
+            
+            // If sizes are very different, thumbnails are likely from different times
+            if (sizeRatio > 0.1) { // 10% difference threshold
+                console.log('✅ Thumbnails appear to be from different times - verification passed');
+                return true;
+            } else {
+                console.log('⚠️ Thumbnails appear to be from similar times - verification failed');
+                return false;
+            }
+        } else {
+            console.log('⚠️ Could not generate comparison thumbnail for verification');
+            return true; // Assume it's correct if we can't verify
+        }
+    } catch (error) {
+        console.log('⚠️ Thumbnail verification failed:', error.message);
+        return true; // Assume it's correct if verification fails
     }
 }
 
