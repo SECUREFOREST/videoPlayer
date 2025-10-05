@@ -336,14 +336,25 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         const optimalTime = getOptimalThumbnailTime(duration);
         console.log('🔄 Using thumbnail time:', optimalTime, 'seconds');
         
-        // Ensure seek time is within video duration
-        const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
-        console.log('🔄 Final seek time:', seekTime, 'seconds');
+        // Ensure seek time is within video duration and never below 15 seconds
+        let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
+        seekTime = Math.max(15, seekTime); // Force minimum 15 seconds
+        console.log('🔄 Final seek time (min 15s):', seekTime, 'seconds');
         
         const ffmpegPath = getFFmpegPath();
         
         // Try multiple time points if the first attempt fails
-        const timePoints = [seekTime, 15, 20, 25, 30].filter(time => time <= (duration || 60));
+        // Ensure we never go below 15 seconds and always have meaningful fallbacks
+        const timePoints = [seekTime, 15, 20, 25, 30].filter(time => time >= 15 && time <= (duration || 60));
+        
+        // If no valid time points, force at least 15 seconds
+        if (timePoints.length === 0) {
+            timePoints.push(15);
+        }
+        
+        console.log('🔄 Time points to try:', timePoints);
+        console.log('🔄 Video duration:', duration, 'seconds');
+        console.log('🔄 Optimal time:', optimalTime, 'seconds');
         
         for (let i = 0; i < timePoints.length; i++) {
             const currentTime = timePoints[i];
