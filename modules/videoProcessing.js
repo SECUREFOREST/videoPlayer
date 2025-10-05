@@ -447,11 +447,13 @@ async function generateAllMissingThumbnails() {
                 
                 // For HLS files, use the same logic as generateHLSThumbnail
                 if (video.isHLS && video.extension === '.m3u8') {
-                    const success = await generateHLSThumbnail(video.path);
-                    if (success) {
+                    const result = await generateHLSThumbnail(video.path);
+                    if (result && typeof result === 'string') {
                         generated++;
+                        console.log(`✅ Generated HLS thumbnail for: ${video.name}`);
                     } else {
                         failed++;
+                        console.log(`❌ Failed to generate HLS thumbnail for: ${video.name}`);
                     }
                 } else {
                     // Regular video file

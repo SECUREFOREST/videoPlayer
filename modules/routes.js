@@ -852,8 +852,8 @@ router.post('/api/generate-hls-thumbnails', async (req, res) => {
         for (const video of hlsVideosWithoutThumbnails) {
             try {
                 console.log(`🔄 Generating thumbnail for HLS: ${video.name}`);
-                const success = await generateHLSThumbnail(video.path);
-                if (success) {
+                const result = await generateHLSThumbnail(video.path);
+                if (result && typeof result === 'string') {
                     generated++;
                     console.log(`✅ Generated thumbnail for: ${video.name}`);
                 } else {
