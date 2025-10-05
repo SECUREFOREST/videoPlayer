@@ -32,7 +32,12 @@ async function saveDurationCache() {
 // Get video duration using cache first, then ffprobe if needed
 async function getVideoDuration(videoPath) {
     // Check cache first
-    const relativePath = path.relative(VIDEOS_ROOT, videoPath);
+    // For HLS files, use hls folder as base, otherwise use videos folder
+    const ext = path.extname(videoPath).toLowerCase();
+    const isHLS = ext === '.m3u8';
+    const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+    const relativePath = path.relative(basePath, videoPath);
+    
     if (durationCache[relativePath]) {
         return durationCache[relativePath];
     }
@@ -143,7 +148,9 @@ async function getHLSInfo(masterPlaylistPath) {
 async function getHLSThumbnail(masterPlaylistPath) {
     try {
         // Check if thumbnail already exists
-        const relativePath = path.relative(VIDEOS_ROOT, masterPlaylistPath);
+        // For HLS files, calculate relative path from hls folder instead of videos folder
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        const relativePath = path.relative(hlsRootPath, masterPlaylistPath);
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
@@ -386,7 +393,10 @@ async function buildDurationCache() {
         
         for (const video of allVideos) {
             try {
-                const relativePath = path.relative(VIDEOS_ROOT, video.path);
+                // For HLS files, use hls folder as base, otherwise use videos folder
+                const isHLS = video.isHLS && video.extension === '.m3u8';
+                const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+                const relativePath = path.relative(basePath, video.path);
                 
                 // Check if already in cache
                 if (durationCache[relativePath]) {

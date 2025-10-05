@@ -70,9 +70,11 @@ router.get('/api/browse', async (req, res) => {
                     const hlsStats = await fsPromises.stat(masterPlaylistPath);
                     if (hlsStats.isFile()) {
                         // Add HLS version as a separate item
+                        // Use the same relative path structure as the original video for consistency
+                        const hlsRelativePath = relativeItemPath.replace(ext, '') + '/master.m3u8';
                         const hlsItem = {
                             name: entry.name.replace(ext, '') + ' (HLS)',
-                            path: path.relative(hlsRootPath, masterPlaylistPath),
+                            path: hlsRelativePath,
                             size: hlsStats.size,
                             modified: hlsStats.mtime,
                             extension: '.m3u8',
