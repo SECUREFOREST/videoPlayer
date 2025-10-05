@@ -324,6 +324,12 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         console.log('🔄 Thumbnail will be saved to:', thumbnailPath);
         console.log('🔄 Regular video thumbnail generation started at:', new Date().toISOString());
         
+        // Force delete existing thumbnail to ensure regeneration
+        if (fs.existsSync(thumbnailPath)) {
+            console.log('🔄 Deleting existing thumbnail to force regeneration');
+            fs.unlinkSync(thumbnailPath);
+        }
+        
         // Get video duration first to determine optimal thumbnail time
         let duration = null;
         try {
@@ -368,53 +374,72 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         for (let i = 0; i < timePoints.length; i++) {
             const currentTime = timePoints[i];
             const timeString = currentTime.toString();
-            // Use more robust FFmpeg command with input seeking for better accuracy
-            // Add -avoid_negative_ts make_zero to handle timestamp issues
-            const command = `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`;
             
-            console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s:`, command);
-            console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
+            // Try multiple FFmpeg approaches for better accuracy
+            const commands = [
+                // Approach 1: Input seeking with timestamp handling
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -avoid_negative_ts make_zero "${thumbnailPath}"`,
+                // Approach 2: Input seeking with more precise seeking
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -seek2any 0 "${thumbnailPath}"`,
+                // Approach 3: Input seeking with no re-encoding
+                `"${ffmpegPath}" -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -an "${thumbnailPath}"`
+            ];
             
-            const startTime = Date.now();
-            try {
-                await execAsync(command);
-                const endTime = Date.now();
-                const executionTime = endTime - startTime;
+            for (let cmdIndex = 0; cmdIndex < commands.length; cmdIndex++) {
+                const command = commands[cmdIndex];
+                console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s (method ${cmdIndex + 1}):`, command);
+                console.log('🔄 Starting FFmpeg execution at:', new Date().toISOString());
                 
-                console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
-                console.log('🔄 Checking if thumbnail file was created...');
-                
-                // Verify the thumbnail was created
-                if (fs.existsSync(thumbnailPath)) {
-                    const stats = fs.statSync(thumbnailPath);
-                    console.log('✅ Thumbnail generated successfully!');
-                    console.log('  📁 File path:', thumbnailPath);
-                    console.log('  📁 File size:', stats.size, 'bytes');
-                    console.log('  ⏱️ Generation time:', executionTime, 'ms');
-                    console.log('  🎯 Used time point:', currentTime, 'seconds');
+                const startTime = Date.now();
+                try {
+                    await execAsync(command);
+                    const endTime = Date.now();
+                    const executionTime = endTime - startTime;
                     
-                    // Additional verification: check if thumbnail is not just a black frame
-                    if (stats.size < 1000) {
-                        console.log('⚠️ Thumbnail file is very small, might be black frame, trying next time point...');
-                        continue;
+                    console.log('🔄 FFmpeg execution completed in:', executionTime, 'ms');
+                    console.log('🔄 Checking if thumbnail file was created...');
+                    
+                    // Verify the thumbnail was created
+                    if (fs.existsSync(thumbnailPath)) {
+                        const stats = fs.statSync(thumbnailPath);
+                        console.log('✅ Thumbnail generated successfully!');
+                        console.log('  📁 File path:', thumbnailPath);
+                        console.log('  📁 File size:', stats.size, 'bytes');
+                        console.log('  ⏱️ Generation time:', executionTime, 'ms');
+                        console.log('  🎯 Used time point:', currentTime, 'seconds');
+                        console.log('  🔧 Used method:', cmdIndex + 1);
+                        
+                        // Additional verification: check if thumbnail is not just a black frame
+                        if (stats.size < 1000) {
+                            console.log('⚠️ Thumbnail file is very small, might be black frame, trying next method...');
+                            continue;
+                        }
+                        
+                        return true;
+                    } else {
+                        console.log(`❌ Thumbnail file was not created with method ${cmdIndex + 1}, trying next method...`);
                     }
+                } catch (error) {
+                    console.log(`❌ FFmpeg failed with method ${cmdIndex + 1}:`, error.message);
+                    console.log(`❌ FFmpeg error details:`, {
+                        code: error.code,
+                        signal: error.signal,
+                        stderr: error.stderr,
+                        stdout: error.stdout
+                    });
                     
-                    return true;
-                } else {
-                    console.log(`❌ Thumbnail file was not created at ${currentTime}s, trying next time point...`);
+                    // If this is the last method for this time point, try next time point
+                    if (cmdIndex === commands.length - 1) {
+                        console.log(`❌ All methods failed for time point ${currentTime}s, trying next time point...`);
+                        break;
+                    }
                 }
-            } catch (error) {
-                console.log(`❌ FFmpeg failed at ${currentTime}s:`, error.message);
-                console.log(`❌ FFmpeg error details:`, {
-                    code: error.code,
-                    signal: error.signal,
-                    stderr: error.stderr,
-                    stdout: error.stdout
-                });
-                if (i === timePoints.length - 1) {
-                    console.log('❌ All thumbnail generation attempts failed');
-                    return false;
-                }
+            }
+            
+            // If we've tried all time points, give up
+            if (i === timePoints.length - 1) {
+                console.log('❌ All thumbnail generation attempts failed');
+                return false;
             }
         }
         
