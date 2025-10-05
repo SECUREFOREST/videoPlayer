@@ -244,20 +244,6 @@ class ModernVideoPlayerBrowser {
         this.fileList.innerHTML = '';
 
 
-        // Only show parent directory option if we're not at the root level
-        if (parentPath && parentPath !== this.currentPath && parentPath !== '') {
-            const parentItem = this.createFileItem({
-                name: '..',
-                path: parentPath,
-                isDirectory: true,
-                isFile: false,
-                size: 0,
-                modified: new Date(),
-                extension: '',
-                isVideo: false
-            });
-            this.fileList.appendChild(parentItem);
-        }
 
         this.renderGridView(items);
 
@@ -327,7 +313,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ?
-                `<span class="file-size">Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}</span>` :
+                `<span class="file-size">Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}</span>` :
                 (item.isVideo ? `<span class="file-size">${item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown'}</span>` : `<span class="file-size">${size}</span>`)
             }
                     <span class="file-date">${date}</span>
@@ -365,7 +351,7 @@ class ModernVideoPlayerBrowser {
             <div class="file-icon">${icon}</div>
             <div class="file-name">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
             <div class="file-details">
-                ${item.isDirectory ? `Directory${item.fileCount !== null ? ` (${item.fileCount} items)` : ''}` : (item.isVideo ? (item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown') : size)}
+                ${item.isDirectory ? `Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}` : (item.isVideo ? (item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown') : size)}
             </div>
         `;
 
@@ -476,7 +462,7 @@ class ModernVideoPlayerBrowser {
     }
 
     formatDate(date) {
-        return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
+        return new Date(date).toLocaleDateString();
     }
 
     createClickablePath(relativePath, fullPath) {
