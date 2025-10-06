@@ -1808,7 +1808,10 @@ class ModernVideoPlayerBrowser {
     }
 
     async addToPlaylist() {
-        if (!this.currentVideo) return;
+        if (!this.currentVideo && !this.currentDirectory) return;
+
+        const currentItem = this.currentVideo || this.currentDirectory;
+        const isDirectory = this.currentDirectory ? true : false;
 
         // Update modal title
         const modalTitle = document.getElementById('playlistModalLabel');
@@ -1817,9 +1820,16 @@ class ModernVideoPlayerBrowser {
         }
 
         this.showPlaylistModal();
+        
+        // Display the item being added
+        const icon = isDirectory ? '📁' : (currentItem.isVideo ? '🎬' : '📄');
+        const itemType = isDirectory ? 'Directory' : (currentItem.isVideo ? 'Video' : 'File');
+        const fileCount = isDirectory && currentItem.fileCount ? ` (${currentItem.fileCount} items)` : '';
+        
         this.playlistVideos.innerHTML = `
             <div class="alert alert-info">
-                <i class="fas fa-video me-2"></i>${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}
+                <span class="me-2">${icon}</span>
+                <strong>${itemType}:</strong> ${this.formatFileName(currentItem.name, currentItem.isVideo, currentItem.isHLS)}${fileCount}
             </div>
         `;
 
@@ -2063,40 +2073,50 @@ class ModernVideoPlayerBrowser {
     }
 
     async addVideoToExistingPlaylist() {
-        if (!this.selectedPlaylistId || !this.currentVideo) {
+        if (!this.selectedPlaylistId || (!this.currentVideo && !this.currentDirectory)) {
             return;
         }
+
+        const currentItem = this.currentVideo || this.currentDirectory;
+        const isDirectory = this.currentDirectory ? true : false;
 
         try {
             const response = await fetch(`/api/playlists/${this.selectedPlaylistId}/add-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ video: this.currentVideo })
+                body: JSON.stringify({ 
+                    video: currentItem,
+                    isDirectory: isDirectory
+                })
             });
 
             if (response.ok) {
                 this.hidePlaylistModal();
                 this.loadPlaylists();
-                this.showStatusMessage('Video added to playlist successfully!', 'success');
+                const itemType = isDirectory ? 'Directory' : 'Video';
+                this.showStatusMessage(`${itemType} added to playlist successfully!`, 'success');
             } else {
                 const data = await response.json();
-                this.showStatusMessage('Failed to add video to playlist: ' + data.error, 'error');
+                this.showStatusMessage(`Failed to add ${isDirectory ? 'directory' : 'video'} to playlist: ` + data.error, 'error');
             }
         } catch (error) {
-            this.showStatusMessage('Error adding video to playlist: ' + error.message, 'error');
+            this.showStatusMessage(`Error adding ${isDirectory ? 'directory' : 'video'} to playlist: ` + error.message, 'error');
         }
     }
 
     async toggleFavorite() {
-        if (!this.currentVideo) return;
+        if (!this.currentVideo && !this.currentDirectory) return;
 
-        // Check if video is already favorited
-        const isFavorited = this.favorites.some(fav => fav.path === this.currentVideo.path);
+        const currentItem = this.currentVideo || this.currentDirectory;
+        const isDirectory = this.currentDirectory ? true : false;
+
+        // Check if item is already favorited
+        const isFavorited = this.favorites.some(fav => fav.path === currentItem.path);
 
         try {
             if (isFavorited) {
                 // Remove from favorites
-                const favorite = this.favorites.find(fav => fav.path === this.currentVideo.path);
+                const favorite = this.favorites.find(fav => fav.path === currentItem.path);
                 if (favorite) {
                     const response = await fetch(`/api/favorites/${favorite.id}`, { 
                         method: 'DELETE' 
@@ -2105,7 +2125,8 @@ class ModernVideoPlayerBrowser {
                     if (response.ok) {
                         this.updateFavoriteButton(false);
                         this.loadFavorites();
-                        this.showStatusMessage('Removed from favorites!', 'success');
+                        const itemType = isDirectory ? 'Directory' : 'Video';
+                        this.showStatusMessage(`${itemType} removed from favorites!`, 'success');
                     } else {
                         this.showStatusMessage('Failed to remove from favorites', 'error');
                     }
@@ -2116,22 +2137,24 @@ class ModernVideoPlayerBrowser {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        path: this.currentVideo.path,
-                        name: this.currentVideo.name
+                        path: currentItem.path,
+                        name: currentItem.name,
+                        isDirectory: isDirectory
                     })
                 });
 
                 if (response.ok) {
                     this.updateFavoriteButton(true);
                     this.loadFavorites();
-                    this.showStatusMessage('Added to favorites!', 'success');
+                    const itemType = isDirectory ? 'Directory' : 'Video';
+                    this.showStatusMessage(`${itemType} added to favorites!`, 'success');
                 } else {
                     const data = await response.json();
                     if (data.error === 'Already in favorites') {
                         this.updateFavoriteButton(true);
                         this.showStatusMessage('Already in favorites', 'info');
                     } else {
-                        this.showStatusMessage('Failed to add to favorites: ' + data.error, 'error');
+                        this.showStatusMessage(`Failed to add ${isDirectory ? 'directory' : 'video'} to favorites: ` + data.error, 'error');
                     }
                 }
             }

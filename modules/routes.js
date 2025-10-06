@@ -74,7 +74,33 @@ router.get('/api/browse', async (req, res) => {
             if (entry.isDirectory()) {
                 try {
                     const dirEntries = await fsPromises.readdir(itemPath);
-                    fileCount = dirEntries.length;
+                    // Count regular files first
+                    let regularFileCount = dirEntries.length;
+                    
+                    // Count HLS versions for video files in this directory
+                    let hlsCount = 0;
+                    for (const dirEntry of dirEntries) {
+                        if (dirEntry.isFile()) {
+                            const dirEntryExt = path.extname(dirEntry.name).toLowerCase();
+                            if (isVideoFile(dirEntryExt)) {
+                                // Check if HLS version exists
+                                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                                const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(itemPath, dirEntry.name)).replace(dirEntryExt, ''));
+                                const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
+                                
+                                try {
+                                    const hlsStats = await fsPromises.stat(masterPlaylistPath);
+                                    if (hlsStats.isFile()) {
+                                        hlsCount++;
+                                    }
+                                } catch (error) {
+                                    // HLS version doesn't exist
+                                }
+                            }
+                        }
+                    }
+                    
+                    fileCount = regularFileCount + hlsCount;
                 } catch (error) {
                     // Directory might not be accessible
                 }
@@ -357,9 +383,23 @@ router.get('/api/search', async (req, res) => {
         const results = [];
         await searchDirectory(VIDEOS_ROOT, searchTerm, type, results);
         
+        // Also search HLS directory for HLS files
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        if (fs.existsSync(hlsRootPath)) {
+            await searchDirectory(hlsRootPath, searchTerm, type, results);
+        }
+        
+        // Apply type filter to search results
+        let filteredResults = results;
+        if (type === 'videos') {
+            filteredResults = results.filter(item => item.isVideo);
+        } else if (type === 'directories') {
+            filteredResults = results.filter(item => item.isDirectory);
+        }
+        
         res.json({
-            results: results,
-            totalResults: results.length,
+            results: filteredResults,
+            totalResults: filteredResults.length,
             searchTerm: searchTerm
         });
     } catch (error) {
@@ -375,11 +415,67 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
         
         for (const entry of entries) {
             const fullPath = path.join(dirPath, entry.name);
-            const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+            // Determine if this is the HLS directory or videos directory
+            const isHLSDirectory = dirPath.includes(path.join(path.dirname(VIDEOS_ROOT), 'hls'));
+            const relativePath = isHLSDirectory ? 
+                path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath) :
+                path.relative(VIDEOS_ROOT, fullPath);
             
             if (entry.isDirectory()) {
                 // Skip hidden directories and system directories
                 if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+                    // Check if directory name matches search term
+                    const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase());
+                    
+                    if (matchesSearch) {
+                        try {
+                            const stats = await fsPromises.stat(fullPath);
+                            const dirEntries = await fsPromises.readdir(fullPath);
+                            
+                            // Count HLS versions for video files in this directory
+                            let hlsCount = 0;
+                            for (const dirEntry of dirEntries) {
+                                if (dirEntry.isFile()) {
+                                    const dirEntryExt = path.extname(dirEntry.name).toLowerCase();
+                                    if (isVideoFile(dirEntryExt)) {
+                                        // Check if HLS version exists
+                                        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                                        const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(fullPath, dirEntry.name)).replace(dirEntryExt, ''));
+                                        const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
+                                        
+                                        try {
+                                            const hlsStats = await fsPromises.stat(masterPlaylistPath);
+                                            if (hlsStats.isFile()) {
+                                                hlsCount++;
+                                            }
+                                        } catch (error) {
+                                            // HLS version doesn't exist
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            const result = {
+                                name: entry.name,
+                                path: relativePath,
+                                size: 0,
+                                modified: stats.mtime,
+                                extension: '',
+                                isVideo: false,
+                                isHLS: false,
+                                isDirectory: true,
+                                fileCount: dirEntries.length + hlsCount,
+                                mimeType: null,
+                                relativePath: relativePath
+                            };
+                            
+                            results.push(result);
+                        } catch (error) {
+                            // Directory might not be accessible
+                        }
+                    }
+                    
+                    // Continue searching in subdirectories
                     await searchDirectory(fullPath, searchTerm, type, results);
                 }
             } else {
@@ -390,6 +486,11 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                 const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase());
 
                 if (matchesSearch && isVideo) {
+                    // Skip HLS files in videos directory - they should only be in hls directory
+                    if (isHLSFile(ext) && !isHLSDirectory) {
+                        continue;
+                    }
+                    
                     const result = {
                         name: entry.name,
                         path: relativePath,
@@ -440,29 +541,64 @@ router.get('/api/playlists', async (req, res) => {
         // Add thumbnail URLs and duration to videos in playlists
         for (const playlist of playlists) {
             if (playlist.videos) {
-                await Promise.all(playlist.videos.map(async video => {
-                    if (video.path) {
-                        const ext = path.extname(video.path).toLowerCase();
+                await Promise.all(playlist.videos.map(async item => {
+                    if (item.path) {
+                        const ext = path.extname(item.path).toLowerCase();
                         if (isVideoOrHLSFile(ext)) {
                             // Convert relative path to absolute path for thumbnail generation
-                            const absolutePath = path.isAbsolute(video.path) ? video.path : path.join(VIDEOS_ROOT, video.path);
-                            video.thumbnailUrl = getThumbnailUrl(absolutePath);
+                            const absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
+                            item.thumbnailUrl = getThumbnailUrl(absolutePath);
                             
                             // Add duration for video files
                             if (isVideoFile(ext)) {
                                 try {
-                                    video.duration = await getVideoDuration(absolutePath);
+                                    item.duration = await getVideoDuration(absolutePath);
                                 } catch (error) {
                                     console.warn(`Warning: Could not get duration for ${absolutePath}:`, error.message);
-                                    video.duration = null;
+                                    item.duration = null;
                                 }
                             } else if (isHLSFile(ext)) {
                                 try {
-                                    video.duration = await getHLSDuration(absolutePath);
+                                    item.duration = await getHLSDuration(absolutePath);
                                 } catch (error) {
                                     console.warn(`Warning: Could not get HLS duration for ${absolutePath}:`, error.message);
-                                    video.duration = null;
+                                    item.duration = null;
                                 }
+                            }
+                        } else if (item.isDirectory) {
+                            // Handle directory items
+                            const absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
+                            try {
+                                const stats = await fsPromises.stat(absolutePath);
+                                if (stats.isDirectory()) {
+                                    // Get file count for directory
+                                    const dirEntries = await fsPromises.readdir(absolutePath);
+                                    let hlsCount = 0;
+                                    for (const dirEntry of dirEntries) {
+                                        if (dirEntry.isFile()) {
+                                            const dirEntryExt = path.extname(dirEntry.name).toLowerCase();
+                                            if (isVideoFile(dirEntryExt)) {
+                                                // Check if HLS version exists
+                                                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                                                const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(absolutePath, dirEntry.name)).replace(dirEntryExt, ''));
+                                                const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
+                                                
+                                                try {
+                                                    const hlsStats = await fsPromises.stat(masterPlaylistPath);
+                                                    if (hlsStats.isFile()) {
+                                                        hlsCount++;
+                                                    }
+                                                } catch (error) {
+                                                    // HLS version doesn't exist
+                                                }
+                                            }
+                                        }
+                                    }
+                                    item.fileCount = dirEntries.length + hlsCount;
+                                    item.modified = stats.mtime;
+                                }
+                            } catch (error) {
+                                console.warn(`Warning: Could not get directory info for ${item.path}:`, error.message);
                             }
                         }
                     }
@@ -510,6 +646,90 @@ router.post('/api/playlists', async (req, res) => {
     }
 });
 
+// API endpoint to expand directory in playlist (get all videos from directory)
+router.get('/api/expand-directory', async (req, res) => {
+    const relativePath = req.query.path;
+    
+    if (!relativePath) {
+        return res.status(400).json({ error: 'Path parameter is required' });
+    }
+    
+    try {
+        const fullPath = resolveSafePath(relativePath);
+        const videos = [];
+        
+        // Check if it's a directory
+        const stats = await fsPromises.stat(fullPath);
+        if (!stats.isDirectory()) {
+            return res.status(400).json({ error: 'Path is not a directory' });
+        }
+        
+        // Get all video files from directory
+        const entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            if (entry.isFile()) {
+                const ext = path.extname(entry.name).toLowerCase();
+                if (isVideoFile(ext)) {
+                    const videoPath = path.join(fullPath, entry.name);
+                    const relativeVideoPath = path.relative(VIDEOS_ROOT, videoPath);
+                    
+                    try {
+                        const videoStats = await fsPromises.stat(videoPath);
+                        const video = {
+                            name: entry.name,
+                            path: relativeVideoPath,
+                            size: videoStats.size,
+                            modified: videoStats.mtime,
+                            extension: ext,
+                            isVideo: true,
+                            isHLS: false,
+                            mimeType: getVideoMimeType(ext),
+                            thumbnailUrl: getThumbnailUrl(videoPath),
+                            duration: await getVideoDuration(videoPath)
+                        };
+                        
+                        videos.push(video);
+                        
+                        // Also add HLS version if it exists
+                        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                        const hlsPath = path.join(hlsRootPath, relativeVideoPath.replace(ext, ''));
+                        const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
+                        
+                        try {
+                            const hlsStats = await fsPromises.stat(masterPlaylistPath);
+                            if (hlsStats.isFile()) {
+                                const hlsVideo = {
+                                    name: entry.name.replace(ext, '') + ' (HLS)',
+                                    path: relativeVideoPath.replace(ext, '') + '/master.m3u8',
+                                    size: hlsStats.size,
+                                    modified: hlsStats.mtime,
+                                    extension: '.m3u8',
+                                    isVideo: true,
+                                    isHLS: true,
+                                    mimeType: 'application/vnd.apple.mpegurl',
+                                    thumbnailUrl: await getHLSThumbnail(masterPlaylistPath),
+                                    duration: await getHLSDuration(masterPlaylistPath)
+                                };
+                                videos.push(hlsVideo);
+                            }
+                        } catch (error) {
+                            // HLS version doesn't exist
+                        }
+                    } catch (error) {
+                        console.warn(`Warning: Could not process video ${entry.name}:`, error.message);
+                    }
+                }
+            }
+        }
+        
+        res.json({ videos });
+    } catch (error) {
+        console.error('Error expanding directory:', error);
+        res.status(500).json({ error: 'Failed to expand directory' });
+    }
+});
+
 // Favorites management routes
 router.get('/api/favorites', async (req, res) => {
     try {
@@ -525,6 +745,41 @@ router.get('/api/favorites', async (req, res) => {
                     const absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
                     favorite.thumbnailUrl = getThumbnailUrl(absolutePath);
                     favorite.duration = await getVideoDuration(absolutePath);
+                } else if (favorite.isDirectory) {
+                    // Handle directory favorites
+                    const absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
+                    try {
+                        const stats = await fsPromises.stat(absolutePath);
+                        if (stats.isDirectory()) {
+                            // Get file count for directory
+                            const dirEntries = await fsPromises.readdir(absolutePath);
+                            let hlsCount = 0;
+                            for (const dirEntry of dirEntries) {
+                                if (dirEntry.isFile()) {
+                                    const dirEntryExt = path.extname(dirEntry.name).toLowerCase();
+                                    if (isVideoFile(dirEntryExt)) {
+                                        // Check if HLS version exists
+                                        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                                        const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(absolutePath, dirEntry.name)).replace(dirEntryExt, ''));
+                                        const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
+                                        
+                                        try {
+                                            const hlsStats = await fsPromises.stat(masterPlaylistPath);
+                                            if (hlsStats.isFile()) {
+                                                hlsCount++;
+                                            }
+                                        } catch (error) {
+                                            // HLS version doesn't exist
+                                        }
+                                    }
+                                }
+                            }
+                            favorite.fileCount = dirEntries.length + hlsCount;
+                            favorite.modified = stats.mtime;
+                        }
+                    } catch (error) {
+                        console.warn(`Warning: Could not get directory info for ${favorite.path}:`, error.message);
+                    }
                 }
             }
         }
