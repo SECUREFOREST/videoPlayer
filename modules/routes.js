@@ -18,6 +18,20 @@ const {
 
 const router = express.Router();
 
+// Helper function to process HLS directory paths
+function processHLSPath(itemPath) {
+    let processedPath = itemPath;
+    let isHLSDirectory = false;
+    
+    if (itemPath.startsWith('hls/') && !itemPath.endsWith('.m3u8')) {
+        // This is an HLS directory path, convert to master.m3u8 path
+        processedPath = itemPath + '/master.m3u8';
+        isHLSDirectory = true;
+    }
+    
+    return { processedPath, isHLSDirectory };
+}
+
 // Function to recursively find all master.m3u8 files in a directory
 async function findMasterPlaylists(dirPath, hlsRootPath) {
     const masterFiles = [];
@@ -746,14 +760,17 @@ router.get('/api/playlists', async (req, res) => {
             if (playlist.videos) {
                 await Promise.all(playlist.videos.map(async item => {
                     if (item.path) {
-                        const ext = path.extname(item.path).toLowerCase();
-                        if (isVideoOrHLSFile(ext)) {
+                        // Handle HLS directory paths - convert to master.m3u8 path
+                        const { processedPath, isHLSDirectory } = processHLSPath(item.path);
+                        
+                        const ext = path.extname(processedPath).toLowerCase();
+                        if (isVideoOrHLSFile(ext) || isHLSDirectory) {
                             // Convert relative path to absolute path for thumbnail generation
                             let absolutePath;
-                            if (isHLSFile(ext)) {
+                            if (isHLSFile(ext) || isHLSDirectory) {
                                 // For HLS files, use the HLS directory as base
                                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                                absolutePath = path.isAbsolute(item.path) ? item.path : path.join(hlsRootPath, item.path);
+                                absolutePath = path.isAbsolute(processedPath) ? processedPath : path.join(hlsRootPath, processedPath);
                             } else {
                                 // For regular video files, use VIDEOS_ROOT
                                 absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
@@ -769,7 +786,7 @@ router.get('/api/playlists', async (req, res) => {
                                     item.thumbnailUrl = null;
                                     item.duration = null;
                                 }
-                            } else if (isHLSFile(ext)) {
+                            } else if (isHLSFile(ext) || isHLSDirectory) {
                                 try {
                                     item.thumbnailUrl = await getHLSThumbnail(absolutePath);
                                     item.duration = await getHLSDuration(absolutePath);
@@ -954,14 +971,17 @@ router.get('/api/favorites', async (req, res) => {
         // Add thumbnail URLs to favorites
         for (const favorite of favorites) {
             if (favorite.path) {
-                const ext = path.extname(favorite.path).toLowerCase();
-                if (isVideoOrHLSFile(ext)) {
+                // Handle HLS directory paths - convert to master.m3u8 path
+                const { processedPath, isHLSDirectory } = processHLSPath(favorite.path);
+                
+                const ext = path.extname(processedPath).toLowerCase();
+                if (isVideoOrHLSFile(ext) || isHLSDirectory) {
                     // Convert relative path to absolute path
                     let absolutePath;
-                    if (isHLSFile(ext)) {
+                    if (isHLSFile(ext) || isHLSDirectory) {
                         // For HLS files, use the HLS directory as base
                         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                        absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(hlsRootPath, favorite.path);
+                        absolutePath = path.isAbsolute(processedPath) ? processedPath : path.join(hlsRootPath, processedPath);
                     } else {
                         // For regular video files, use VIDEOS_ROOT
                         absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
@@ -977,7 +997,7 @@ router.get('/api/favorites', async (req, res) => {
                             favorite.thumbnailUrl = null;
                             favorite.duration = null;
                         }
-                    } else if (isHLSFile(ext)) {
+                    } else if (isHLSFile(ext) || isHLSDirectory) {
                         try {
                             favorite.thumbnailUrl = await getHLSThumbnail(absolutePath);
                             favorite.duration = await getHLSDuration(absolutePath);
