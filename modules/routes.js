@@ -38,6 +38,13 @@ async function findMasterPlaylists(dirPath, hlsRootPath) {
                 const relativeDir = path.dirname(relativePath);
                 const videoName = path.basename(relativeDir);
                 
+                console.log('DEBUG: Found master.m3u8:', {
+                    fullPath,
+                    hlsRootPath,
+                    relativePath,
+                    videoName
+                });
+                
                 // Create a fake directory entry for the master.m3u8 file
                 const masterEntry = {
                     name: videoName,
@@ -115,7 +122,10 @@ router.get('/api/browse', async (req, res) => {
             
             try {
                 // Find all master.m3u8 files recursively in this directory
+                console.log('DEBUG: hlsFullPath:', hlsFullPath);
+                console.log('DEBUG: hlsRootPath:', hlsRootPath);
                 const masterFiles = await findMasterPlaylists(hlsFullPath, hlsRootPath);
+                console.log('DEBUG: masterFiles:', masterFiles.map(f => ({ name: f.name, relativePath: f.relativePath })));
                 entries = masterFiles;
             } catch (hlsError) {
                 console.log('HLS subdirectory not found or not accessible:', hlsError.message);
@@ -141,6 +151,15 @@ router.get('/api/browse', async (req, res) => {
                 isHLS = true;
                 basePath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                 relativeItemPath = entry.relativePath;
+                
+                console.log('DEBUG: Processing master playlist:', {
+                    name: entry.name,
+                    originalPath: entry.originalPath,
+                    relativePath: entry.relativePath,
+                    itemPath,
+                    basePath,
+                    relativeItemPath
+                });
             } else if (relativePath.startsWith('hls/')) {
                 // We're browsing inside an HLS directory
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -209,11 +228,21 @@ router.get('/api/browse', async (req, res) => {
                 }
             }
             //
+            const finalPath = entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
+                              entry.isMasterPlaylist ? relativeItemPath :
+                              relativePath.startsWith('hls/') ? 'hls/' + relativeItemPath : relativeItemPath;
+            
+            console.log('DEBUG: Final path construction:', {
+                name: entry.name,
+                isHLSDirectory: entry.isHLSDirectory,
+                isMasterPlaylist: entry.isMasterPlaylist,
+                relativeItemPath,
+                finalPath
+            });
+            
             const item = {
                 name: entry.name,
-                path: entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
-                      entry.isMasterPlaylist ? 'hls/' + relativeItemPath :
-                      relativePath.startsWith('hls/') ? 'hls/' + relativeItemPath : relativeItemPath,
+                path: finalPath,
                 size: size,
                 modified: modified,
                 extension: ext,
