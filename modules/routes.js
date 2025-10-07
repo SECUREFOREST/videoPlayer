@@ -186,7 +186,11 @@ router.get('/api/browse', async (req, res) => {
             }
             
             let fileCount = null;
-            if (entry.isDirectory()) {
+            
+            // For HLS directories, use the pre-calculated fileCount
+            if (entry.isHLSDirectory && entry.fileCount !== undefined) {
+                fileCount = entry.fileCount;
+            } else if (entry.isDirectory()) {
                 try {
                     const dirEntries = await fsPromises.readdir(itemPath);
                     // Count regular files first
