@@ -508,10 +508,10 @@ router.get('/api/search', async (req, res) => {
         const results = [];
         await searchDirectory(VIDEOS_ROOT, searchTerm, type, results);
         
-        // Also search HLS directory for HLS files
+        // Also search HLS directory for HLS files and master playlists
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         if (fs.existsSync(hlsRootPath)) {
-            await searchDirectory(hlsRootPath, searchTerm, type, results);
+            await searchHLSDirectory(hlsRootPath, searchTerm, type, results);
         }
         
         // Apply type filter to search results
@@ -532,6 +532,84 @@ router.get('/api/search', async (req, res) => {
         res.status(500).json({ error: 'Search failed' });
     }
 });
+
+// Search HLS directory for master playlists
+async function searchHLSDirectory(dirPath, searchTerm, type, results) {
+    try {
+        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            
+            if (entry.isDirectory()) {
+                // Skip hidden directories and system directories
+                if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+                    // Check if directory name matches search term
+                    const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase());
+                    
+                    if (matchesSearch) {
+                        // This is an HLS directory that matches the search
+                        const relativePath = path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath);
+                        const result = {
+                            name: entry.name + ' (HLS)',
+                            path: 'hls/' + relativePath,
+                            size: 0,
+                            modified: new Date(),
+                            extension: '',
+                            isVideo: false,
+                            isHLS: false,
+                            isDirectory: true,
+                            isHLSDirectory: true,
+                            mimeType: null,
+                            relativePath: 'hls/' + relativePath
+                        };
+                        results.push(result);
+                    }
+                    
+                    // Recursively search subdirectories
+                    await searchHLSDirectory(fullPath, searchTerm, type, results);
+                }
+            } else if (entry.name === 'master.m3u8') {
+                // Found a master playlist file - check if its directory name matches search
+                const dirName = path.basename(path.dirname(fullPath));
+                const matchesSearch = dirName.toLowerCase().includes(searchTerm.toLowerCase());
+                
+                if (matchesSearch) {
+                    const relativePath = path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath);
+                    const videoName = path.basename(path.dirname(fullPath));
+                    
+                    const result = {
+                        name: videoName,
+                        path: 'hls/' + relativePath,
+                        size: 0,
+                        modified: new Date(),
+                        extension: '.m3u8',
+                        isVideo: true,
+                        isHLS: true,
+                        isDirectory: false,
+                        isMasterPlaylist: true,
+                        mimeType: 'application/vnd.apple.mpegurl',
+                        relativePath: 'hls/' + relativePath
+                    };
+                    
+                    // Add duration and thumbnail for HLS files
+                    try {
+                        result.duration = await getHLSDuration(fullPath);
+                        result.thumbnailUrl = await getHLSThumbnail(fullPath);
+                    } catch (hlsError) {
+                        console.warn(`Warning: Could not get HLS info for ${fullPath}:`, hlsError.message);
+                        result.duration = null;
+                        result.thumbnailUrl = null;
+                    }
+                    
+                    results.push(result);
+                }
+            }
+        }
+    } catch (error) {
+        // Skip directories we can't access
+    }
+}
 
 // Recursive search function
 async function searchDirectory(dirPath, searchTerm, type, results) {
@@ -618,14 +696,14 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                     
                     const result = {
                         name: entry.name,
-                        path: relativePath,
+                        path: isHLSDirectory ? 'hls/' + relativePath : relativePath,
                         size: stats.size,
                         modified: stats.mtime,
                         extension: ext,
                         isVideo: true,
                         isHLS: isHLSFile(ext),
                         mimeType: getVideoMimeType(ext),
-                        relativePath: relativePath
+                        relativePath: isHLSDirectory ? 'hls/' + relativePath : relativePath
                     };
 
                     // Add duration and thumbnail for video files
