@@ -834,6 +834,12 @@ class ModernVideoPlayerBrowser {
 
     async fallbackToOriginalVideo(videoData) {
         try {
+            // Only try fallback if this is an HLS file
+            if (!videoData.isHLS || videoData.extension !== '.m3u8') {
+                this.showStatusMessage('No fallback available for this file type', 'error');
+                return;
+            }
+            
             // Look for original video file in the same directory
             const hlsPath = videoData.path;
             const hlsDir = hlsPath.substring(0, hlsPath.lastIndexOf('/'));
@@ -841,6 +847,7 @@ class ModernVideoPlayerBrowser {
             
             // Try common video extensions
             const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
+            let foundOriginal = false;
             
             for (const ext of videoExtensions) {
                 const originalPath = hlsDir + '/' + videoName + ext;
@@ -848,20 +855,27 @@ class ModernVideoPlayerBrowser {
                     const response = await fetch(`/api/video-info?path=${encodeURIComponent(originalPath)}`);
                     if (response.ok) {
                         const originalData = await response.json();
-                        if (originalData.isVideo) {
-                            // Falling back to original video
+                        if (originalData.isVideo && !originalData.isHLS) {
+                            // Found original video file
                             this.video.src = `/videos/${encodeURIComponent(originalPath)}`;
                             this.video.load();
                             this.showStatusMessage('Playing original video file instead', 'info');
+                            foundOriginal = true;
                             return;
                         }
                     }
                 } catch (e) {
-                    // Continue to next extension
+                    // Continue to next extension - don't log 404 errors as they're expected
+                    if (e.message && !e.message.includes('404')) {
+                        console.warn(`Error checking ${originalPath}:`, e.message);
+                    }
                 }
             }
             
-            this.showStatusMessage('No fallback video found', 'error');
+            // No original video found
+            if (!foundOriginal) {
+                this.showStatusMessage('No original video file found. This appears to be HLS-only content.', 'info');
+            }
         } catch (error) {
             console.error('Fallback error:', error);
             this.showStatusMessage('Fallback failed: ' + error.message, 'error');
