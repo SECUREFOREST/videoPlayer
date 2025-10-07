@@ -5,7 +5,7 @@ module.exports = {
       script: 'server.js',
       cwd: '/app/videoPlayer',
       instances: 'max', // Use all CPU cores
-      exec_mode: 'cluster',
+      exec_mode: 'fork',
       watch: false,
       max_memory_restart: '2G',
       env: {
