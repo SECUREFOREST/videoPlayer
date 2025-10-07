@@ -385,7 +385,12 @@ router.get('/api/video-info', async (req, res) => {
             const normalizedPath = path.normalize(relativePath);
             
             // Remove leading slash if present
-            const cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
+            let cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
+            
+            // Remove hls/ prefix if present to avoid double hls/
+            if (cleanPath.startsWith('hls/')) {
+                cleanPath = cleanPath.substring(4);
+            }
             
             // Check for directory traversal attempts
             if (cleanPath.includes('..')) {
