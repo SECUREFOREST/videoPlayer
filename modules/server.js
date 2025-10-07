@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const cluster = require('cluster');
+const os = require('os');
 const { APP_CONFIG, VIDEOS_ROOT } = require('./config');
 const { validateFFmpegInstallation } = require('./ffmpeg');
 const { requireAuth, getLoginPageHTML } = require('./auth');
@@ -278,43 +280,81 @@ app.get('/', (req, res) => {
 // Initialize server
 async function startServer() {
     try {
-        // Validate FFmpeg installation
+        // Cluster-specific optimizations
+        if (cluster.isMaster) {
+            console.log(`🚀 Master process ${process.pid} is running`);
+            console.log(`💻 CPU cores available: ${os.cpus().length}`);
+            
+            // Set process title for better monitoring
+            process.title = 'video-player-master';
+        } else {
+            console.log(`⚡ Worker process ${process.pid} started`);
+            process.title = `video-player-worker-${process.pid}`;
+        }
+
+        // Validate FFmpeg installation (only once per worker)
         const ffmpegValid = await validateFFmpegInstallation();
         if (!ffmpegValid) {
             console.error('❌ FFmpeg validation failed. Please install FFmpeg before starting the server.');
             process.exit(1);
         }
 
-        // Ensure required directories exist
+        // Ensure required directories exist (only once per worker)
         await ensureDirectoryExists(VIDEOS_ROOT);
         await ensureDirectoryExists(path.join(__dirname, '..', 'thumbnails'));
 
-        // Ensure JSON files exist
+        // Ensure JSON files exist (only once per worker)
         console.log('🔧 Checking JSON files...');
         await ensureJsonFile(path.join(__dirname, '..', 'favorites.json'), { favorites: [] });
         await ensureJsonFile(path.join(__dirname, '..', 'playlists.json'), { playlists: [] });
 
-        // Load duration cache
+        // Load duration cache (per worker for better performance)
         await loadDurationCache();
 
         // Start the server
-        app.listen(APP_CONFIG.port, () => {
+        const server = app.listen(APP_CONFIG.port, () => {
             console.log(`🚀 Server running on http://localhost:${APP_CONFIG.port}`);
             console.log(`📁 Videos directory: ${VIDEOS_ROOT}`);
             console.log(`🔐 Authentication: ${APP_CONFIG.password ? 'Enabled' : 'Disabled'}`);
+            console.log(`⚡ Process ID: ${process.pid}`);
+            console.log(`💾 Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
         });
 
-        // Generate missing thumbnails in background
-        console.log('🔄 Starting background thumbnail generation...');
-        generateAllMissingThumbnails().then(() => {
-            console.log('✅ Background thumbnail generation completed');
-        }).catch(error => {
-            console.error('❌ Error generating thumbnails:', error.message);
+        // Server optimizations for video streaming
+        server.keepAliveTimeout = 65000; // 65 seconds
+        server.headersTimeout = 66000; // 66 seconds
+        server.maxConnections = 1000; // Max concurrent connections
+
+        // Generate missing thumbnails in background (only on master or first worker)
+        if (cluster.isMaster || process.env.WORKER_ID === '0') {
+            console.log('🔄 Starting background thumbnail generation...');
+            generateAllMissingThumbnails().then(() => {
+                console.log('✅ Background thumbnail generation completed');
+            }).catch(error => {
+                console.error('❌ Error generating thumbnails:', error.message);
+            });
+
+            // Build duration cache in background
+            buildDurationCache().catch(error => {
+                console.error('Error building duration cache:', error);
+            });
+        }
+
+        // Graceful shutdown handling
+        process.on('SIGTERM', () => {
+            console.log('🛑 SIGTERM received, shutting down gracefully...');
+            server.close(() => {
+                console.log('✅ Process terminated');
+                process.exit(0);
+            });
         });
 
-        // Build duration cache in background
-        buildDurationCache().catch(error => {
-            console.error('Error building duration cache:', error);
+        process.on('SIGINT', () => {
+            console.log('🛑 SIGINT received, shutting down gracefully...');
+            server.close(() => {
+                console.log('✅ Process terminated');
+                process.exit(0);
+            });
         });
     } catch (error) {
         console.error('❌ Failed to start server:', error);

@@ -7,18 +7,24 @@ module.exports = {
       instances: 'max', // Use all CPU cores
       exec_mode: 'cluster',
       watch: false,
-      max_memory_restart: '2G',
+      max_memory_restart: '1G', // Reduced for better memory management
       env: {
         NODE_ENV: 'production',
-        PORT: 4000
+        PORT: 4000,
+        UV_THREADPOOL_SIZE: 16, // Increase thread pool for I/O operations
+        NODE_OPTIONS: '--max-old-space-size=1024 --max-semi-space-size=64'
       },
       env_development: {
         NODE_ENV: 'development',
-        PORT: 4000
+        PORT: 4000,
+        instances: 2, // Fewer instances in development
+        UV_THREADPOOL_SIZE: 8
       },
       env_staging: {
         NODE_ENV: 'staging',
-        PORT: 4000
+        PORT: 4000,
+        instances: 4, // Half of production instances
+        UV_THREADPOOL_SIZE: 12
       },
       log_file: './logs/combined.log',
       out_file: './logs/out.log',
@@ -34,21 +40,40 @@ module.exports = {
       listen_timeout: 3000,
       shutdown_with_message: true,
       wait_ready: true,
+      // Performance optimizations
+      increment_var: 'PORT',
+      instance_var: 'INSTANCE_ID',
+      pmx: true,
+      vizion: false,
+      // Graceful shutdown
+      kill_retry_time: 100,
+      // Memory and CPU monitoring
+      monitoring: false, // Disable PM2 monitoring for better performance
+      // Process management
+      min_uptime: '10s',
+      max_restarts: 5,
+      // File watching exclusions
       ignore_watch: [
         'node_modules',
         'logs',
         'thumbnails',
         'videos',
+        'hls',
         '.git',
-        '*.log'
+        '*.log',
+        '*.json',
+        '*.tmp'
       ],
-      node_args: '--max-old-space-size=2048',
-      source_map_support: true,
-      instance_var: 'INSTANCE_ID',
-      increment_var: 'PORT',
-      pmx: true,
-      vizion: false,
-      post_update: ['npm install', 'echo "Video Player updated"'],
+      // Node.js optimizations
+      node_args: [
+        '--max-old-space-size=1024',
+        '--max-semi-space-size=64',
+        '--optimize-for-size',
+        '--gc-interval=100',
+        '--expose-gc'
+      ],
+      // Deployment hooks
+      post_update: ['npm install --production', 'echo "Video Player updated"'],
       pre_setup: 'echo "Setting up Video Player environment"',
       post_setup: 'echo "Video Player environment setup complete"'
     }
