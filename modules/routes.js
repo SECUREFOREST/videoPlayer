@@ -98,9 +98,19 @@ router.get('/api/browse', async (req, res) => {
                 // Add HLS entries with a special prefix to distinguish them
                 for (const hlsEntry of hlsEntries) {
                     const hlsItem = Object.create(hlsEntry);
-                    hlsItem.name = hlsEntry.name + ' (HLS)';
+                    hlsItem.name = hlsEntry.name; // Remove (HLS) from name
                     hlsItem.isHLSDirectory = true;
                     hlsItem.originalName = hlsEntry.name;
+                    
+                    // Calculate file count for HLS directories
+                    try {
+                        const hlsDirPath = path.join(hlsRootPath, hlsEntry.name);
+                        const hlsDirEntries = await fsPromises.readdir(hlsDirPath);
+                        hlsItem.fileCount = hlsDirEntries.length;
+                    } catch (error) {
+                        hlsItem.fileCount = 0;
+                    }
+                    
                     entries.push(hlsItem);
                 }
             } catch (hlsError) {

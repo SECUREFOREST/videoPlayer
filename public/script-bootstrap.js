@@ -313,7 +313,7 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-details d-flex gap-3">
                     ${item.isDirectory ?
-                `<span class="file-size">Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}</span>` :
+                `<span class="file-size">Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}${item.isHLSDirectory ? ' (HLS)' : ''}</span>` :
                 (item.isVideo ? `<span class="file-size">${item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown'}</span>` : `<span class="file-size">${size}</span>`)
             }
                     <span class="file-date">${date}</span>
@@ -1202,7 +1202,10 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo ? (item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown') : size}
+                    ${item.isDirectory ? 
+                        `Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}${item.isHLSDirectory ? ' (HLS)' : ''}` :
+                        (item.isVideo ? 'Video' : 'File') + (item.isVideo ? ` • ${item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown'}` : ` • ${size}`)
+                    }
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath || item.path}">
                     ${this.createClickablePath(item.relativePath || item.path, item.path) || 'No path available'}
