@@ -992,19 +992,31 @@ router.get('/api/favorites', async (req, res) => {
                         try {
                             favorite.thumbnailUrl = getThumbnailUrl(absolutePath);
                             favorite.duration = await getVideoDuration(absolutePath);
+                            favorite.isVideo = true;
+                            favorite.isHLS = false;
+                            favorite.mimeType = getVideoMimeType(ext);
                         } catch (error) {
                             console.warn(`Warning: Could not get video info for ${absolutePath}:`, error.message);
                             favorite.thumbnailUrl = null;
                             favorite.duration = null;
+                            favorite.isVideo = true;
+                            favorite.isHLS = false;
+                            favorite.mimeType = getVideoMimeType(ext);
                         }
                     } else if (isHLSFile(ext) || isHLSDirectory) {
                         try {
                             favorite.thumbnailUrl = await getHLSThumbnail(absolutePath);
                             favorite.duration = await getHLSDuration(absolutePath);
+                            favorite.isVideo = true;
+                            favorite.isHLS = true;
+                            favorite.mimeType = 'application/vnd.apple.mpegurl';
                         } catch (error) {
                             console.warn(`Warning: Could not get HLS info for ${absolutePath}:`, error.message);
                             favorite.thumbnailUrl = null;
                             favorite.duration = null;
+                            favorite.isVideo = true;
+                            favorite.isHLS = true;
+                            favorite.mimeType = 'application/vnd.apple.mpegurl';
                         }
                     }
                 } else if (favorite.isDirectory) {
