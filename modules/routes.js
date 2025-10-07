@@ -230,7 +230,7 @@ router.get('/api/browse', async (req, res) => {
             //
             const finalPath = entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
                               entry.isMasterPlaylist ? relativeItemPath :
-                              relativePath.startsWith('hls/') ? 'hls/' + relativeItemPath : relativeItemPath;
+                              (relativePath.startsWith('hls/') || relativePath === 'hls') ? 'hls/' + relativeItemPath : relativeItemPath;
             
             console.log('DEBUG: Final path construction:', {
                 name: entry.name,
