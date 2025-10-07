@@ -520,6 +520,9 @@ router.get('/api/search', async (req, res) => {
             filteredResults = results.filter(item => item.isVideo);
         } else if (type === 'directories') {
             filteredResults = results.filter(item => item.isDirectory);
+        } else if (type === 'all') {
+            // For 'all' type, only show videos (not directories) to avoid clutter
+            filteredResults = results.filter(item => item.isVideo);
         }
         
         res.json({
@@ -544,29 +547,7 @@ async function searchHLSDirectory(dirPath, searchTerm, type, results) {
             if (entry.isDirectory()) {
                 // Skip hidden directories and system directories
                 if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
-                    // Check if directory name matches search term
-                    const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase());
-                    
-                    if (matchesSearch) {
-                        // This is an HLS directory that matches the search
-                        const relativePath = path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath);
-                        const result = {
-                            name: entry.name + ' (HLS)',
-                            path: 'hls/' + relativePath,
-                            size: 0,
-                            modified: new Date(),
-                            extension: '',
-                            isVideo: false,
-                            isHLS: false,
-                            isDirectory: true,
-                            isHLSDirectory: true,
-                            mimeType: null,
-                            relativePath: 'hls/' + relativePath
-                        };
-                        results.push(result);
-                    }
-                    
-                    // Recursively search subdirectories
+                    // Recursively search subdirectories (but don't add directories to results)
                     await searchHLSDirectory(fullPath, searchTerm, type, results);
                 }
             } else if (entry.name === 'master.m3u8') {
