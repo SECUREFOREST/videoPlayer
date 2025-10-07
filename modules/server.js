@@ -10,6 +10,25 @@ const { ensureDirectoryExists } = require('./fileUtils');
 const { loadDurationCache, generateAllMissingThumbnails, buildDurationCache } = require('./videoProcessing');
 const routes = require('./routes');
 
+// Helper function to ensure JSON file exists with default structure
+async function ensureJsonFile(filePath, defaultStructure) {
+    try {
+        await fs.promises.access(filePath);
+        // File exists, no need to create it
+        console.log(`✅ JSON file exists: ${path.basename(filePath)}`);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // File doesn't exist, create it with default structure
+            console.log(`📝 Creating missing JSON file: ${path.basename(filePath)}`);
+            await fs.promises.writeFile(filePath, JSON.stringify(defaultStructure, null, 2));
+            console.log(`✅ Created JSON file: ${path.basename(filePath)}`);
+        } else {
+            // Other error (permission, etc.)
+            throw error;
+        }
+    }
+}
+
 const app = express();
 
 // Middleware
@@ -269,6 +288,11 @@ async function startServer() {
         // Ensure required directories exist
         await ensureDirectoryExists(VIDEOS_ROOT);
         await ensureDirectoryExists(path.join(__dirname, '..', 'thumbnails'));
+
+        // Ensure JSON files exist
+        console.log('🔧 Checking JSON files...');
+        await ensureJsonFile(path.join(__dirname, '..', 'favorites.json'), { favorites: [] });
+        await ensureJsonFile(path.join(__dirname, '..', 'playlists.json'), { playlists: [] });
 
         // Load duration cache
         await loadDurationCache();
