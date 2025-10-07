@@ -536,7 +536,9 @@ class ModernVideoPlayerBrowser {
 
                 // Check if it's an HLS file
                 if (videoData.isHLS && videoData.extension === '.m3u8') {
-                    const videoUrl = `/hls/${encodeURIComponent(item.path)}`;
+                    // Remove hls/ prefix from path to avoid double hls/
+                    const hlsPath = item.path.startsWith('hls/') ? item.path.substring(4) : item.path;
+                    const videoUrl = `/hls/${encodeURIComponent(hlsPath)}`;
                     // Constructed HLS URL for video
                     // Item data available
                     await this.playHLSVideo(videoUrl, videoData);
