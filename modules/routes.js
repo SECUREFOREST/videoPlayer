@@ -749,22 +749,33 @@ router.get('/api/playlists', async (req, res) => {
                         const ext = path.extname(item.path).toLowerCase();
                         if (isVideoOrHLSFile(ext)) {
                             // Convert relative path to absolute path for thumbnail generation
-                            const absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
-                            item.thumbnailUrl = getThumbnailUrl(absolutePath);
+                            let absolutePath;
+                            if (isHLSFile(ext)) {
+                                // For HLS files, use the HLS directory as base
+                                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                                absolutePath = path.isAbsolute(item.path) ? item.path : path.join(hlsRootPath, item.path);
+                            } else {
+                                // For regular video files, use VIDEOS_ROOT
+                                absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
+                            }
                             
-                            // Add duration for video files
+                            // Add thumbnail and duration for video files
                             if (isVideoFile(ext)) {
                                 try {
+                                    item.thumbnailUrl = getThumbnailUrl(absolutePath);
                                     item.duration = await getVideoDuration(absolutePath);
                                 } catch (error) {
-                                    console.warn(`Warning: Could not get duration for ${absolutePath}:`, error.message);
+                                    console.warn(`Warning: Could not get video info for ${absolutePath}:`, error.message);
+                                    item.thumbnailUrl = null;
                                     item.duration = null;
                                 }
                             } else if (isHLSFile(ext)) {
                                 try {
+                                    item.thumbnailUrl = await getHLSThumbnail(absolutePath);
                                     item.duration = await getHLSDuration(absolutePath);
                                 } catch (error) {
-                                    console.warn(`Warning: Could not get HLS duration for ${absolutePath}:`, error.message);
+                                    console.warn(`Warning: Could not get HLS info for ${absolutePath}:`, error.message);
+                                    item.thumbnailUrl = null;
                                     item.duration = null;
                                 }
                             }
@@ -945,9 +956,37 @@ router.get('/api/favorites', async (req, res) => {
             if (favorite.path) {
                 const ext = path.extname(favorite.path).toLowerCase();
                 if (isVideoOrHLSFile(ext)) {
-                    const absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
-                    favorite.thumbnailUrl = getThumbnailUrl(absolutePath);
-                    favorite.duration = await getVideoDuration(absolutePath);
+                    // Convert relative path to absolute path
+                    let absolutePath;
+                    if (isHLSFile(ext)) {
+                        // For HLS files, use the HLS directory as base
+                        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                        absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(hlsRootPath, favorite.path);
+                    } else {
+                        // For regular video files, use VIDEOS_ROOT
+                        absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
+                    }
+                    
+                    // Add thumbnail and duration for video files
+                    if (isVideoFile(ext)) {
+                        try {
+                            favorite.thumbnailUrl = getThumbnailUrl(absolutePath);
+                            favorite.duration = await getVideoDuration(absolutePath);
+                        } catch (error) {
+                            console.warn(`Warning: Could not get video info for ${absolutePath}:`, error.message);
+                            favorite.thumbnailUrl = null;
+                            favorite.duration = null;
+                        }
+                    } else if (isHLSFile(ext)) {
+                        try {
+                            favorite.thumbnailUrl = await getHLSThumbnail(absolutePath);
+                            favorite.duration = await getHLSDuration(absolutePath);
+                        } catch (error) {
+                            console.warn(`Warning: Could not get HLS info for ${absolutePath}:`, error.message);
+                            favorite.thumbnailUrl = null;
+                            favorite.duration = null;
+                        }
+                    }
                 } else if (favorite.isDirectory) {
                     // Handle directory favorites
                     const absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
