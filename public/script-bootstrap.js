@@ -474,8 +474,18 @@ class ModernVideoPlayerBrowser {
         
         if (pathParts.length === 0) return relativePath;
         
-        // Only show folder path (exclude filename)
-        const folderParts = pathParts.slice(0, -1); // Remove the last part (filename)
+        // For HLS videos, show only the main category (first level after hls)
+        let folderParts;
+        if (pathParts[0] === 'hls' && pathParts.length > 1) {
+            // For HLS videos, only show the main category (skip hls prefix)
+            folderParts = pathParts.slice(1, 2); // only main category, skip hls
+        } else if (pathParts[pathParts.length - 1] === 'master.m3u8') {
+            // Remove the master.m3u8 filename
+            folderParts = pathParts.slice(0, -1);
+        } else {
+            // For regular files, remove the last part (filename)
+            folderParts = pathParts.slice(0, -1);
+        }
         
         if (folderParts.length === 0) {
             // If no folders, just show the filename
@@ -1190,7 +1200,7 @@ class ModernVideoPlayerBrowser {
                     ${item.isVideo ? 'Video' : 'File'} • ${item.isVideo ? (item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown') : size}
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath || item.path}">
-                    ${this.createClickablePath(item.relativePath || item.path, item.path)}
+                    ${this.createClickablePath(item.relativePath || item.path, item.path) || 'No path available'}
                 </div>
             `;
 
