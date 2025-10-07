@@ -55,12 +55,10 @@ router.get('/api/browse', async (req, res) => {
                 const hlsEntries = await fsPromises.readdir(hlsRootPath, { withFileTypes: true });
                 // Add HLS entries with a special prefix to distinguish them
                 for (const hlsEntry of hlsEntries) {
-                    const hlsItem = {
-                        ...hlsEntry,
-                        name: hlsEntry.name + ' (HLS)',
-                        isHLSDirectory: true,
-                        originalName: hlsEntry.name
-                    };
+                    const hlsItem = Object.create(hlsEntry);
+                    hlsItem.name = hlsEntry.name + ' (HLS)';
+                    hlsItem.isHLSDirectory = true;
+                    hlsItem.originalName = hlsEntry.name;
                     entries.push(hlsItem);
                 }
             } catch (hlsError) {
