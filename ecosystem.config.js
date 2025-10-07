@@ -4,7 +4,7 @@ module.exports = {
       name: 'video-player',
       script: 'server.js',
       cwd: '/app/videoPlayer',
-      instances: 'max', // Use all CPU cores
+      instances: '1', // Use all CPU cores
       exec_mode: 'fork',
       watch: false,
       max_memory_restart: '2G',
