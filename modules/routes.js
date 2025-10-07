@@ -18,6 +18,47 @@ const {
 
 const router = express.Router();
 
+// Function to recursively find all master.m3u8 files in a directory
+async function findMasterPlaylists(dirPath, hlsRootPath) {
+    const masterFiles = [];
+    
+    try {
+        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            
+            if (entry.isDirectory()) {
+                // Recursively search subdirectories
+                const subMasterFiles = await findMasterPlaylists(fullPath, hlsRootPath);
+                masterFiles.push(...subMasterFiles);
+            } else if (entry.name === 'master.m3u8') {
+                // Found a master playlist file
+                const relativePath = path.relative(hlsRootPath, fullPath);
+                const relativeDir = path.dirname(relativePath);
+                const videoName = path.basename(relativeDir);
+                
+                // Create a fake directory entry for the master.m3u8 file
+                const masterEntry = {
+                    name: videoName,
+                    isDirectory: () => false,
+                    isFile: () => true,
+                    isHLSDirectory: false,
+                    isMasterPlaylist: true,
+                    originalPath: fullPath,
+                    relativePath: relativePath
+                };
+                
+                masterFiles.push(masterEntry);
+            }
+        }
+    } catch (error) {
+        console.log(`Error scanning directory ${dirPath}:`, error.message);
+    }
+    
+    return masterFiles;
+}
+
 // API endpoint to get directory contents
 router.get('/api/browse', async (req, res) => {
     const relativePath = req.query.path || '';
@@ -66,15 +107,16 @@ router.get('/api/browse', async (req, res) => {
             }
         }
         
-        // If we're browsing an HLS directory, scan it directly
+        // If we're browsing an HLS directory, find all master.m3u8 files recursively
         if (relativePath.startsWith('hls/')) {
             const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
             const hlsRelativePath = relativePath.substring(4); // Remove 'hls/' prefix
             const hlsFullPath = path.join(hlsRootPath, hlsRelativePath);
             
             try {
-                const hlsEntries = await fsPromises.readdir(hlsFullPath, { withFileTypes: true });
-                entries = hlsEntries;
+                // Find all master.m3u8 files recursively in this directory
+                const masterFiles = await findMasterPlaylists(hlsFullPath, hlsRootPath);
+                entries = masterFiles;
             } catch (hlsError) {
                 console.log('HLS subdirectory not found or not accessible:', hlsError.message);
                 return res.status(404).json({ error: 'HLS directory not found or not accessible' });
@@ -92,6 +134,13 @@ router.get('/api/browse', async (req, res) => {
                 isHLS = false;
                 basePath = hlsRootPath;
                 relativeItemPath = entry.originalName;
+            } else if (entry.isMasterPlaylist) {
+                // This is a master playlist file found by findMasterPlaylists
+                itemPath = entry.originalPath;
+                ext = '.m3u8';
+                isHLS = true;
+                basePath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                relativeItemPath = entry.relativePath;
             } else if (relativePath.startsWith('hls/')) {
                 // We're browsing inside an HLS directory
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -163,6 +212,7 @@ router.get('/api/browse', async (req, res) => {
             const item = {
                 name: entry.name,
                 path: entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
+                      entry.isMasterPlaylist ? 'hls/' + relativeItemPath :
                       relativePath.startsWith('hls/') ? 'hls/' + relativeItemPath : relativeItemPath,
                 size: size,
                 modified: modified,
@@ -171,15 +221,16 @@ router.get('/api/browse', async (req, res) => {
                 isVideo: isVideoOrHLSFile(ext),
                 isHLS: isHLSFile(ext),
                 isHLSDirectory: entry.isHLSDirectory || false,
+                isMasterPlaylist: entry.isMasterPlaylist || false,
                 mimeType: isVideoOrHLSFile(ext) ? getVideoMimeType(ext) : null,
                 fileCount: fileCount
             };
 
             // Add thumbnail URL and duration for video files
-            if (isVideoOrHLSFile(ext)) {
+            if (isVideoOrHLSFile(ext) || entry.isMasterPlaylist) {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
-                    if (isHLSFile(ext) && ext === '.m3u8') {
+                    if (isHLSFile(ext) && ext === '.m3u8' && !entry.isMasterPlaylist) {
                         // Note: We can't use the warnedFiles cache here since it's in a different module
                         console.log(`⚠️ Skipping HLS file in videos directory: ${itemPath} - HLS files should be in hls directory`);
                         continue; // Skip this item entirely
@@ -187,6 +238,10 @@ router.get('/api/browse', async (req, res) => {
                         // For regular video files, get thumbnail and duration
                         item.thumbnailUrl = getThumbnailUrl(itemPath);
                         item.duration = await getVideoDuration(itemPath);
+                    } else if (isHLSFile(ext) || entry.isMasterPlaylist) {
+                        // For HLS files and master playlists, get HLS thumbnail and duration
+                        item.thumbnailUrl = await getHLSThumbnail(itemPath);
+                        item.duration = await getHLSDuration(itemPath);
                     }
                     
                     // Check if thumbnail exists
