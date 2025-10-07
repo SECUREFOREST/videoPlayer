@@ -11,6 +11,11 @@ function resolveSafePath(requestedPath) {
         return VIDEOS_ROOT;
     }
 
+    // Handle HLS root directory
+    if (requestedPath === 'hls') {
+        return path.join(path.dirname(VIDEOS_ROOT), 'hls');
+    }
+
     // Normalize the requested path to prevent directory traversal
     let normalizedPath = path.normalize(requestedPath);
 
