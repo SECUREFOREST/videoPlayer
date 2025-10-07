@@ -331,9 +331,19 @@ router.get('/api/browse', async (req, res) => {
             return sortOrder === 'desc' ? -comparison : comparison;
         });
 
+        // Create a user-friendly display path for breadcrumbs
+        let displayPath = relativePath;
+        if (relativePath.startsWith('hls/')) {
+            // For HLS directories, show a cleaner name without the hls/ prefix
+            displayPath = relativePath.substring(4); // Remove 'hls/' prefix
+        } else if (relativePath === 'hls') {
+            // For HLS root, show a friendly name
+            displayPath = 'HLS Videos';
+        }
+        
         res.json({ 
             items,
-            currentPath: relativePath,
+            currentPath: displayPath,
             parentPath: relativePath ? path.dirname(relativePath) : null
         });
     } catch (error) {
