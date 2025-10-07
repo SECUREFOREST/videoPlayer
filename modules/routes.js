@@ -18,6 +18,157 @@ const {
 
 const router = express.Router();
 
+// Search cache and index
+let searchIndex = new Map();
+let searchIndexLastUpdated = 0;
+const SEARCH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Helper function to build search index
+async function buildSearchIndex() {
+    const now = Date.now();
+    if (now - searchIndexLastUpdated < SEARCH_CACHE_DURATION && searchIndex.size > 0) {
+        return; // Cache is still valid
+    }
+    
+    console.log('🔍 Building search index...');
+    const startTime = Date.now();
+    searchIndex.clear();
+    
+    try {
+        // Index videos directory
+        await indexDirectory(VIDEOS_ROOT, 'videos');
+        
+        // Index HLS directory
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        if (fs.existsSync(hlsRootPath)) {
+            await indexHLSDirectory(hlsRootPath, 'hls');
+        }
+        
+        searchIndexLastUpdated = now;
+        const duration = Date.now() - startTime;
+        console.log(`✅ Search index built in ${duration}ms (${searchIndex.size} items)`);
+    } catch (error) {
+        console.error('❌ Error building search index:', error);
+    }
+}
+
+// Index regular video directory
+async function indexDirectory(dirPath, baseType) {
+    try {
+        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+            
+            if (entry.isDirectory()) {
+                if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+                    // Index directory
+                    const key = entry.name.toLowerCase();
+                    if (!searchIndex.has(key)) {
+                        searchIndex.set(key, []);
+                    }
+                    searchIndex.get(key).push({
+                        name: entry.name,
+                        path: relativePath,
+                        type: 'directory',
+                        baseType: baseType
+                    });
+                    
+                    // Recursively index subdirectories
+                    await indexDirectory(fullPath, baseType);
+                }
+            } else {
+                const ext = path.extname(entry.name).toLowerCase();
+                if (isVideoFile(ext)) {
+                    // Index video file
+                    const key = entry.name.toLowerCase();
+                    if (!searchIndex.has(key)) {
+                        searchIndex.set(key, []);
+                    }
+                    searchIndex.get(key).push({
+                        name: entry.name,
+                        path: relativePath,
+                        type: 'video',
+                        baseType: baseType,
+                        extension: ext
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        // Skip directories we can't access
+    }
+}
+
+// Index HLS directory
+async function indexHLSDirectory(dirPath, baseType) {
+    try {
+        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+        
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            
+            if (entry.isDirectory()) {
+                if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+                    // Index HLS directory
+                    const key = entry.name.toLowerCase();
+                    if (!searchIndex.has(key)) {
+                        searchIndex.set(key, []);
+                    }
+                    searchIndex.get(key).push({
+                        name: entry.name,
+                        path: 'hls/' + entry.name,
+                        type: 'hls',
+                        baseType: baseType
+                    });
+                    
+                    // Recursively index subdirectories
+                    await indexHLSDirectory(fullPath, baseType);
+                }
+            } else if (entry.name === 'master.m3u8') {
+                // Index master playlist
+                const videoName = path.basename(path.dirname(fullPath));
+                const key = videoName.toLowerCase();
+                if (!searchIndex.has(key)) {
+                    searchIndex.set(key, []);
+                }
+                searchIndex.get(key).push({
+                    name: videoName,
+                    path: 'hls/' + path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath),
+                    type: 'hls',
+                    baseType: baseType
+                });
+            }
+        }
+    } catch (error) {
+        // Skip directories we can't access
+    }
+}
+
+// Fast search using index
+function fastSearch(searchTerm, type) {
+    const term = searchTerm.toLowerCase();
+    const results = [];
+    
+    for (const [key, items] of searchIndex) {
+        if (key.includes(term)) {
+            for (const item of items) {
+                // Apply type filter
+                if (type === 'videos' && (item.type === 'video' || item.type === 'hls')) {
+                    results.push(item);
+                } else if (type === 'directories' && item.type === 'directory') {
+                    results.push(item);
+                } else if (type === 'all' && (item.type === 'video' || item.type === 'hls')) {
+                    results.push(item);
+                }
+            }
+        }
+    }
+    
+    return results;
+}
+
 // Helper function to process HLS directory paths
 function processHLSPath(itemPath) {
     let processedPath = itemPath;
@@ -528,7 +679,7 @@ router.get('/api/server-status', (req, res) => {
     });
 });
 
-// API endpoint to search files recursively
+// API endpoint to search files using fast index
 router.get('/api/search', async (req, res) => {
     const searchTerm = req.query.q;
     const type = req.query.type || 'all';
@@ -538,30 +689,60 @@ router.get('/api/search', async (req, res) => {
     }
 
     try {
-        const results = [];
-        await searchDirectory(VIDEOS_ROOT, searchTerm, type, results);
+        // Ensure search index is built
+        await buildSearchIndex();
         
-        // Also search HLS directory for HLS files and master playlists
-        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-        if (fs.existsSync(hlsRootPath)) {
-            await searchHLSDirectory(hlsRootPath, searchTerm, type, results);
-        }
+        // Use fast search
+        const results = fastSearch(searchTerm, type);
         
-        // Apply type filter to search results
-        let filteredResults = results;
-        if (type === 'videos') {
-            filteredResults = results.filter(item => item.isVideo);
-        } else if (type === 'directories') {
-            filteredResults = results.filter(item => item.isDirectory);
-        } else if (type === 'all') {
-            // For 'all' type, only show videos (not directories) to avoid clutter
-            filteredResults = results.filter(item => item.isVideo);
-        }
+        // Convert to expected format and add metadata
+        const formattedResults = await Promise.all(results.map(async (item) => {
+            const result = {
+                name: item.name,
+                path: item.path,
+                size: 0,
+                modified: new Date(),
+                extension: item.extension || '',
+                isVideo: item.type === 'video' || item.type === 'hls',
+                isHLS: item.type === 'hls',
+                isDirectory: item.type === 'directory',
+                mimeType: item.type === 'hls' ? 'application/vnd.apple.mpegurl' : 
+                          item.type === 'video' ? getVideoMimeType(item.extension) : null
+            };
+            
+            // Add thumbnail and duration for videos (lazy loading)
+            if (result.isVideo) {
+                try {
+                    let absolutePath;
+                    if (item.type === 'hls') {
+                        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                        absolutePath = path.join(hlsRootPath, item.path.replace('hls/', ''));
+                    } else {
+                        absolutePath = path.join(VIDEOS_ROOT, item.path);
+                    }
+                    
+                    if (item.type === 'video') {
+                        result.thumbnailUrl = getThumbnailUrl(absolutePath);
+                        result.duration = await getVideoDuration(absolutePath);
+                    } else if (item.type === 'hls') {
+                        result.thumbnailUrl = await getHLSThumbnail(absolutePath);
+                        result.duration = await getHLSDuration(absolutePath);
+                    }
+                } catch (error) {
+                    // Skip if we can't get metadata
+                    result.thumbnailUrl = null;
+                    result.duration = null;
+                }
+            }
+            
+            return result;
+        }));
         
         res.json({
-            results: filteredResults,
-            totalResults: filteredResults.length,
-            searchTerm: searchTerm
+            results: formattedResults,
+            totalResults: formattedResults.length,
+            searchTerm: searchTerm,
+            fromCache: true
         });
     } catch (error) {
         console.error('Search error:', error);
@@ -1654,4 +1835,4 @@ router.get('/api/thumbnail', async (req, res) => {
     }
 });
 
-module.exports = router;
+module.exports = { router, buildSearchIndex };

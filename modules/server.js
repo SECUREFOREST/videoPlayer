@@ -8,7 +8,7 @@ const { validateFFmpegInstallation } = require('./ffmpeg');
 const { requireAuth, getLoginPageHTML } = require('./auth');
 const { ensureDirectoryExists } = require('./fileUtils');
 const { loadDurationCache, generateAllMissingThumbnails, buildDurationCache } = require('./videoProcessing');
-const routes = require('./routes');
+const { router: routes, buildSearchIndex } = require('./routes');
 
 // Helper function to ensure JSON file exists with default structure
 async function ensureJsonFile(filePath, defaultStructure) {
@@ -296,6 +296,10 @@ async function startServer() {
 
         // Load duration cache
         await loadDurationCache();
+
+        // Build search index
+        console.log('🔍 Building search index...');
+        await buildSearchIndex();
 
         // Start the server
         app.listen(APP_CONFIG.port, () => {
