@@ -1065,7 +1065,7 @@ router.get('/api/favorites', async (req, res) => {
     }
 });
 
-router.post('/api/favorites', async (req, res) => {
+router.post('/api/favorites', (req, res) => {
     try {
         const { name, path: videoPath } = req.body;
         
@@ -1073,10 +1073,8 @@ router.post('/api/favorites', async (req, res) => {
             return res.status(400).json({ error: 'Name and path are required' });
         }
 
-        const favoritesJson = await ensureJsonFile(
-            path.join(__dirname, '..', 'favorites.json'),
-            { favorites: [] }
-        );
+        const favoritesData = fs.readFileSync(path.join(__dirname, '..', 'favorites.json'), 'utf8');
+        const favoritesJson = JSON.parse(favoritesData);
         const favorites = favoritesJson.favorites || [];
         
         const newFavorite = {
