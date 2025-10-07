@@ -208,7 +208,7 @@ router.get('/api/browse', async (req, res) => {
                     // Directory might not be accessible
                 }
             }
-
+            //
             const item = {
                 name: entry.name,
                 path: entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
