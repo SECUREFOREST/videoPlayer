@@ -29,7 +29,21 @@ function resolveSafePath(requestedPath) {
         throw new Error('Access denied: Cannot browse above main folder');
     }
 
-    // Resolve the absolute path
+    // Handle HLS directory paths
+    if (normalizedPath.startsWith('hls/')) {
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        const hlsRelativePath = normalizedPath.substring(4); // Remove 'hls/' prefix
+        const fullPath = path.resolve(hlsRootPath, hlsRelativePath);
+        
+        // Ensure the resolved path is inside HLS_ROOT
+        if (!fullPath.startsWith(hlsRootPath)) {
+            throw new Error('Access denied: Path outside HLS directory');
+        }
+        
+        return fullPath;
+    }
+
+    // Resolve the absolute path for regular videos directory
     const fullPath = path.resolve(VIDEOS_ROOT, normalizedPath);
 
     // Ensure the resolved path is inside VIDEOS_ROOT and not the same as VIDEOS_ROOT parent

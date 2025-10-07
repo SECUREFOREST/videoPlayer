@@ -46,14 +46,70 @@ router.get('/api/browse', async (req, res) => {
             return res.status(404).json({ error: 'Directory not found or not accessible' });
         }
 
-        const entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
+        let entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
+        
+        // If videos directory is empty and we're at root, also scan HLS directory
+        if (relativePath === '' && entries.length === 0) {
+            const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+            try {
+                const hlsEntries = await fsPromises.readdir(hlsRootPath, { withFileTypes: true });
+                // Add HLS entries with a special prefix to distinguish them
+                for (const hlsEntry of hlsEntries) {
+                    const hlsItem = {
+                        ...hlsEntry,
+                        name: hlsEntry.name + ' (HLS)',
+                        isHLSDirectory: true,
+                        originalName: hlsEntry.name
+                    };
+                    entries.push(hlsItem);
+                }
+            } catch (hlsError) {
+                console.log('HLS directory not found or not accessible:', hlsError.message);
+            }
+        }
+        
+        // If we're browsing an HLS directory, scan it directly
+        if (relativePath.startsWith('hls/')) {
+            const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+            const hlsRelativePath = relativePath.substring(4); // Remove 'hls/' prefix
+            const hlsFullPath = path.join(hlsRootPath, hlsRelativePath);
+            
+            try {
+                const hlsEntries = await fsPromises.readdir(hlsFullPath, { withFileTypes: true });
+                entries = hlsEntries;
+            } catch (hlsError) {
+                console.log('HLS subdirectory not found or not accessible:', hlsError.message);
+                return res.status(404).json({ error: 'HLS directory not found or not accessible' });
+            }
+        }
 
         for (const entry of entries) {
-            const itemPath = path.join(fullPath, entry.name);
-            const ext = path.extname(entry.name).toLowerCase();
-            const isHLS = isHLSFile(ext);
-            const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
-            const relativeItemPath = path.relative(basePath, itemPath);
+            let itemPath, ext, isHLS, basePath, relativeItemPath;
+            
+            // Handle HLS directories specially
+            if (entry.isHLSDirectory) {
+                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                itemPath = path.join(hlsRootPath, entry.originalName);
+                ext = '';
+                isHLS = false;
+                basePath = hlsRootPath;
+                relativeItemPath = entry.originalName;
+            } else if (relativePath.startsWith('hls/')) {
+                // We're browsing inside an HLS directory
+                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                const hlsRelativePath = relativePath.substring(4); // Remove 'hls/' prefix
+                itemPath = path.join(hlsRootPath, hlsRelativePath, entry.name);
+                ext = path.extname(entry.name).toLowerCase();
+                isHLS = isHLSFile(ext);
+                basePath = hlsRootPath;
+                relativeItemPath = path.join(hlsRelativePath, entry.name);
+            } else {
+                itemPath = path.join(fullPath, entry.name);
+                ext = path.extname(entry.name).toLowerCase();
+                isHLS = isHLSFile(ext);
+                basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+                relativeItemPath = path.relative(basePath, itemPath);
+            }
             
             let stats;
             let size = 0;
@@ -108,13 +164,15 @@ router.get('/api/browse', async (req, res) => {
 
             const item = {
                 name: entry.name,
-                path: relativeItemPath,
+                path: entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
+                      relativePath.startsWith('hls/') ? 'hls/' + relativeItemPath : relativeItemPath,
                 size: size,
                 modified: modified,
                 extension: ext,
                 isDirectory: entry.isDirectory(),
                 isVideo: isVideoOrHLSFile(ext),
                 isHLS: isHLSFile(ext),
+                isHLSDirectory: entry.isHLSDirectory || false,
                 mimeType: isVideoOrHLSFile(ext) ? getVideoMimeType(ext) : null,
                 fileCount: fileCount
             };
