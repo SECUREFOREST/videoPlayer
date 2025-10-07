@@ -115,9 +115,9 @@ router.get('/api/browse', async (req, res) => {
         }
         
         // If we're browsing an HLS directory, find all master.m3u8 files recursively
-        if (relativePath.startsWith('hls/')) {
+        if (relativePath.startsWith('hls/') || relativePath === 'hls') {
             const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-            const hlsRelativePath = relativePath.substring(4); // Remove 'hls/' prefix
+            const hlsRelativePath = relativePath === 'hls' ? '' : relativePath.substring(4); // Remove 'hls/' prefix
             const hlsFullPath = path.join(hlsRootPath, hlsRelativePath);
             
             try {
@@ -160,10 +160,10 @@ router.get('/api/browse', async (req, res) => {
                     basePath,
                     relativeItemPath
                 });
-            } else if (relativePath.startsWith('hls/')) {
+            } else if (relativePath.startsWith('hls/') || relativePath === 'hls') {
                 // We're browsing inside an HLS directory
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                const hlsRelativePath = relativePath.substring(4); // Remove 'hls/' prefix
+                const hlsRelativePath = relativePath === 'hls' ? '' : relativePath.substring(4); // Remove 'hls/' prefix
                 itemPath = path.join(hlsRootPath, hlsRelativePath, entry.name);
                 ext = path.extname(entry.name).toLowerCase();
                 isHLS = isHLSFile(ext);
