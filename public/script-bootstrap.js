@@ -2557,12 +2557,19 @@ class ModernVideoPlayerBrowser {
                 
                 // Check if the new source is unexpectedly the domain name (but not a blob URL)
                 if (newSrc && !newSrc.startsWith('blob:') && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com')) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
+                    // Create safe copies to prevent console logging issues
+                    const safeNewSrc = String(newSrc);
+                    const safeCurrentVideo = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
+                    const safeIsHLS = Boolean(this.currentVideo?.isHLS);
+                    const safeTimestamp = new Date().toISOString();
+                    const safeStackTrace = String(stackTrace);
+                    
                     console.error('Video source unexpectedly changed to domain name! Clearing it...', {
-                        newSrc,
-                        currentVideo: this.currentVideo?.name || 'Unknown',
-                        isHLS: this.currentVideo?.isHLS || false,
-                        timestamp: new Date().toISOString(),
-                        stackTrace: stackTrace
+                        newSrc: safeNewSrc,
+                        currentVideo: safeCurrentVideo,
+                        isHLS: safeIsHLS,
+                        timestamp: safeTimestamp,
+                        stackTrace: safeStackTrace
                     });
                     
                     // Automatically clear the invalid src to prevent errors
@@ -2575,12 +2582,19 @@ class ModernVideoPlayerBrowser {
                 
                 // Additional check for exact domain match
                 if (newSrc && (newSrc === window.location.href || newSrc === window.location.origin + '/')) {
+                    // Create safe copies to prevent console logging issues
+                    const safeNewSrc = String(newSrc);
+                    const safeCurrentVideo = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
+                    const safeIsHLS = Boolean(this.currentVideo?.isHLS);
+                    const safeTimestamp = new Date().toISOString();
+                    const safeStackTrace = String(stackTrace);
+                    
                     console.error('Video source set to current page URL! Clearing it...', {
-                        newSrc,
-                        currentVideo: this.currentVideo?.name || 'Unknown',
-                        isHLS: this.currentVideo?.isHLS || false,
-                        timestamp: new Date().toISOString(),
-                        stackTrace: stackTrace
+                        newSrc: safeNewSrc,
+                        currentVideo: safeCurrentVideo,
+                        isHLS: safeIsHLS,
+                        timestamp: safeTimestamp,
+                        stackTrace: safeStackTrace
                     });
                     
                     // Automatically clear the invalid src to prevent errors
@@ -2672,6 +2686,16 @@ class ModernVideoPlayerBrowser {
             return;
         }
         
+        // IMMEDIATE FIX: If video src is set to domain name, clear it immediately
+        if (video.src && (video.src === window.location.href || video.src === window.location.origin + '/' || 
+            (video.src.includes('ttu.deviantdare.com') && !video.src.includes('/video') && !video.src.includes('/hls') && !video.src.startsWith('blob:')))) {
+            console.warn('IMMEDIATE FIX: Video src is domain name, clearing it to prevent error');
+            video.src = '';
+            video.removeAttribute('src');
+            video.load();
+            return; // Exit early to prevent error processing
+        }
+        
         // Debug: Log if video source is unexpectedly set to domain name (but not a blob URL)
         if (video.src && !video.src.startsWith('blob:') && (video.src.includes('ttu.deviantdare.com') || video.src.includes('deviantdare.com')) && !video.src.includes('/video') && !video.src.includes('/hls')) {
             // Create safe copies to prevent console logging issues
@@ -2724,8 +2748,10 @@ class ModernVideoPlayerBrowser {
         const videoCurrentSrc = video.currentSrc ? String(video.currentSrc) : 'null';
         const currentVideoName = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
         const hlsUrl = this.hls?.url ? String(this.hls.url) : 'null';
-        const isHLS = this.currentVideo?.isHLS || false;
+        const isHLS = Boolean(this.currentVideo?.isHLS);
         const hlsInstance = this.hls ? 'exists' : 'null';
+        const videoNetworkState = Number(video.networkState);
+        const videoReadyState = Number(video.readyState);
         const timestamp = new Date().toISOString();
         
         console.error('Video error details:', {
@@ -2734,8 +2760,8 @@ class ModernVideoPlayerBrowser {
             errorDetails,
             videoSrc,
             videoCurrentSrc,
-            videoNetworkState: video.networkState,
-            videoReadyState: video.readyState,
+            videoNetworkState,
+            videoReadyState,
             currentVideo: currentVideoName,
             isHLS,
             hlsInstance,
