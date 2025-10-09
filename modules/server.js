@@ -160,31 +160,70 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 const masterPlaylistStore = new Map();
 
-// Route to capture master playlist access and store the path
-app.get('/hls/*', (req, res, next) => {
-    const masterPath = req.path;
-    const sessionId = req.sessionID || req.ip;
+// Clean up old sessions periodically (every 30 minutes)
+setInterval(() => {
+    const now = Date.now();
+    const maxAge = 30 * 60 * 1000; // 30 minutes
     
-    // Only store master playlist paths (not segments or quality playlists)
-    if (masterPath.endsWith('/master.m3u8')) {
-        // Store master playlist path for session
-        masterPlaylistStore.set(sessionId, masterPath);
+    for (const [sessionId, data] of masterPlaylistStore.entries()) {
+        if (data.timestamp && (now - data.timestamp) > maxAge) {
+            masterPlaylistStore.delete(sessionId);
+            console.log(`Cleaned up old session: ${sessionId}`);
+        }
+    }
+}, 30 * 60 * 1000);
+
+// Helper function to get a consistent session identifier
+function getSessionId(req) {
+    // Try multiple methods to get a consistent session ID
+    if (req.sessionID) {
+        return req.sessionID;
     }
     
-    // Continue to static file serving
-    next();
-});
+    // Use IP + User-Agent as fallback for more consistency
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.get('User-Agent') || 'unknown';
+    return `${ip}-${userAgent.substring(0, 50)}`;
+}
 
-// HLS quality playlist proxy middleware
+// Helper function to find master playlist path from request
+function findMasterPlaylistFromRequest(req) {
+    const referer = req.get('Referer');
+    if (referer) {
+        // Extract master playlist path from referer URL
+        const url = new URL(referer);
+        const pathname = url.pathname;
+        if (pathname.includes('/hls/') && pathname.endsWith('/master.m3u8')) {
+            return pathname;
+        }
+    }
+    return null;
+}
+
+// HLS quality playlist proxy middleware - MUST come before general /hls/* route
 app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     const quality = req.params.quality;
-    const sessionId = req.sessionID || req.ip;
-    const masterPath = masterPlaylistStore.get(sessionId);
+    const sessionId = getSessionId(req);
+    let sessionData = masterPlaylistStore.get(sessionId);
+    let masterPath = sessionData ? sessionData.path : null;
     
-    // Handle HLS quality playlist request
+    console.log(`HLS quality playlist request - Session: ${sessionId}, Quality: ${quality}, Master Path: ${masterPath}`);
+    
+    // If no master path found, try to find it from the referer
+    if (!masterPath) {
+        masterPath = findMasterPlaylistFromRequest(req);
+        if (masterPath) {
+            masterPlaylistStore.set(sessionId, {
+                path: masterPath,
+                timestamp: Date.now()
+            });
+            console.log(`Found master playlist from referer: ${masterPath}`);
+        }
+    }
     
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
+        console.error('Available sessions:', Array.from(masterPlaylistStore.keys()));
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
@@ -194,7 +233,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
         
-        // Look for quality playlist
+        console.log(`Looking for quality playlist at: ${correctPath}`);
         
         if (!fs.existsSync(correctPath)) {
             console.error('Quality playlist not found:', correctPath);
@@ -216,22 +255,27 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     }
 });
 
-// General HLS request handler
-app.get('/hls/*', (req, res, next) => {
-    next();
-});
-
-// HLS video segment proxy middleware
+// HLS video segment proxy middleware - MUST come before general /hls/* route
 app.get('/hls/:quality/:segment', async (req, res) => {
     const quality = req.params.quality;
     const segmentFile = req.params.segment;
-    const sessionId = req.sessionID || req.ip;
-    const masterPath = masterPlaylistStore.get(sessionId);
+    const sessionId = getSessionId(req);
+    let masterPath = masterPlaylistStore.get(sessionId);
     
-    // Handle HLS segment request
+    console.log(`HLS segment request - Session: ${sessionId}, Quality: ${quality}, Segment: ${segmentFile}, Master Path: ${masterPath}`);
+    
+    // If no master path found, try to find it from the referer
+    if (!masterPath) {
+        masterPath = findMasterPlaylistFromRequest(req);
+        if (masterPath) {
+            masterPlaylistStore.set(sessionId, masterPath);
+            console.log(`Found master playlist from referer: ${masterPath}`);
+        }
+    }
     
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
+        console.error('Available sessions:', Array.from(masterPlaylistStore.keys()));
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
@@ -241,7 +285,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
         
-        // Look for segment file
+        console.log(`Looking for segment at: ${correctPath}`);
         
         if (!fs.existsSync(correctPath)) {
             console.error('Segment not found:', correctPath);
@@ -263,6 +307,29 @@ app.get('/hls/:quality/:segment', async (req, res) => {
         res.status(500).json({ error: 'Failed to serve video segment' });
     }
 });
+
+// Route to capture master playlist access and store the path - MUST come after specific routes
+app.get('/hls/*', (req, res, next) => {
+    const masterPath = req.path;
+    const sessionId = getSessionId(req);
+    
+    console.log(`HLS request - Path: ${masterPath}, Session: ${sessionId}`);
+    
+    // Only store master playlist paths (not segments or quality playlists)
+    if (masterPath.endsWith('/master.m3u8')) {
+        // Store master playlist path for session with timestamp
+        masterPlaylistStore.set(sessionId, {
+            path: masterPath,
+            timestamp: Date.now()
+        });
+        console.log(`Stored master playlist path for session ${sessionId}: ${masterPath}`);
+        console.log(`Total sessions stored: ${masterPlaylistStore.size}`);
+    }
+    
+    // Continue to static file serving
+    next();
+});
+
 
 // Static file serving for HLS files - MUST come after proxy middleware
 app.use('/hls', express.static(HLS_ROOT, {
