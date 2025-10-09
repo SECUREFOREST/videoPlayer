@@ -208,6 +208,8 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     let masterPath = sessionData ? sessionData.path : null;
     
     console.log(`HLS quality playlist request - Session: ${sessionId}, Quality: ${quality}, Master Path: ${masterPath}`);
+    console.log(`Session data:`, sessionData);
+    console.log(`Available sessions:`, Array.from(masterPlaylistStore.keys()));
     
     // If no master path found, try to find it from the referer
     if (!masterPath) {
@@ -224,6 +226,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
         console.error('Available sessions:', Array.from(masterPlaylistStore.keys()));
+        console.error('Session store contents:', Array.from(masterPlaylistStore.entries()));
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
@@ -264,6 +267,8 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     let masterPath = sessionData ? sessionData.path : null;
     
     console.log(`HLS segment request - Session: ${sessionId}, Quality: ${quality}, Segment: ${segmentFile}, Master Path: ${masterPath}`);
+    console.log(`Session data:`, sessionData);
+    console.log(`Available sessions:`, Array.from(masterPlaylistStore.keys()));
     
     // If no master path found, try to find it from the referer
     if (!masterPath) {
@@ -280,6 +285,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
         console.error('Available sessions:', Array.from(masterPlaylistStore.keys()));
+        console.error('Session store contents:', Array.from(masterPlaylistStore.entries()));
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
@@ -319,6 +325,7 @@ app.use('/hls', (req, res, next) => {
     const sessionId = getSessionId(req);
     
     console.log(`HLS request - Relative Path: ${relativePath}, Full Path: ${fullPath}, Session: ${sessionId}`);
+    console.log(`Path ends with /master.m3u8: ${relativePath.endsWith('/master.m3u8')}`);
     
     // Only store master playlist paths (not segments or quality playlists)
     if (relativePath.endsWith('/master.m3u8')) {
@@ -327,8 +334,10 @@ app.use('/hls', (req, res, next) => {
             path: fullPath,
             timestamp: Date.now()
         });
-        console.log(`Stored master playlist path for session ${sessionId}: ${fullPath}`);
+        console.log(`✅ Stored master playlist path for session ${sessionId}: ${fullPath}`);
         console.log(`Total sessions stored: ${masterPlaylistStore.size}`);
+    } else {
+        console.log(`❌ Not storing path - does not end with /master.m3u8`);
     }
     
     // Continue to next middleware
