@@ -563,7 +563,7 @@ class ModernVideoPlayerBrowser {
                     }
                     
                     // Clear video element to prevent segment mixing
-                    this.video.src = '';
+                    this.video.removeAttribute('src');
                     this.video.load();
                     
                     const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
@@ -648,7 +648,7 @@ class ModernVideoPlayerBrowser {
                 }
 
                 // Clear video element to prevent segment mixing
-                this.video.src = '';
+                this.video.removeAttribute('src');
                 this.video.load();
 
                 // Small delay to ensure cleanup is complete
@@ -913,7 +913,6 @@ class ModernVideoPlayerBrowser {
                     timestamp: new Date().toISOString()
                 });
                 
-                this.video.src = '';
                 this.video.removeAttribute('src');
                 this.video.load();
                 return;
@@ -953,7 +952,6 @@ class ModernVideoPlayerBrowser {
             }
             
             // Clear the video element completely to prevent further errors
-            this.video.src = '';
             this.video.removeAttribute('src');
             this.video.load();
             
@@ -2505,7 +2503,6 @@ class ModernVideoPlayerBrowser {
             });
             
             // Clear it immediately
-            this.video.src = '';
             this.video.removeAttribute('src');
             this.video.load();
         }
@@ -2520,7 +2517,6 @@ class ModernVideoPlayerBrowser {
             });
             
             // Clear it immediately
-            this.video.src = '';
             this.video.removeAttribute('src');
             this.video.load();
         }
@@ -2532,7 +2528,6 @@ class ModernVideoPlayerBrowser {
         // Ensure video src is not set to the domain name initially
         if (this.video.src && this.video.src === window.location.href) {
             console.warn('Video src was set to current page URL, clearing it');
-            this.video.src = '';
             this.video.removeAttribute('src');
         }
         
@@ -2556,7 +2551,7 @@ class ModernVideoPlayerBrowser {
                 });
                 
                 // Check if the new source is unexpectedly the domain name (but not a blob URL)
-                if (newSrc && !newSrc.startsWith('blob:') && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com')) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
+                if (newSrc && !newSrc.startsWith('blob:') && newSrc.includes(window.location.hostname) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
                     // Create safe copies to prevent console logging issues
                     const safeNewSrc = String(newSrc);
                     const safeCurrentVideo = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
@@ -2573,7 +2568,6 @@ class ModernVideoPlayerBrowser {
                     });
                     
                     // Automatically clear the invalid src to prevent errors
-                    this.video.src = '';
                     this.video.removeAttribute('src');
                     this.video.load();
                     lastSrc = '';
@@ -2598,7 +2592,6 @@ class ModernVideoPlayerBrowser {
                     });
                     
                     // Automatically clear the invalid src to prevent errors
-                    this.video.src = '';
                     this.video.removeAttribute('src');
                     this.video.load();
                     lastSrc = '';
@@ -2688,16 +2681,15 @@ class ModernVideoPlayerBrowser {
         
         // IMMEDIATE FIX: If video src is set to domain name, clear it immediately
         if (video.src && (video.src === window.location.href || video.src === window.location.origin + '/' || 
-            (video.src.includes('ttu.deviantdare.com') && !video.src.includes('/video') && !video.src.includes('/hls') && !video.src.startsWith('blob:')))) {
+            (video.src.includes(window.location.hostname) && !video.src.includes('/video') && !video.src.includes('/hls') && !video.src.startsWith('blob:')))) {
             console.warn('IMMEDIATE FIX: Video src is domain name, clearing it to prevent error');
-            video.src = '';
             video.removeAttribute('src');
             video.load();
             return; // Exit early to prevent error processing
         }
         
         // Debug: Log if video source is unexpectedly set to domain name (but not a blob URL)
-        if (video.src && !video.src.startsWith('blob:') && (video.src.includes('ttu.deviantdare.com') || video.src.includes('deviantdare.com')) && !video.src.includes('/video') && !video.src.includes('/hls')) {
+        if (video.src && !video.src.startsWith('blob:') && video.src.includes(window.location.hostname) && !video.src.includes('/video') && !video.src.includes('/hls')) {
             // Create safe copies to prevent console logging issues
             const videoSrc = String(video.src);
             const currentVideoName = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
@@ -2907,7 +2899,6 @@ class ModernVideoPlayerBrowser {
             // Clear video element
             if (this.video) {
                 this.video.pause();
-                this.video.src = '';
                 this.video.removeAttribute('src');
                 this.video.load();
             }
@@ -3313,7 +3304,7 @@ class ModernVideoPlayerBrowser {
         // Clean up video element and remove event listeners
         if (this.video) {
             this.video.pause();
-            this.video.src = '';
+            this.video.removeAttribute('src');
             this.video.load();
             
             // Remove all event listeners
