@@ -545,10 +545,18 @@ class ModernVideoPlayerBrowser {
                 } else {
                     // Regular video file - clean up any existing HLS instance
                     if (this.hls) {
-                        // Cleaning up HLS instance before playing regular video
+                        // Remove all event listeners first
+                        this.hls.off();
+                        // Detach from video element
+                        this.hls.detachMedia();
+                        // Destroy the instance
                         this.hls.destroy();
                         this.hls = null;
                     }
+                    
+                    // Clear video element to prevent segment mixing
+                    this.video.src = '';
+                    this.video.load();
                     
                     const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                     this.videoSource.src = videoUrl;
@@ -589,9 +597,21 @@ class ModernVideoPlayerBrowser {
                 
                 // Destroy existing HLS instance if any
                 if (this.hls) {
+                    // Remove all event listeners first
+                    this.hls.off();
+                    // Detach from video element
+                    this.hls.detachMedia();
+                    // Destroy the instance
                     this.hls.destroy();
                     this.hls = null;
                 }
+
+                // Clear video element to prevent segment mixing
+                this.video.src = '';
+                this.video.load();
+
+                // Small delay to ensure cleanup is complete
+                await new Promise(resolve => setTimeout(resolve, 100));
 
                 // Create new HLS instance with performance optimizations
                 this.hls = new Hls({
