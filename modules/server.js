@@ -167,7 +167,7 @@ app.get('/hls/*', (req, res, next) => {
     
     // Only store master playlist paths (not segments or quality playlists)
     if (masterPath.endsWith('/master.m3u8')) {
-        console.log('Storing master playlist path:', masterPath, 'for session:', sessionId);
+        // Store master playlist path for session
         masterPlaylistStore.set(sessionId, masterPath);
     }
     
@@ -181,12 +181,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     const sessionId = req.sessionID || req.ip;
     const masterPath = masterPlaylistStore.get(sessionId);
     
-    console.log('HLS quality playlist request:', {
-        quality,
-        sessionId,
-        masterPath,
-        allStoredPaths: Array.from(masterPlaylistStore.entries())
-    });
+    // Handle HLS quality playlist request
     
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
@@ -199,7 +194,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
         
-        console.log('Looking for quality playlist at:', correctPath);
+        // Look for quality playlist
         
         if (!fs.existsSync(correctPath)) {
             console.error('Quality playlist not found:', correctPath);
@@ -233,13 +228,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     const sessionId = req.sessionID || req.ip;
     const masterPath = masterPlaylistStore.get(sessionId);
     
-    console.log('HLS segment request:', {
-        quality,
-        segmentFile,
-        sessionId,
-        masterPath,
-        allStoredPaths: Array.from(masterPlaylistStore.entries())
-    });
+    // Handle HLS segment request
     
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
@@ -252,7 +241,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
         
-        console.log('Looking for segment at:', correctPath);
+        // Look for segment file
         
         if (!fs.existsSync(correctPath)) {
             console.error('Segment not found:', correctPath);
