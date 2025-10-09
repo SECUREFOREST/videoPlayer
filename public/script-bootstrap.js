@@ -2524,14 +2524,7 @@ class ModernVideoPlayerBrowser {
                 const newSrc = this.video.src;
                 
                 
-                // Only log significant changes (not blob URLs)
-                if (!newSrc.startsWith('blob:')) {
-                    console.log('Video source changed:', {
-                        from: lastSrc,
-                        to: newSrc,
-                        currentVideo: this.currentVideo?.name || 'Unknown'
-                    });
-                }
+                // Monitor video source changes silently
                 
                 // Check if the new source is unexpectedly the domain name (but not a blob URL)
                 if (newSrc && !newSrc.startsWith('blob:') && newSrc.includes(window.location.hostname) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
