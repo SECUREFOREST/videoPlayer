@@ -775,26 +775,11 @@ class ModernVideoPlayerBrowser {
                 });
 
                 // Load the HLS source
-                console.log('Loading HLS video:', {
-                    videoUrl,
-                    videoData: {
-                        name: videoData.name,
-                        path: videoData.path,
-                        isHLS: videoData.isHLS,
-                        duration: videoData.duration
-                    }
-                });
                 
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
                 
-                // Debug: Check video source after HLS setup
-                console.log('Video source after HLS setup:', {
-                    videoSrc: this.video.src,
-                    videoCurrentSrc: this.video.currentSrc,
-                    videoNetworkState: this.video.networkState,
-                    videoReadyState: this.video.readyState
-                });
+                // HLS setup complete
                 
                 // Enhanced seeking behavior for HLS
                 this.video.addEventListener('seeking', () => {

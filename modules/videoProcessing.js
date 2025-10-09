@@ -193,11 +193,11 @@ async function getHLSThumbnail(masterPlaylistPath) {
         
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-            console.log('✅ HLS thumbnail found:', thumbnailUrl);
+            // HLS thumbnail found
             return thumbnailUrl;
         }
         
-        console.log('❌ HLS thumbnail not found for:', masterPlaylistPath);
+        // HLS thumbnail not found
         return null;
     } catch (error) {
         console.error('❌ Error getting HLS thumbnail:', error);
@@ -257,14 +257,14 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             
             if (success && fs.existsSync(thumbnailPath)) {
                 const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-                console.log('✅ HLS thumbnail generated successfully!');
+                // HLS thumbnail generated successfully
                 return thumbnailUrl;
             } else {
-                console.log('❌ HLS thumbnail generation failed');
+                // HLS thumbnail generation failed
                 return null;
             }
         } else {
-            console.log('❌ No HLS qualities found for thumbnail generation');
+            // No HLS qualities found for thumbnail generation
             return null;
         }
     } catch (error) {
