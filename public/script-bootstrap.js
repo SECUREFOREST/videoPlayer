@@ -889,6 +889,26 @@ class ModernVideoPlayerBrowser {
             } else {
                 throw new Error('HLS is not supported in this browser');
             }
+            
+            // Update video info after HLS setup
+            this.updateVideoInfo(videoData);
+            
+            // Update favorite button state
+            this.updateFavoriteButtonState();
+            
+            // Show modal
+            this.videoPlayerModal.show();
+            
+            // Restore progress if available
+            if (this.currentVideo && this.currentVideo.path) {
+                this.restoreProgress(this.currentVideo.path);
+            }
+            
+            // Autoplay the video (wait for manifest to be parsed)
+            this.video.play().catch(error => {
+                console.log('Autoplay failed (will retry after manifest parsed):', error.message);
+            });
+            
         } catch (error) {
             console.error('HLS playback error:', error);
             this.showStatusMessage('HLS playback error: ' + error.message, 'error');
@@ -2472,8 +2492,8 @@ class ModernVideoPlayerBrowser {
                     timestamp: new Date().toISOString()
                 });
                 
-                // Check if the new source is unexpectedly the domain name
-                if (newSrc && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com'))) {
+                // Check if the new source is unexpectedly the domain name (but not a blob URL)
+                if (newSrc && !newSrc.startsWith('blob:') && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com')) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
                     console.error('Video source unexpectedly changed to domain name!', {
                         newSrc,
                         currentVideo: this.currentVideo?.name || 'Unknown',
@@ -2563,8 +2583,8 @@ class ModernVideoPlayerBrowser {
             return;
         }
         
-        // Debug: Log if video source is unexpectedly set to domain name
-        if (video.src && (video.src.includes('ttu.deviantdare.com') || video.src.includes('deviantdare.com'))) {
+        // Debug: Log if video source is unexpectedly set to domain name (but not a blob URL)
+        if (video.src && !video.src.startsWith('blob:') && (video.src.includes('ttu.deviantdare.com') || video.src.includes('deviantdare.com')) && !video.src.includes('/video') && !video.src.includes('/hls')) {
             console.error('Unexpected video source detected - video.src contains domain name:', {
                 videoSrc: video.src,
                 currentVideo: this.currentVideo?.name || 'Unknown',
