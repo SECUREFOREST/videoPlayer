@@ -527,6 +527,10 @@ class ModernVideoPlayerBrowser {
 
     async playVideo(item) {
         try {
+            // Show loading state
+            this.showStatusMessage('Loading video...', 'info');
+            this.setLoadingState('video', true);
+            
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
             const videoData = await response.json();
 
@@ -581,11 +585,16 @@ class ModernVideoPlayerBrowser {
                 this.video.play().catch(error => {
                     // Autoplay failed
                 });
+                
+                // Clear loading state
+                this.setLoadingState('video', false);
             } else {
+                this.setLoadingState('video', false);
                 this.showStatusMessage('Error loading video: ' + videoData.error, 'error');
             }
         } catch (error) {
-            this.showStatusMessage('Error loading video: ' + error.message, 'error');
+            this.setLoadingState('video', false);
+            this.handleError(error, 'video');
         }
     }
 
@@ -746,13 +755,6 @@ class ModernVideoPlayerBrowser {
                     // Video seeked
                 });
 
-                // Add custom seeking method for better HLS scrubbing
-                this.video.addEventListener('timeupdate', () => {
-                    // Update progress display more frequently for smoother scrubbing
-                    this.updateVideoInfo();
-                });
-                
-
                 // Handle HLS events
                 this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     // HLS manifest parsed
@@ -828,12 +830,6 @@ class ModernVideoPlayerBrowser {
                 });
 
 
-                // Save progress for HLS streams
-                this.video.addEventListener('timeupdate', () => {
-                    if (this.currentVideo && this.video.duration) {
-                        this.saveProgress(this.currentVideo.path, this.video.currentTime);
-                    }
-                });
 
 
             } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -2438,7 +2434,21 @@ class ModernVideoPlayerBrowser {
         if (!this.videoState.isSeeking) {
             this.videoState.currentTime = this.video.currentTime;
             this.updateProgress();
+            
+            // Update video info for HLS videos (debounced to improve performance)
+            if (this.currentVideo && this.currentVideo.isHLS) {
+                this.debounceVideoInfoUpdate();
+            }
         }
+    }
+
+    debounceVideoInfoUpdate() {
+        if (this.videoInfoUpdateTimeout) {
+            clearTimeout(this.videoInfoUpdateTimeout);
+        }
+        this.videoInfoUpdateTimeout = setTimeout(() => {
+            this.updateVideoInfo();
+        }, 100); // Update every 100ms instead of every timeupdate event
     }
 
     handleVideoVolumeChange() {
@@ -2647,8 +2657,23 @@ class ModernVideoPlayerBrowser {
 
     handleError(error, context = '') {
         console.error(`Error in ${context}:`, error);
-        this.showStatusMessage(`Error: ${error.message || 'Something went wrong'}`, 'error');
-        this.announceToScreenReader(`Error: ${error.message || 'Something went wrong'}`);
+        
+        // Provide more specific error messages based on context
+        let userMessage = 'Something went wrong';
+        if (context.includes('video')) {
+            userMessage = 'Video playback error. Please try refreshing the page.';
+        } else if (context.includes('search')) {
+            userMessage = 'Search failed. Please try again.';
+        } else if (context.includes('favorite')) {
+            userMessage = 'Failed to update favorites. Please try again.';
+        } else if (context.includes('playlist')) {
+            userMessage = 'Playlist operation failed. Please try again.';
+        } else if (error.message) {
+            userMessage = error.message;
+        }
+        
+        this.showStatusMessage(`Error: ${userMessage}`, 'error');
+        this.announceToScreenReader(`Error: ${userMessage}`);
     }
 
     debounceSearch(query) {
@@ -2806,6 +2831,11 @@ class ModernVideoPlayerBrowser {
             this.debounceTimeout = null;
         }
 
+        if (this.videoInfoUpdateTimeout) {
+            clearTimeout(this.videoInfoUpdateTimeout);
+            this.videoInfoUpdateTimeout = null;
+        }
+
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
             this.animationFrame = null;
@@ -2814,6 +2844,8 @@ class ModernVideoPlayerBrowser {
         // Clean up HLS instance properly
         if (this.hls) {
             try {
+                this.hls.off(); // Remove all event listeners
+                this.hls.detachMedia(); // Detach from video element
                 this.hls.destroy();
             } catch (error) {
                 // HLS cleanup error (non-fatal)
@@ -2821,12 +2853,36 @@ class ModernVideoPlayerBrowser {
             this.hls = null;
         }
 
-        // Clean up video element
+        // Clean up video element and remove event listeners
         if (this.video) {
             this.video.pause();
             this.video.src = '';
             this.video.load();
+            
+            // Remove all event listeners
+            this.video.removeEventListener('loadstart', this.handleVideoLoadStart);
+            this.video.removeEventListener('loadedmetadata', this.handleVideoLoadedMetadata);
+            this.video.removeEventListener('canplay', this.handleVideoCanPlay);
+            this.video.removeEventListener('play', this.handleVideoPlay);
+            this.video.removeEventListener('pause', this.handleVideoPause);
+            this.video.removeEventListener('ended', this.handleVideoEnded);
+            this.video.removeEventListener('timeupdate', this.handleVideoTimeUpdate);
+            this.video.removeEventListener('volumechange', this.handleVideoVolumeChange);
+            this.video.removeEventListener('ratechange', this.handleVideoRateChange);
+            this.video.removeEventListener('error', this.handleVideoError);
+            this.video.removeEventListener('seeking', this.handleVideoSeeking);
+            this.video.removeEventListener('seeked', this.handleVideoSeeked);
         }
+
+        // Clean up global event listeners
+        document.removeEventListener('keydown', this.handleKeyboard);
+        document.removeEventListener('keyup', this.handleKeyboardUp);
+        document.removeEventListener('focusin', this.handleFocusIn);
+        document.removeEventListener('focusout', this.handleFocusOut);
+        document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', this.handleFullscreenChange);
+        document.removeEventListener('mozfullscreenchange', this.handleFullscreenChange);
+        document.removeEventListener('MSFullscreenChange', this.handleFullscreenChange);
 
         this.loadingStates.clear();
         this.saveAllProgress();
