@@ -12,6 +12,7 @@ class ModernVideoPlayerBrowser {
         this.currentPlaylistIndex = 0;
         this.selectedPlaylistId = null;
         this.hls = null; // HLS instance for streaming
+        this.isHandlingVideoError = false; // Flag to prevent infinite error loops
 
         // Video player state management
         this.videoState = {
@@ -527,6 +528,9 @@ class ModernVideoPlayerBrowser {
 
     async playVideo(item) {
         try {
+            // Reset error handling state when starting a new video
+            this.isHandlingVideoError = false;
+            
             // Show loading state
             this.showStatusMessage('Loading video...', 'info');
             this.setLoadingState('video', true);
@@ -887,29 +891,51 @@ class ModernVideoPlayerBrowser {
             
             console.log('Attempting fallback for HLS video:', videoData);
             
+            // Clean up HLS instance properly to prevent further errors
+            if (this.hls) {
+                console.log('Cleaning up HLS instance');
+                this.hls.off(); // Remove all event listeners
+                this.hls.detachMedia(); // Detach from video element
+                this.hls.destroy(); // Destroy the instance
+                this.hls = null;
+            }
+            
+            // Clear the video element completely to prevent further errors
+            this.video.src = '';
+            this.video.removeAttribute('src');
+            this.video.load();
+            
             // For HLS-only content, just show a helpful message
             // Don't try to find original files as they likely don't exist
             this.showStatusMessage('HLS video failed to load. This appears to be HLS-only content with no original video file.', 'info');
             
-            // Clear the video element to prevent further errors
-            this.video.src = '';
-            this.video.load();
+            // Reset the error handling flag
+            this.isHandlingVideoError = false;
             
         } catch (error) {
             console.error('Fallback error:', error);
             this.showStatusMessage('Fallback failed: ' + error.message, 'error');
+            this.isHandlingVideoError = false;
         }
     }
 
     handleHLSError(errorData) {
-        console.error('HLS fatal error:', errorData);
-        console.error('HLS error details:', {
-            type: errorData.type,
-            details: errorData.details,
-            fatal: errorData.fatal,
-            error: errorData.error,
-            event: errorData.event
-        });
+        // Create safe copies of error data to prevent console logging issues
+        const hlsErrorInfo = {
+            type: errorData.type || 'unknown',
+            details: errorData.details || 'no details',
+            fatal: errorData.fatal || false,
+            error: errorData.error ? String(errorData.error) : 'no error object',
+            timestamp: new Date().toISOString()
+        };
+        
+        console.error('HLS fatal error:', hlsErrorInfo);
+        
+        // Prevent infinite loop if we're already handling a video error
+        if (this.isHandlingVideoError) {
+            console.log('Already handling video error, skipping HLS error handling');
+            return;
+        }
         
         switch (errorData.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
@@ -922,6 +948,8 @@ class ModernVideoPlayerBrowser {
                 break;
             default:
                 this.showStatusMessage('HLS playback error: ' + errorData.details, 'error');
+                // Set flag to prevent infinite loop
+                this.isHandlingVideoError = true;
                 // Try fallback to original video
                 this.fallbackToOriginalVideo(this.currentVideo);
                 break;
@@ -2467,6 +2495,18 @@ class ModernVideoPlayerBrowser {
         const video = e.target;
         const error = video.error;
         
+        // Prevent infinite loop by checking if we're already handling a video error
+        if (this.isHandlingVideoError) {
+            console.log('Already handling video error, preventing infinite loop');
+            return;
+        }
+        
+        // Ignore errors from blob URLs that are being cleaned up
+        if (video.src && video.src.startsWith('blob:') && !this.hls) {
+            console.log('Ignoring error from cleaned up blob URL');
+            return;
+        }
+        
         // Get detailed error information
         let errorMessage = 'Video playback error occurred';
         let errorCode = 'UNKNOWN';
@@ -2498,41 +2538,94 @@ class ModernVideoPlayerBrowser {
             errorDetails = `Code: ${errorCode}, Message: ${error.message || 'No additional details'}`;
         }
         
-        // Log detailed error information
-        console.error('Video error details:', {
+        // Log detailed error information with safe object references
+        const errorInfo = {
             errorCode,
             errorMessage,
             errorDetails,
-            videoSrc: video.src,
-            videoCurrentSrc: video.currentSrc,
+            videoSrc: video.src || 'null',
+            videoCurrentSrc: video.currentSrc || 'null',
             videoNetworkState: video.networkState,
             videoReadyState: video.readyState,
             currentVideo: this.currentVideo?.name || 'Unknown',
             isHLS: this.currentVideo?.isHLS || false,
             hlsInstance: this.hls ? 'exists' : 'null',
-            hlsUrl: this.hls ? this.hls.url : 'null',
-            event: e
-        });
+            hlsUrl: this.hls?.url || 'null',
+            timestamp: new Date().toISOString()
+        };
+        
+        console.error('Video error details:', errorInfo);
         
         // Additional debugging for SRC_NOT_SUPPORTED errors
         if (errorCode === 'SRC_NOT_SUPPORTED') {
-            console.error('SRC_NOT_SUPPORTED debugging:', {
-                videoSrc: video.src,
-                videoCurrentSrc: video.currentSrc,
+            const srcDebugInfo = {
+                videoSrc: video.src || 'null',
+                videoCurrentSrc: video.currentSrc || 'null',
                 expectedHLSUrl: this.currentVideo ? `/hls/${encodeURIComponent(this.currentVideo.path)}` : 'unknown',
                 hlsAttached: this.hls ? 'yes' : 'no',
-                hlsUrl: this.hls ? this.hls.url : 'null'
-            });
+                hlsUrl: this.hls?.url || 'null',
+                timestamp: new Date().toISOString()
+            };
+            console.error('SRC_NOT_SUPPORTED debugging:', srcDebugInfo);
         }
         
         // Show user-friendly error message
         this.showStatusMessage(`Video Error: ${errorMessage}`, 'error');
         this.videoState.isPlaying = false;
         
-        // For HLS videos, try fallback to original video
-        if (this.currentVideo && this.currentVideo.isHLS) {
-            console.log('Attempting fallback to original video for HLS error');
-            this.fallbackToOriginalVideo(this.currentVideo);
+        // Set flag to prevent infinite loop
+        this.isHandlingVideoError = true;
+        
+        // Handle different error types with appropriate recovery strategies
+        this.handleVideoErrorRecovery(errorCode, errorMessage);
+        
+        // Reset flag after a delay to allow for retry if needed
+        setTimeout(() => {
+            this.isHandlingVideoError = false;
+        }, 2000);
+    }
+
+    handleVideoErrorRecovery(errorCode, errorMessage) {
+        try {
+            switch (errorCode) {
+                case 'SRC_NOT_SUPPORTED':
+                    // For HLS videos, try fallback to original video
+                    if (this.currentVideo && this.currentVideo.isHLS) {
+                        console.log('Attempting fallback to original video for HLS error');
+                        this.fallbackToOriginalVideo(this.currentVideo);
+                    } else {
+                        this.showStatusMessage('Video format not supported by your browser. Try using a different browser or update your current one.', 'error');
+                    }
+                    break;
+                    
+                case 'NETWORK':
+                    // For network errors, attempt automatic retry
+                    this.showStatusMessage('Network error occurred. Attempting to retry...', 'warning');
+                    this.retryVideoLoad().then(success => {
+                        if (!success) {
+                            this.showStatusMessage('Network error: Unable to retry. Check your connection and try again.', 'error');
+                        }
+                    });
+                    break;
+                    
+                case 'DECODE':
+                    // For decode errors, suggest different browser or codec
+                    this.showStatusMessage('Video decoding error. This video may be corrupted or use an unsupported codec.', 'error');
+                    break;
+                    
+                case 'ABORTED':
+                    // For aborted errors, usually user-initiated, just log
+                    console.log('Video playback was aborted');
+                    break;
+                    
+                default:
+                    // For unknown errors, try basic recovery
+                    this.showStatusMessage('Unknown video error occurred. Please try refreshing the page.', 'error');
+                    break;
+            }
+        } catch (error) {
+            console.error('Error in error recovery:', error);
+            this.showStatusMessage('Error recovery failed. Please try refreshing the page.', 'error');
         }
     }
 
@@ -2543,6 +2636,71 @@ class ModernVideoPlayerBrowser {
     handleVideoSeeked() {
         this.videoState.isSeeking = false;
         this.videoState.currentTime = this.video.currentTime;
+    }
+
+    // Method to attempt video reload with exponential backoff
+    async retryVideoLoad(maxRetries = 3, baseDelay = 1000) {
+        if (this.retryCount >= maxRetries) {
+            this.showStatusMessage('Maximum retry attempts reached. Please try refreshing the page.', 'error');
+            return false;
+        }
+
+        this.retryCount = (this.retryCount || 0) + 1;
+        const delay = baseDelay * Math.pow(2, this.retryCount - 1); // Exponential backoff
+        
+        console.log(`Retrying video load (attempt ${this.retryCount}/${maxRetries}) in ${delay}ms`);
+        this.showStatusMessage(`Retrying video load (attempt ${this.retryCount}/${maxRetries})...`, 'info');
+
+        return new Promise((resolve) => {
+            setTimeout(async () => {
+                try {
+                    if (this.currentVideo) {
+                        if (this.currentVideo.isHLS) {
+                            await this.playHLSVideo(`/hls/${encodeURIComponent(this.currentVideo.path)}`, this.currentVideo);
+                        } else {
+                            await this.playVideo(`/video/${encodeURIComponent(this.currentVideo.path)}`, this.currentVideo);
+                        }
+                        this.retryCount = 0; // Reset on success
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                } catch (error) {
+                    console.error('Retry failed:', error);
+                    resolve(false);
+                }
+            }, delay);
+        });
+    }
+
+    // Method to clean up video resources properly
+    cleanupVideoResources() {
+        try {
+            // Clean up HLS instance
+            if (this.hls) {
+                this.hls.off();
+                this.hls.detachMedia();
+                this.hls.destroy();
+                this.hls = null;
+            }
+
+            // Clear video element
+            if (this.video) {
+                this.video.pause();
+                this.video.src = '';
+                this.video.removeAttribute('src');
+                this.video.load();
+            }
+
+            // Reset state
+            this.currentVideo = null;
+            this.retryCount = 0;
+            this.isHandlingVideoError = false;
+
+            console.log('Video resources cleaned up successfully');
+        } catch (error) {
+            console.error('Error cleaning up video resources:', error);
+        }
     }
 
     // Accessibility and UX methods
@@ -2922,6 +3080,9 @@ class ModernVideoPlayerBrowser {
             }
             this.hls = null;
         }
+        
+        // Reset error handling state
+        this.isHandlingVideoError = false;
 
         // Clean up video element and remove event listeners
         if (this.video) {
