@@ -578,9 +578,26 @@ class ModernVideoPlayerBrowser {
                         }
                     });
                     
+                    // Debug: Check video element state before setting source
+                    console.log('Video element state before setting source:', {
+                        currentSrc: this.video.currentSrc,
+                        src: this.video.src,
+                        networkState: this.video.networkState,
+                        readyState: this.video.readyState
+                    });
+                    
                     this.videoSource.src = videoUrl;
                     this.videoSource.type = videoData.mimeType;
                     this.video.src = videoUrl;
+                    
+                    // Debug: Check video element state after setting source
+                    console.log('Video element state after setting source:', {
+                        currentSrc: this.video.currentSrc,
+                        src: this.video.src,
+                        networkState: this.video.networkState,
+                        readyState: this.video.readyState
+                    });
+                    
                     this.video.load();
                 }
 
@@ -2432,6 +2449,45 @@ class ModernVideoPlayerBrowser {
         this.video.addEventListener('error', (e) => this.handleVideoError(e));
         this.video.addEventListener('seeking', () => this.handleVideoSeeking());
         this.video.addEventListener('seeked', () => this.handleVideoSeeked());
+        
+        // Monitor video source changes to detect unexpected modifications
+        this.monitorVideoSourceChanges();
+    }
+    
+    monitorVideoSourceChanges() {
+        if (!this.video) return;
+        
+        // Store the last known source
+        let lastSrc = this.video.src;
+        
+        // Check for source changes every 100ms
+        const sourceMonitor = setInterval(() => {
+            if (this.video && this.video.src !== lastSrc) {
+                const newSrc = this.video.src;
+                console.log('Video source changed:', {
+                    from: lastSrc,
+                    to: newSrc,
+                    currentVideo: this.currentVideo?.name || 'Unknown',
+                    isHLS: this.currentVideo?.isHLS || false,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Check if the new source is unexpectedly the domain name
+                if (newSrc && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com'))) {
+                    console.error('Video source unexpectedly changed to domain name!', {
+                        newSrc,
+                        currentVideo: this.currentVideo?.name || 'Unknown',
+                        isHLS: this.currentVideo?.isHLS || false,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                lastSrc = newSrc;
+            }
+        }, 100);
+        
+        // Store the interval ID so it can be cleared if needed
+        this.videoSourceMonitor = sourceMonitor;
     }
 
     handleVideoLoadStart() {
@@ -2507,6 +2563,16 @@ class ModernVideoPlayerBrowser {
             return;
         }
         
+        // Debug: Log if video source is unexpectedly set to domain name
+        if (video.src && (video.src.includes('ttu.deviantdare.com') || video.src.includes('deviantdare.com'))) {
+            console.error('Unexpected video source detected - video.src contains domain name:', {
+                videoSrc: video.src,
+                currentVideo: this.currentVideo?.name || 'Unknown',
+                isHLS: this.currentVideo?.isHLS || false,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
         // Get detailed error information
         let errorMessage = 'Video playback error occurred';
         let errorCode = 'UNKNOWN';
@@ -2538,35 +2604,45 @@ class ModernVideoPlayerBrowser {
             errorDetails = `Code: ${errorCode}, Message: ${error.message || 'No additional details'}`;
         }
         
-        // Log detailed error information with safe object references
-        const errorInfo = {
+        // Log detailed error information with completely safe primitive values
+        const videoSrc = video.src ? String(video.src) : 'null';
+        const videoCurrentSrc = video.currentSrc ? String(video.currentSrc) : 'null';
+        const currentVideoName = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
+        const hlsUrl = this.hls?.url ? String(this.hls.url) : 'null';
+        
+        console.error('Video error details:', {
             errorCode,
             errorMessage,
             errorDetails,
-            videoSrc: video.src || 'null',
-            videoCurrentSrc: video.currentSrc || 'null',
+            videoSrc,
+            videoCurrentSrc,
             videoNetworkState: video.networkState,
             videoReadyState: video.readyState,
-            currentVideo: this.currentVideo?.name || 'Unknown',
+            currentVideo: currentVideoName,
             isHLS: this.currentVideo?.isHLS || false,
             hlsInstance: this.hls ? 'exists' : 'null',
-            hlsUrl: this.hls?.url || 'null',
+            hlsUrl,
             timestamp: new Date().toISOString()
-        };
-        
-        console.error('Video error details:', errorInfo);
+        });
         
         // Additional debugging for SRC_NOT_SUPPORTED errors
         if (errorCode === 'SRC_NOT_SUPPORTED') {
-            const srcDebugInfo = {
-                videoSrc: video.src || 'null',
-                videoCurrentSrc: video.currentSrc || 'null',
-                expectedHLSUrl: this.currentVideo ? `/hls/${encodeURIComponent(this.currentVideo.path)}` : 'unknown',
-                hlsAttached: this.hls ? 'yes' : 'no',
-                hlsUrl: this.hls?.url || 'null',
-                timestamp: new Date().toISOString()
-            };
-            console.error('SRC_NOT_SUPPORTED debugging:', srcDebugInfo);
+            // Create completely safe primitive values to prevent console reference issues
+            const srcDebugVideoSrc = video.src ? String(video.src) : 'null';
+            const srcDebugVideoCurrentSrc = video.currentSrc ? String(video.currentSrc) : 'null';
+            const expectedHLSUrl = this.currentVideo ? `/hls/${encodeURIComponent(String(this.currentVideo.path))}` : 'unknown';
+            const hlsAttached = this.hls ? 'yes' : 'no';
+            const srcDebugHlsUrl = this.hls?.url ? String(this.hls.url) : 'null';
+            const srcDebugTimestamp = new Date().toISOString();
+            
+            console.error('SRC_NOT_SUPPORTED debugging:', {
+                videoSrc: srcDebugVideoSrc,
+                videoCurrentSrc: srcDebugVideoCurrentSrc,
+                expectedHLSUrl,
+                hlsAttached,
+                hlsUrl: srcDebugHlsUrl,
+                timestamp: srcDebugTimestamp
+            });
         }
         
         // Show user-friendly error message
@@ -2690,6 +2766,12 @@ class ModernVideoPlayerBrowser {
                 this.video.src = '';
                 this.video.removeAttribute('src');
                 this.video.load();
+            }
+
+            // Clear source monitoring
+            if (this.videoSourceMonitor) {
+                clearInterval(this.videoSourceMonitor);
+                this.videoSourceMonitor = null;
             }
 
             // Reset state
