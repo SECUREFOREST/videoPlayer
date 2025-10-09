@@ -231,7 +231,9 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     }
     
     // Convert master playlist path to directory path
-    const masterDir = decodeURIComponent(masterPath.replace('/hls/', '').replace('/master.m3u8', ''));
+    // First decode the URL-encoded path, then remove /hls/ prefix and /master.m3u8 suffix
+    const decodedMasterPath = decodeURIComponent(masterPath);
+    const masterDir = decodedMasterPath.replace('/hls/', '').replace('/master.m3u8', '');
     
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
@@ -290,7 +292,9 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     }
     
     // Convert master playlist path to directory path
-    const masterDir = decodeURIComponent(masterPath.replace('/hls/', '').replace('/master.m3u8', ''));
+    // First decode the URL-encoded path, then remove /hls/ prefix and /master.m3u8 suffix
+    const decodedMasterPath = decodeURIComponent(masterPath);
+    const masterDir = decodedMasterPath.replace('/hls/', '').replace('/master.m3u8', '');
     
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
