@@ -926,10 +926,11 @@ class ModernVideoPlayerBrowser {
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
             `;
         } else if (this.currentVideo && this.video) {
-            // Fallback for when called without videoData 
+            // Use duration from currentVideo if available (for HLS), otherwise use video.duration
+            const duration = this.currentVideo.duration || this.video.duration || 0;
             this.videoInfo.innerHTML = `
                 <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
-                <strong>Duration:</strong> ${this.formatTime(this.video.duration)}<br>
+                <strong>Duration:</strong> ${this.formatTime(duration)}<br>
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
         }
