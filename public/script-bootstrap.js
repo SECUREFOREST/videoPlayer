@@ -904,6 +904,21 @@ class ModernVideoPlayerBrowser {
                 this.restoreProgress(this.currentVideo.path);
             }
             
+            // Check for domain name issue before playing
+            if (this.video.src && (this.video.src === window.location.href || this.video.src === window.location.origin + '/')) {
+                console.error('CRITICAL: Video src is set to domain name before play! Clearing it...', {
+                    videoSrc: this.video.src,
+                    currentVideo: this.currentVideo?.name || 'Unknown',
+                    isHLS: this.currentVideo?.isHLS || false,
+                    timestamp: new Date().toISOString()
+                });
+                
+                this.video.src = '';
+                this.video.removeAttribute('src');
+                this.video.load();
+                return;
+            }
+            
             // Autoplay the video (wait for manifest to be parsed)
             this.video.play().catch(error => {
                 console.log('Autoplay failed (will retry after manifest parsed):', error.message);
@@ -2472,6 +2487,43 @@ class ModernVideoPlayerBrowser {
         
         // Monitor video source changes to detect unexpected modifications
         this.monitorVideoSourceChanges();
+        
+        // Add immediate check for domain name issue
+        this.checkForDomainNameIssue();
+    }
+    
+    checkForDomainNameIssue() {
+        if (!this.video) return;
+        
+        // Check immediately if video src is set to domain name
+        if (this.video.src && this.video.src === window.location.href) {
+            console.error('CRITICAL: Video src is set to current page URL on initialization!', {
+                videoSrc: this.video.src,
+                currentVideo: this.currentVideo?.name || 'Unknown',
+                isHLS: this.currentVideo?.isHLS || false,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Clear it immediately
+            this.video.src = '';
+            this.video.removeAttribute('src');
+            this.video.load();
+        }
+        
+        // Also check if it's just the domain name
+        if (this.video.src && this.video.src === window.location.origin + '/') {
+            console.error('CRITICAL: Video src is set to domain name on initialization!', {
+                videoSrc: this.video.src,
+                currentVideo: this.currentVideo?.name || 'Unknown',
+                isHLS: this.currentVideo?.isHLS || false,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Clear it immediately
+            this.video.src = '';
+            this.video.removeAttribute('src');
+            this.video.load();
+        }
     }
     
     monitorVideoSourceChanges() {
@@ -2506,6 +2558,24 @@ class ModernVideoPlayerBrowser {
                 // Check if the new source is unexpectedly the domain name (but not a blob URL)
                 if (newSrc && !newSrc.startsWith('blob:') && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com')) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
                     console.error('Video source unexpectedly changed to domain name! Clearing it...', {
+                        newSrc,
+                        currentVideo: this.currentVideo?.name || 'Unknown',
+                        isHLS: this.currentVideo?.isHLS || false,
+                        timestamp: new Date().toISOString(),
+                        stackTrace: stackTrace
+                    });
+                    
+                    // Automatically clear the invalid src to prevent errors
+                    this.video.src = '';
+                    this.video.removeAttribute('src');
+                    this.video.load();
+                    lastSrc = '';
+                    return;
+                }
+                
+                // Additional check for exact domain match
+                if (newSrc && (newSrc === window.location.href || newSrc === window.location.origin + '/')) {
+                    console.error('Video source set to current page URL! Clearing it...', {
                         newSrc,
                         currentVideo: this.currentVideo?.name || 'Unknown',
                         isHLS: this.currentVideo?.isHLS || false,
