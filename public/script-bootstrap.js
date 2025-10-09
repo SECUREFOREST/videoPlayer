@@ -563,6 +563,17 @@ class ModernVideoPlayerBrowser {
                     this.video.load();
                     
                     const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
+                    console.log('Loading regular video:', {
+                        videoUrl,
+                        mimeType: videoData.mimeType,
+                        videoData: {
+                            name: videoData.name,
+                            path: videoData.path,
+                            isHLS: videoData.isHLS,
+                            duration: videoData.duration
+                        }
+                    });
+                    
                     this.videoSource.src = videoUrl;
                     this.videoSource.type = videoData.mimeType;
                     this.video.src = videoUrl;
@@ -743,6 +754,16 @@ class ModernVideoPlayerBrowser {
                 });
 
                 // Load the HLS source
+                console.log('Loading HLS video:', {
+                    videoUrl,
+                    videoData: {
+                        name: videoData.name,
+                        path: videoData.path,
+                        isHLS: videoData.isHLS,
+                        duration: videoData.duration
+                    }
+                });
+                
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
                 
@@ -2461,9 +2482,63 @@ class ModernVideoPlayerBrowser {
     }
 
     handleVideoError(e) {
-        console.error('Video error:', e);
-        this.showStatusMessage('Video playback error occurred', 'error');
+        const video = e.target;
+        const error = video.error;
+        
+        // Get detailed error information
+        let errorMessage = 'Video playback error occurred';
+        let errorCode = 'UNKNOWN';
+        let errorDetails = '';
+        
+        if (error) {
+            switch (error.code) {
+                case MediaError.MEDIA_ERR_ABORTED:
+                    errorCode = 'ABORTED';
+                    errorMessage = 'Video playback was aborted';
+                    break;
+                case MediaError.MEDIA_ERR_NETWORK:
+                    errorCode = 'NETWORK';
+                    errorMessage = 'Network error occurred while loading video';
+                    break;
+                case MediaError.MEDIA_ERR_DECODE:
+                    errorCode = 'DECODE';
+                    errorMessage = 'Video decoding error occurred';
+                    break;
+                case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                    errorCode = 'SRC_NOT_SUPPORTED';
+                    errorMessage = 'Video format not supported';
+                    break;
+                default:
+                    errorCode = 'UNKNOWN';
+                    errorMessage = 'Unknown video error occurred';
+            }
+            
+            errorDetails = `Code: ${errorCode}, Message: ${error.message || 'No additional details'}`;
+        }
+        
+        // Log detailed error information
+        console.error('Video error details:', {
+            errorCode,
+            errorMessage,
+            errorDetails,
+            videoSrc: video.src,
+            videoCurrentSrc: video.currentSrc,
+            videoNetworkState: video.networkState,
+            videoReadyState: video.readyState,
+            currentVideo: this.currentVideo?.name || 'Unknown',
+            isHLS: this.currentVideo?.isHLS || false,
+            event: e
+        });
+        
+        // Show user-friendly error message
+        this.showStatusMessage(`Video Error: ${errorMessage}`, 'error');
         this.videoState.isPlaying = false;
+        
+        // For HLS videos, try fallback to original video
+        if (this.currentVideo && this.currentVideo.isHLS) {
+            console.log('Attempting fallback to original video for HLS error');
+            this.fallbackToOriginalVideo(this.currentVideo);
+        }
     }
 
     handleVideoSeeking() {
