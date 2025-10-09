@@ -312,8 +312,8 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     }
 });
 
-// Route to capture master playlist access and store the path - MUST come after specific routes
-app.get('/hls/*', (req, res, next) => {
+// Middleware to capture master playlist access and store the path - MUST come before static file serving
+app.use('/hls', (req, res, next) => {
     const masterPath = req.path;
     const sessionId = getSessionId(req);
     
@@ -330,12 +330,11 @@ app.get('/hls/*', (req, res, next) => {
         console.log(`Total sessions stored: ${masterPlaylistStore.size}`);
     }
     
-    // Continue to static file serving
+    // Continue to next middleware
     next();
 });
 
-
-// Static file serving for HLS files - MUST come after proxy middleware
+// Static file serving for HLS files - MUST come after capture middleware
 app.use('/hls', express.static(HLS_ROOT, {
     setHeaders: (res, filePath) => {
         if (filePath.match(/\.(m3u8|ts)$/i)) {
