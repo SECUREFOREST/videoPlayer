@@ -325,10 +325,14 @@ app.use('/hls', (req, res, next) => {
     const sessionId = getSessionId(req);
     
     console.log(`HLS request - Relative Path: ${relativePath}, Full Path: ${fullPath}, Session: ${sessionId}`);
-    console.log(`Path ends with /master.m3u8: ${relativePath.endsWith('/master.m3u8')}`);
+    
+    // Decode the path to handle URL-encoded characters
+    const decodedPath = decodeURIComponent(relativePath);
+    console.log(`Decoded path: ${decodedPath}`);
+    console.log(`Path ends with /master.m3u8: ${decodedPath.endsWith('/master.m3u8')}`);
     
     // Only store master playlist paths (not segments or quality playlists)
-    if (relativePath.endsWith('/master.m3u8')) {
+    if (decodedPath.endsWith('/master.m3u8')) {
         // Store master playlist path for session with timestamp
         masterPlaylistStore.set(sessionId, {
             path: fullPath,
