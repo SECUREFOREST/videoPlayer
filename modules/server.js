@@ -260,7 +260,8 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     const quality = req.params.quality;
     const segmentFile = req.params.segment;
     const sessionId = getSessionId(req);
-    let masterPath = masterPlaylistStore.get(sessionId);
+    let sessionData = masterPlaylistStore.get(sessionId);
+    let masterPath = sessionData ? sessionData.path : null;
     
     console.log(`HLS segment request - Session: ${sessionId}, Quality: ${quality}, Segment: ${segmentFile}, Master Path: ${masterPath}`);
     
@@ -268,7 +269,10 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     if (!masterPath) {
         masterPath = findMasterPlaylistFromRequest(req);
         if (masterPath) {
-            masterPlaylistStore.set(sessionId, masterPath);
+            masterPlaylistStore.set(sessionId, {
+                path: masterPath,
+                timestamp: Date.now()
+            });
             console.log(`Found master playlist from referer: ${masterPath}`);
         }
     }
