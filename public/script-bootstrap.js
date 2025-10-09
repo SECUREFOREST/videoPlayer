@@ -539,6 +539,8 @@ class ModernVideoPlayerBrowser {
 
             if (response.ok) {
                 this.currentVideo = item;
+                // Reset video state duration to prevent showing previous video's duration
+                this.videoState.duration = 0;
                 this.videoTitle.innerHTML = `${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}`;
 
                 // Check if it's an HLS file
@@ -631,6 +633,9 @@ class ModernVideoPlayerBrowser {
 
     async playHLSVideo(videoUrl, videoData) {
         try {
+            // Reset video state duration to prevent showing previous video's duration
+            this.videoState.duration = 0;
+            
             // Check if HLS is supported
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 // Using HLS.js for HLS playback
@@ -868,6 +873,8 @@ class ModernVideoPlayerBrowser {
 
             } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
                 // Using native HLS support (Safari)
+                // Reset video state duration to prevent showing previous video's duration
+                this.videoState.duration = 0;
                 this.video.src = videoUrl;
                 this.video.load();
             } else {
@@ -2562,6 +2569,12 @@ class ModernVideoPlayerBrowser {
 
     handleVideoLoadedMetadata() {
         this.videoState.duration = this.video.duration;
+        
+        // Update currentVideo duration if it exists
+        if (this.currentVideo) {
+            this.currentVideo.duration = this.video.duration;
+        }
+        
         this.updateVideoInfo();
     }
 
