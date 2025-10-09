@@ -2674,11 +2674,17 @@ class ModernVideoPlayerBrowser {
         
         // Debug: Log if video source is unexpectedly set to domain name (but not a blob URL)
         if (video.src && !video.src.startsWith('blob:') && (video.src.includes('ttu.deviantdare.com') || video.src.includes('deviantdare.com')) && !video.src.includes('/video') && !video.src.includes('/hls')) {
+            // Create safe copies to prevent console logging issues
+            const videoSrc = String(video.src);
+            const currentVideoName = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
+            const isHLS = this.currentVideo?.isHLS || false;
+            const timestamp = new Date().toISOString();
+            
             console.error('Unexpected video source detected - video.src contains domain name:', {
-                videoSrc: video.src,
-                currentVideo: this.currentVideo?.name || 'Unknown',
-                isHLS: this.currentVideo?.isHLS || false,
-                timestamp: new Date().toISOString()
+                videoSrc,
+                currentVideo: currentVideoName,
+                isHLS,
+                timestamp
             });
         }
         
@@ -2718,6 +2724,9 @@ class ModernVideoPlayerBrowser {
         const videoCurrentSrc = video.currentSrc ? String(video.currentSrc) : 'null';
         const currentVideoName = this.currentVideo?.name ? String(this.currentVideo.name) : 'Unknown';
         const hlsUrl = this.hls?.url ? String(this.hls.url) : 'null';
+        const isHLS = this.currentVideo?.isHLS || false;
+        const hlsInstance = this.hls ? 'exists' : 'null';
+        const timestamp = new Date().toISOString();
         
         console.error('Video error details:', {
             errorCode,
@@ -2728,10 +2737,10 @@ class ModernVideoPlayerBrowser {
             videoNetworkState: video.networkState,
             videoReadyState: video.readyState,
             currentVideo: currentVideoName,
-            isHLS: this.currentVideo?.isHLS || false,
-            hlsInstance: this.hls ? 'exists' : 'null',
+            isHLS,
+            hlsInstance,
             hlsUrl,
-            timestamp: new Date().toISOString()
+            timestamp
         });
         
         // Additional debugging for SRC_NOT_SUPPORTED errors
