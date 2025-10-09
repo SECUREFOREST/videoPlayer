@@ -2477,6 +2477,13 @@ class ModernVideoPlayerBrowser {
     monitorVideoSourceChanges() {
         if (!this.video) return;
         
+        // Ensure video src is not set to the domain name initially
+        if (this.video.src && this.video.src === window.location.href) {
+            console.warn('Video src was set to current page URL, clearing it');
+            this.video.src = '';
+            this.video.removeAttribute('src');
+        }
+        
         // Store the last known source
         let lastSrc = this.video.src;
         
@@ -2484,6 +2491,10 @@ class ModernVideoPlayerBrowser {
         const sourceMonitor = setInterval(() => {
             if (this.video && this.video.src !== lastSrc) {
                 const newSrc = this.video.src;
+                
+                // Capture stack trace to see where the change is coming from
+                const stackTrace = new Error().stack;
+                
                 console.log('Video source changed:', {
                     from: lastSrc,
                     to: newSrc,
@@ -2494,12 +2505,20 @@ class ModernVideoPlayerBrowser {
                 
                 // Check if the new source is unexpectedly the domain name (but not a blob URL)
                 if (newSrc && !newSrc.startsWith('blob:') && (newSrc.includes('ttu.deviantdare.com') || newSrc.includes('deviantdare.com')) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
-                    console.error('Video source unexpectedly changed to domain name!', {
+                    console.error('Video source unexpectedly changed to domain name! Clearing it...', {
                         newSrc,
                         currentVideo: this.currentVideo?.name || 'Unknown',
                         isHLS: this.currentVideo?.isHLS || false,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        stackTrace: stackTrace
                     });
+                    
+                    // Automatically clear the invalid src to prevent errors
+                    this.video.src = '';
+                    this.video.removeAttribute('src');
+                    this.video.load();
+                    lastSrc = '';
+                    return;
                 }
                 
                 lastSrc = newSrc;
