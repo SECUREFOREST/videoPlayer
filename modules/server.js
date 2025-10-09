@@ -161,12 +161,15 @@ const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 const masterPlaylistStore = new Map();
 
 // Route to capture master playlist access and store the path
-app.get('/hls/*/master.m3u8', (req, res, next) => {
+app.get('/hls/*', (req, res, next) => {
     const masterPath = req.path;
     const sessionId = req.sessionID || req.ip;
     
-    // Store the master playlist path for this session
-    masterPlaylistStore.set(sessionId, masterPath);
+    // Only store master playlist paths (not segments or quality playlists)
+    if (masterPath.endsWith('/master.m3u8')) {
+        console.log('Storing master playlist path:', masterPath, 'for session:', sessionId);
+        masterPlaylistStore.set(sessionId, masterPath);
+    }
     
     // Continue to static file serving
     next();
@@ -178,7 +181,15 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     const sessionId = req.sessionID || req.ip;
     const masterPath = masterPlaylistStore.get(sessionId);
     
+    console.log('HLS quality playlist request:', {
+        quality,
+        sessionId,
+        masterPath,
+        allStoredPaths: Array.from(masterPlaylistStore.entries())
+    });
+    
     if (!masterPath) {
+        console.error('No master playlist path found for session:', sessionId);
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
@@ -188,7 +199,10 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
         
+        console.log('Looking for quality playlist at:', correctPath);
+        
         if (!fs.existsSync(correctPath)) {
+            console.error('Quality playlist not found:', correctPath);
             return res.status(404).json({ error: 'Quality playlist not found' });
         }
         
@@ -219,7 +233,16 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     const sessionId = req.sessionID || req.ip;
     const masterPath = masterPlaylistStore.get(sessionId);
     
+    console.log('HLS segment request:', {
+        quality,
+        segmentFile,
+        sessionId,
+        masterPath,
+        allStoredPaths: Array.from(masterPlaylistStore.entries())
+    });
+    
     if (!masterPath) {
+        console.error('No master playlist path found for session:', sessionId);
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
     
@@ -229,7 +252,10 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
         
+        console.log('Looking for segment at:', correctPath);
+        
         if (!fs.existsSync(correctPath)) {
+            console.error('Segment not found:', correctPath);
             return res.status(404).json({ error: 'Video segment not found' });
         }
         

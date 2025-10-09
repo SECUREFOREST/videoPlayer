@@ -767,6 +767,14 @@ class ModernVideoPlayerBrowser {
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
                 
+                // Debug: Check video source after HLS setup
+                console.log('Video source after HLS setup:', {
+                    videoSrc: this.video.src,
+                    videoCurrentSrc: this.video.currentSrc,
+                    videoNetworkState: this.video.networkState,
+                    videoReadyState: this.video.readyState
+                });
+                
                 // Enhanced seeking behavior for HLS
                 this.video.addEventListener('seeking', () => {
                     // Video seeking
@@ -877,42 +885,16 @@ class ModernVideoPlayerBrowser {
                 return;
             }
             
-            // Look for original video file in the same directory
-            const hlsPath = videoData.path;
-            const hlsDir = hlsPath.substring(0, hlsPath.lastIndexOf('/'));
-            const videoName = videoData.name.replace('.m3u8', '');
+            console.log('Attempting fallback for HLS video:', videoData);
             
-            // Try common video extensions
-            const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
-            let foundOriginal = false;
+            // For HLS-only content, just show a helpful message
+            // Don't try to find original files as they likely don't exist
+            this.showStatusMessage('HLS video failed to load. This appears to be HLS-only content with no original video file.', 'info');
             
-            for (const ext of videoExtensions) {
-                const originalPath = hlsDir + '/' + videoName + ext;
-                try {
-                    const response = await fetch(`/api/video-info?path=${encodeURIComponent(originalPath)}`);
-                    if (response.ok) {
-                        const originalData = await response.json();
-                        if (originalData.isVideo && !originalData.isHLS) {
-                            // Found original video file
-                            this.video.src = `/videos/${encodeURIComponent(originalPath)}`;
-                            this.video.load();
-                            this.showStatusMessage('Playing original video file instead', 'info');
-                            foundOriginal = true;
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    // Continue to next extension - don't log 404 errors as they're expected
-                    if (e.message && !e.message.includes('404')) {
-                        console.warn(`Error checking ${originalPath}:`, e.message);
-                    }
-                }
-            }
+            // Clear the video element to prevent further errors
+            this.video.src = '';
+            this.video.load();
             
-            // No original video found
-            if (!foundOriginal) {
-                this.showStatusMessage('No original video file found. This appears to be HLS-only content.', 'info');
-            }
         } catch (error) {
             console.error('Fallback error:', error);
             this.showStatusMessage('Fallback failed: ' + error.message, 'error');
@@ -2527,8 +2509,21 @@ class ModernVideoPlayerBrowser {
             videoReadyState: video.readyState,
             currentVideo: this.currentVideo?.name || 'Unknown',
             isHLS: this.currentVideo?.isHLS || false,
+            hlsInstance: this.hls ? 'exists' : 'null',
+            hlsUrl: this.hls ? this.hls.url : 'null',
             event: e
         });
+        
+        // Additional debugging for SRC_NOT_SUPPORTED errors
+        if (errorCode === 'SRC_NOT_SUPPORTED') {
+            console.error('SRC_NOT_SUPPORTED debugging:', {
+                videoSrc: video.src,
+                videoCurrentSrc: video.currentSrc,
+                expectedHLSUrl: this.currentVideo ? `/hls/${encodeURIComponent(this.currentVideo.path)}` : 'unknown',
+                hlsAttached: this.hls ? 'yes' : 'no',
+                hlsUrl: this.hls ? this.hls.url : 'null'
+            });
+        }
         
         // Show user-friendly error message
         this.showStatusMessage(`Video Error: ${errorMessage}`, 'error');
