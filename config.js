@@ -5,7 +5,7 @@
 
 module.exports = {
     // Application Identity
-    name: 'Tie them up!',
+    name: 'Tie Them Down!',
     description: 'Advanced Video Player',
     
     // Security Settings

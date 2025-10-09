@@ -1,4 +1,4 @@
-# 🎬 Tie them up! - Advanced Video Player
+# 🎬 Advanced Video Player
 
 A high-performance Node.js video streaming application with professional-grade features including authentication, playlists, favorites, search, and optimized video delivery. Built with modern web technologies and designed to handle large video collections efficiently.
 
