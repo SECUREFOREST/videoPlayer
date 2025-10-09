@@ -532,7 +532,6 @@ class ModernVideoPlayerBrowser {
             this.isHandlingVideoError = false;
             
             // Show loading state
-            this.showStatusMessage('Loading video...', 'info');
             this.setLoadingState('video', true);
             
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
