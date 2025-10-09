@@ -314,19 +314,20 @@ app.get('/hls/:quality/:segment', async (req, res) => {
 
 // Middleware to capture master playlist access and store the path - MUST come before static file serving
 app.use('/hls', (req, res, next) => {
-    const masterPath = req.path;
+    const relativePath = req.path;
+    const fullPath = `/hls${relativePath}`;
     const sessionId = getSessionId(req);
     
-    console.log(`HLS request - Path: ${masterPath}, Session: ${sessionId}`);
+    console.log(`HLS request - Relative Path: ${relativePath}, Full Path: ${fullPath}, Session: ${sessionId}`);
     
     // Only store master playlist paths (not segments or quality playlists)
-    if (masterPath.endsWith('/master.m3u8')) {
+    if (relativePath.endsWith('/master.m3u8')) {
         // Store master playlist path for session with timestamp
         masterPlaylistStore.set(sessionId, {
-            path: masterPath,
+            path: fullPath,
             timestamp: Date.now()
         });
-        console.log(`Stored master playlist path for session ${sessionId}: ${masterPath}`);
+        console.log(`Stored master playlist path for session ${sessionId}: ${fullPath}`);
         console.log(`Total sessions stored: ${masterPlaylistStore.size}`);
     }
     
