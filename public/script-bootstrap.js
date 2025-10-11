@@ -1209,6 +1209,8 @@ class ModernVideoPlayerBrowser {
 
             // Use the video's directory (not browser's current path)
             const videoDirectory = this.currentVideoDirectory;
+            console.log(`🔍 Looking for next video in directory: "${videoDirectory}"`);
+            console.log(`📁 Current video: "${this.currentVideo.name}" (${this.currentVideo.path})`);
             
             // Loading directory for path
             const response = await fetch(`/api/browse?path=${encodeURIComponent(videoDirectory)}`, {
@@ -1224,10 +1226,14 @@ class ModernVideoPlayerBrowser {
             if (response.ok && data.items) {
                 // Filter only video files
                 const videos = data.items.filter(item => item.isVideo);
+                console.log(`📊 Found ${videos.length} videos in directory:`, videos.map(v => v.name));
+                console.log(`🎬 All items in directory:`, data.items.map(item => ({ name: item.name, isVideo: item.isVideo, isDirectory: item.isDirectory })));
                 
                 if (videos.length > 1) {
                     // Find current video index
                     const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
+                    console.log(`🎯 Current video index: ${currentIndex} (looking for: "${this.currentVideo.path}")`);
+                    console.log(`🔗 Video paths in directory:`, videos.map(v => v.path));
                     
                     if (currentIndex !== -1 && currentIndex < videos.length - 1) {
                         // Play next video
@@ -1248,7 +1254,10 @@ class ModernVideoPlayerBrowser {
 
     getVideoDirectory(videoPath) {
         // Extract directory from video path
-        if (!videoPath) return '';
+        if (!videoPath) {
+            console.log(`❌ No video path provided`);
+            return '';
+        }
         
         // Handle different path formats
         if (videoPath.includes('/')) {
@@ -1256,10 +1265,12 @@ class ModernVideoPlayerBrowser {
             const pathParts = videoPath.split('/');
             pathParts.pop(); // Remove filename
             const directory = pathParts.join('/');
+            console.log(`📂 Extracted directory from "${videoPath}" -> "${directory}"`);
             return directory;
         }
         
         // If no slashes, it's likely a root file
+        console.log(`📂 Video is in root directory: "${videoPath}"`);
         return '';
     }
 
