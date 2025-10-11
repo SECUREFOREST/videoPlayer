@@ -1,7 +1,7 @@
 {
   "name": "video-player-browser",
-  "version": "2.2.0",
-  "description": "A Node.js app for browsing files and watching videos with HLS streaming support",
+  "version": "2.3.0",
+  "description": "A high-performance Node.js video streaming application with smart search navigation, multi-strategy next video detection, and comprehensive cache management",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -38,7 +38,13 @@
     "hls",
     "streaming",
     "adaptive",
-    "bitrate"
+    "bitrate",
+    "search",
+    "navigation",
+    "cache",
+    "playlist",
+    "favorites",
+    "authentication"
   ],
   "author": "",
   "license": "MIT"

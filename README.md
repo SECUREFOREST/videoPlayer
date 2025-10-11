@@ -1,4 +1,4 @@
-# 🎬 Advanced Video Player
+# 🎬 Advanced Video Player v2.3.0
 
 A high-performance Node.js video streaming application with professional-grade features including authentication, playlists, favorites, search, and optimized video delivery. Built with modern web technologies and designed to handle large video collections efficiently.
 
@@ -24,6 +24,8 @@ A high-performance Node.js video streaming application with professional-grade f
 - **Multiple Sorting**: Sort by name, duration, or modification date
 - **Breadcrumb Navigation**: Easy directory navigation with clickable paths
 - **Grid View**: Optimized grid layout for video browsing
+- **Smart Search Navigation**: Seamless video playback from search results without losing search context
+- **Multi-Strategy Next Video**: Intelligent next video detection across directories and search results
 
 ### 📋 Playlist Management
 - **Create Playlists**: Organize your favorite videos with custom names
@@ -59,6 +61,8 @@ A high-performance Node.js video streaming application with professional-grade f
 - **Gzip Compression**: Reduced bandwidth usage
 - **Range Request Support**: Efficient video streaming with 206 Partial Content
 - **Memory Efficient**: Handles 600+ videos with minimal memory usage (~45MB RSS)
+- **Cache Busting**: Dynamic cache invalidation for instant updates
+- **No-Cache Headers**: Prevents stale content issues during development
 
 ## 🚀 Installation
 
@@ -113,7 +117,7 @@ A high-performance Node.js video streaming application with professional-grade f
 videoPlayer/
 ├── server.js                    # Main server entry point (modularized)
 ├── config.js                    # Application configuration
-├── package.json                 # Dependencies and scripts (v2.0.0)
+├── package.json                 # Dependencies and scripts (v2.3.0)
 ├── ecosystem.config.js          # PM2 configuration
 ├── nginx.conf                   # Nginx reverse proxy configuration
 ├── test-performance.js          # Performance testing script
@@ -130,12 +134,12 @@ videoPlayer/
 │   ├── convert-to-hls.js       # Main converter with smart validation
 │   ├── convert-to-hls.bat      # Windows batch file
 │   ├── convert-to-hls.sh       # Linux/macOS shell script
-│   ├── package.json            # Converter dependencies (v2.0.0)
+│   ├── package.json            # Converter dependencies (v2.3.0)
 │   └── README.md               # Converter documentation
 ├── public/                      # Client-side files
-│   ├── index.html              # Main HTML file with Bootstrap 5
-│   ├── style-bootstrap.css     # Custom styling (v9)
-│   ├── script-bootstrap.js     # JavaScript functionality (v113)
+│   ├── index.html              # Main HTML file with Bootstrap 5 (v2.3.0)
+│   ├── style-bootstrap.css     # Custom styling (v13)
+│   ├── script-bootstrap.js     # JavaScript functionality (v190)
 │   └── favicon.svg             # Application icon
 ├── thumbnails/                  # Generated video thumbnails
 ├── videos/                      # Video files directory (602+ videos)
@@ -157,6 +161,8 @@ videoPlayer/
 2. **Filtering**: Use the Filter dropdown to show All Files, Videos Only, or Directories Only
 3. **Sorting**: Sort by Name, Duration, or Date using the Sort dropdown
 4. **Search Results**: Access search results from the dedicated Search Results tab
+5. **Smart Next Video**: When playing from search results, automatically plays the next video from your search results
+6. **Multi-Strategy Detection**: Intelligently finds related videos across different directory levels
 
 ### Playlist Management
 1. **Create Playlist**: 
@@ -182,6 +188,8 @@ videoPlayer/
 1. **Playback Controls**: Play, pause, seek, volume control
 2. **Fullscreen**: Click the fullscreen button or press F
 3. **Video Info**: View video details in the player footer
+4. **Auto-Next**: Automatically plays the next video when current video ends
+5. **Cache Management**: Force refresh with Ctrl+F5 (Windows/Linux) or Cmd+Shift+R (Mac)
 
 ## 🔧 Configuration
 
@@ -340,6 +348,28 @@ This will test:
 - Large video file handling
 - Range request support
 - Video collection analysis (602+ videos)
+
+## 🆕 Version 2.3.0 Improvements
+
+### Major Enhancements
+- **Fixed Search Navigation**: Resolved "only one video in directory" issue when playing from search results
+- **Multi-Strategy Next Video**: Intelligent detection system that tries multiple strategies to find related videos
+- **Search Context Preservation**: Maintains search results context when playing videos, allowing seamless browsing
+- **Enhanced Cache Management**: Comprehensive cache clearing with force refresh functionality
+- **Improved User Experience**: Better video sequencing and navigation flow
+
+### Technical Improvements
+- **Separate Video Context**: Video directory tracking independent from browser navigation
+- **Strategy-Based Detection**: 4-tier approach for finding next videos (exact directory, parent, grandparent, search results)
+- **Cache Busting**: Dynamic timestamp-based cache invalidation for instant updates
+- **No-Cache Headers**: Prevents stale content issues during development and updates
+- **Clean Console Output**: Removed debug logging for production-ready code
+
+### Bug Fixes
+- Fixed video playback sequence when browsing from search results
+- Resolved directory context issues that prevented proper next video detection
+- Improved HLS video handling and cleanup
+- Enhanced error handling and user feedback
 
 ## 🔮 Future Enhancements
 
