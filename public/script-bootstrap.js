@@ -115,7 +115,21 @@ class ModernVideoPlayerBrowser {
     bindEvents() {
         // Navigation
         if (this.backBtn) this.backBtn.addEventListener('click', () => this.goBack());
-        if (this.refreshBtn) this.refreshBtn.addEventListener('click', () => this.loadDirectory());
+        if (this.refreshBtn) this.refreshBtn.addEventListener('click', () => {
+            // Use force refresh to clear all caches
+            if (window.forceRefresh) {
+                // Show loading state on refresh button
+                const originalHTML = this.refreshBtn.innerHTML;
+                this.refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.refreshBtn.disabled = true;
+                
+                // Call force refresh
+                window.forceRefresh();
+            } else {
+                // Fallback to regular refresh
+                this.loadDirectory();
+            }
+        });
 
         // Logout button
         const logoutBtn = document.getElementById('logout-btn');
@@ -206,6 +220,16 @@ class ModernVideoPlayerBrowser {
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => this.cleanup());
+        
+        // Add keyboard shortcut for force refresh (Ctrl+F5 or Cmd+Shift+R)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey && e.key === 'F5') || (e.metaKey && e.shiftKey && e.key === 'R')) {
+                e.preventDefault();
+                if (window.forceRefresh) {
+                    window.forceRefresh();
+                }
+            }
+        });
     }
 
     async loadDirectory(path = '') {
@@ -228,7 +252,14 @@ class ModernVideoPlayerBrowser {
                 filterType: this.filterType.value || 'all'
             });
 
-            const response = await fetch(`/api/browse?${params}`);
+            const response = await fetch(`/api/browse?${params}`, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             const data = await response.json();
 
             if (response.ok) {
@@ -402,7 +433,14 @@ class ModernVideoPlayerBrowser {
     async checkServerStatus() {
         try {
             // Check if server is still generating thumbnails
-            const response = await fetch('/api/server-status');
+            const response = await fetch('/api/server-status', {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             if (response.ok) {
                 const data = await response.json();
                 if (data.generatingThumbnails) {
@@ -534,7 +572,14 @@ class ModernVideoPlayerBrowser {
             // Show loading state
             this.setLoadingState('video', true);
             
-            const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`);
+            const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             const videoData = await response.json();
 
             if (response.ok) {
@@ -1155,7 +1200,14 @@ class ModernVideoPlayerBrowser {
             // Get current directory videos
             const pathToUse = this.currentPath || '';
             // Loading directory for path
-            const response = await fetch(`/api/browse?path=${encodeURIComponent(pathToUse)}`);
+            const response = await fetch(`/api/browse?path=${encodeURIComponent(pathToUse)}`, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             const data = await response.json();
             
             if (response.ok && data.items) {
@@ -1249,7 +1301,14 @@ class ModernVideoPlayerBrowser {
 
 
         return this.safeAsyncOperation(async () => {
-            const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`);
+            const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&type=${this.filterType.value || 'all'}`, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
 
             const data = await response.json();
 
@@ -1381,7 +1440,14 @@ class ModernVideoPlayerBrowser {
 
     async loadPlaylists() {
         try {
-            const response = await fetch('/api/playlists');
+            const response = await fetch('/api/playlists', {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             const data = await response.json();
 
             if (response.ok) {
@@ -1783,7 +1849,14 @@ class ModernVideoPlayerBrowser {
 
     async loadFavorites() {
         try {
-            const response = await fetch('/api/favorites');
+            const response = await fetch('/api/favorites', {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             const data = await response.json();
 
             if (response.ok) {

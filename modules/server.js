@@ -392,6 +392,13 @@ app.use(routes);
 
 // Serve the main HTML file on root path
 app.get('/', (req, res) => {
+    // Add no-cache headers to prevent browser caching
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Last-Modified', new Date().toUTCString());
+    res.setHeader('ETag', `"${Date.now()}"`);
+    
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
