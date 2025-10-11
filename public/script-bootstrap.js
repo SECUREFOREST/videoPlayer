@@ -553,15 +553,7 @@ class ModernVideoPlayerBrowser {
                     await this.playHLSVideo(videoUrl, videoData);
                 } else {
                     // Regular video file - clean up any existing HLS instance
-                    if (this.hls) {
-                        // Remove all event listeners first
-                        this.hls.off();
-                        // Detach from video element
-                        this.hls.detachMedia();
-                        // Destroy the instance
-                        this.hls.destroy();
-                        this.hls = null;
-                    }
+                    await this.cleanupHLSInstance();
                     
                     // Clear video element to prevent segment mixing
                     this.video.removeAttribute('src');
@@ -640,23 +632,15 @@ class ModernVideoPlayerBrowser {
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 // Using HLS.js for HLS playback
                 
-                // Destroy existing HLS instance if any
-                if (this.hls) {
-                    // Remove all event listeners first
-                    this.hls.off();
-                    // Detach from video element
-                    this.hls.detachMedia();
-                    // Destroy the instance
-                    this.hls.destroy();
-                    this.hls = null;
-                }
+                // Comprehensive HLS cleanup to prevent segment mixing
+                await this.cleanupHLSInstance();
 
-                // Clear video element to prevent segment mixing
+                // Clear video element completely to prevent segment mixing
                 this.video.removeAttribute('src');
                 this.video.load();
 
-                // Small delay to ensure cleanup is complete
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Wait for cleanup to complete
+                await new Promise(resolve => setTimeout(resolve, 200));
 
                 // Create new HLS instance with performance optimizations
                 this.hls = new Hls({
@@ -875,6 +859,17 @@ class ModernVideoPlayerBrowser {
                 // Using native HLS support (Safari)
                 // Reset video state duration to prevent showing previous video's duration
                 this.videoState.duration = 0;
+                
+                // Clean up any existing HLS instance for native HLS
+                await this.cleanupHLSInstance();
+                
+                // Clear video element completely
+                this.video.removeAttribute('src');
+                this.video.load();
+                
+                // Wait for cleanup
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
                 this.video.src = videoUrl;
                 this.video.load();
             } else {
@@ -2434,15 +2429,6 @@ class ModernVideoPlayerBrowser {
         `;
     }
 
-    showThumbnailError(container, itemName) {
-        if (container) {
-            container.innerHTML = `
-                <div class="d-flex align-items-center justify-content-center h-100 text-muted" title="Thumbnail failed to load">
-                    <i class="fas fa-exclamation-triangle fa-2x"></i>
-                </div>
-            `;
-        }
-    }
 
     // Video player initialization
     initializeVideoPlayer() {
@@ -2869,6 +2855,53 @@ class ModernVideoPlayerBrowser {
             console.log('Video resources cleaned up successfully');
         } catch (error) {
             console.error('Error cleaning up video resources:', error);
+        }
+    }
+
+    // Comprehensive HLS cleanup method to prevent segment mixing
+    async cleanupHLSInstance() {
+        if (!this.hls) return;
+
+        try {
+            console.log('Starting comprehensive HLS cleanup...');
+            
+            // Stop all HLS operations
+            this.hls.stopLoad();
+            
+            // Remove all event listeners
+            this.hls.off();
+            
+            // Detach from video element
+            this.hls.detachMedia();
+            
+            // Destroy the instance
+            this.hls.destroy();
+            
+            // Clear the reference
+            this.hls = null;
+            
+            // Additional cleanup for video element
+            if (this.video) {
+                // Pause and reset video
+                this.video.pause();
+                this.video.currentTime = 0;
+                
+                // Clear any buffered data
+                if (this.video.buffered && this.video.buffered.length > 0) {
+                    // Force clear buffer by setting currentTime
+                    this.video.currentTime = 0;
+                }
+            }
+            
+            console.log('HLS cleanup completed');
+            
+            // Wait a bit more to ensure cleanup is complete
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+        } catch (error) {
+            console.error('Error during HLS cleanup:', error);
+            // Force clear the reference even if cleanup failed
+            this.hls = null;
         }
     }
 

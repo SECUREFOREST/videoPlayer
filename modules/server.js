@@ -247,7 +247,12 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
         
         // Set appropriate headers
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        // Use shorter cache for playlists to prevent mixing - playlists should be cached but not immutable
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes for playlists
+        // Add ETag for cache validation to prevent playlist mixing
+        const stats = fs.statSync(correctPath);
+        const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
+        res.setHeader('ETag', etag);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
@@ -309,7 +314,12 @@ app.get('/hls/:quality/:segment', async (req, res) => {
         // Set appropriate headers for video segments
         res.setHeader('Content-Type', 'video/mp2t');
         res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        // Use shorter cache for segments to prevent mixing - segments should be cached but not immutable
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour instead of 1 year
+        // Add ETag for cache validation to prevent segment mixing
+        const stats = fs.statSync(correctPath);
+        const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
+        res.setHeader('ETag', etag);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
@@ -357,7 +367,14 @@ app.use('/hls', express.static(HLS_ROOT, {
     setHeaders: (res, filePath) => {
         if (filePath.match(/\.(m3u8|ts)$/i)) {
             res.setHeader('Accept-Ranges', 'bytes');
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            // Use appropriate cache headers based on file type
+            if (filePath.match(/\.m3u8$/i)) {
+                // Playlists should have shorter cache to prevent mixing
+                res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+            } else if (filePath.match(/\.ts$/i)) {
+                // Segments can be cached longer but not immutable
+                res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+            }
             res.setHeader('X-Content-Type-Options', 'nosniff');
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -365,7 +382,7 @@ app.use('/hls', express.static(HLS_ROOT, {
             res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
         }
     },
-    maxAge: '1y'
+    maxAge: '1h' // Reduced from 1y to 1h
 }));
 
 // ===== API ROUTES =====
