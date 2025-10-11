@@ -3,6 +3,7 @@ class ModernVideoPlayerBrowser {
     constructor() {
         this.currentPath = '';
         this.currentVideo = null;
+        this.currentVideoDirectory = ''; // Track video's directory separately from browser path
         this.playlists = [];
         this.favorites = [];
         this.searchResults = [];
@@ -584,10 +585,8 @@ class ModernVideoPlayerBrowser {
 
             if (response.ok) {
                 this.currentVideo = item;
-                // Update currentPath to the video's directory for proper navigation
-                this.currentPath = this.getVideoDirectory(item.path);
-                // Update breadcrumb display
-                this.updateBreadcrumb();
+                // Track video's directory separately from browser's current path
+                this.currentVideoDirectory = this.getVideoDirectory(item.path);
                 // Reset video state duration to prevent showing previous video's duration
                 this.videoState.duration = 0;
                 this.videoTitle.innerHTML = `${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}`;
@@ -1082,6 +1081,7 @@ class ModernVideoPlayerBrowser {
             const date = this.formatDate(videoData.modified);
             this.videoInfo.innerHTML = `
                 <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}<br>
+                <strong>Directory:</strong> ${this.currentVideoDirectory || 'Root'}<br>
                 <strong>Size:</strong> ${size}<br>
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
@@ -1091,6 +1091,7 @@ class ModernVideoPlayerBrowser {
             const duration = this.currentVideo.duration || this.video.duration || 0;
             this.videoInfo.innerHTML = `
                 <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
+                <strong>Directory:</strong> ${this.currentVideoDirectory || 'Root'}<br>
                 <strong>Duration:</strong> ${this.formatTime(duration)}<br>
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
@@ -1206,9 +1207,8 @@ class ModernVideoPlayerBrowser {
                 return;
             }
 
-            // Get the directory of the current video
-            const videoDirectory = this.getVideoDirectory(this.currentVideo.path);
-            console.log(`Looking for next video in directory: ${videoDirectory}`);
+            // Use the video's directory (not browser's current path)
+            const videoDirectory = this.currentVideoDirectory;
             
             // Loading directory for path
             const response = await fetch(`/api/browse?path=${encodeURIComponent(videoDirectory)}`, {
@@ -1224,12 +1224,10 @@ class ModernVideoPlayerBrowser {
             if (response.ok && data.items) {
                 // Filter only video files
                 const videos = data.items.filter(item => item.isVideo);
-                console.log(`Found ${videos.length} videos in directory:`, videos.map(v => v.name));
                 
                 if (videos.length > 1) {
                     // Find current video index
                     const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
-                    console.log(`Current video: ${this.currentVideo.name}, Index: ${currentIndex}`);
                     
                     if (currentIndex !== -1 && currentIndex < videos.length - 1) {
                         // Play next video
@@ -1258,12 +1256,10 @@ class ModernVideoPlayerBrowser {
             const pathParts = videoPath.split('/');
             pathParts.pop(); // Remove filename
             const directory = pathParts.join('/');
-            console.log(`Video path: ${videoPath}, Directory: ${directory}`);
             return directory;
         }
         
         // If no slashes, it's likely a root file
-        console.log(`Video path: ${videoPath}, Directory: (root)`);
         return '';
     }
 
