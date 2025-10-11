@@ -835,7 +835,6 @@ class ModernVideoPlayerBrowser {
                 });
 
                 // Load the HLS source with cache busting
-                console.log('Loading HLS source:', videoUrl);
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
                 
@@ -3036,8 +3035,6 @@ class ModernVideoPlayerBrowser {
         if (!this.hls) return;
 
         try {
-            console.log('Starting comprehensive HLS cleanup...');
-            
             // Stop all HLS operations
             this.hls.stopLoad();
             
@@ -3068,8 +3065,6 @@ class ModernVideoPlayerBrowser {
                 this.video.currentTime = 0.1;
                 this.video.currentTime = 0;
             }
-            
-            console.log('HLS cleanup completed');
             
             // Wait a bit more to ensure cleanup is complete
             await new Promise(resolve => setTimeout(resolve, 200));
