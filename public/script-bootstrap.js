@@ -1207,49 +1207,92 @@ class ModernVideoPlayerBrowser {
                 return;
             }
 
-            // Use the video's directory (not browser's current path)
-            const videoDirectory = this.currentVideoDirectory;
-            console.log(`🔍 Looking for next video in directory: "${videoDirectory}"`);
-            console.log(`📁 Current video: "${this.currentVideo.name}" (${this.currentVideo.path})`);
-            
-            // Loading directory for path
-            const response = await fetch(`/api/browse?path=${encodeURIComponent(videoDirectory)}`, {
-                cache: 'no-cache',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                }
-            });
-            const data = await response.json();
-            
-            if (response.ok && data.items) {
-                // Filter only video files
-                const videos = data.items.filter(item => item.isVideo);
-                console.log(`📊 Found ${videos.length} videos in directory:`, videos.map(v => v.name));
-                console.log(`🎬 All items in directory:`, data.items.map(item => ({ name: item.name, isVideo: item.isVideo, isDirectory: item.isDirectory })));
+            // Try multiple strategies to find related videos
+            const strategies = [
+                // Strategy 1: Look in the exact same directory
+                this.currentVideoDirectory,
+                // Strategy 2: Look in the parent directory
+                this.getParentDirectory(this.currentVideoDirectory),
+                // Strategy 3: Look in the grandparent directory
+                this.getParentDirectory(this.getParentDirectory(this.currentVideoDirectory))
+            ].filter(dir => dir !== ''); // Remove empty directories
+
+            // Strategy 4: If we have search results, try to find the next video from search results
+            if (this.searchResults && this.searchResults.length > 1) {
+                console.log(`🔍 Strategy 4: Looking in search results (${this.searchResults.length} results)`);
+                const searchVideos = this.searchResults.filter(item => item.isVideo);
+                const currentIndex = searchVideos.findIndex(video => video.path === this.currentVideo.path);
                 
-                if (videos.length > 1) {
-                    // Find current video index
-                    const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
-                    console.log(`🎯 Current video index: ${currentIndex} (looking for: "${this.currentVideo.path}")`);
-                    console.log(`🔗 Video paths in directory:`, videos.map(v => v.path));
-                    
-                    if (currentIndex !== -1 && currentIndex < videos.length - 1) {
-                        // Play next video
-                        const nextVideo = videos[currentIndex + 1];
-                        this.playVideo(nextVideo);
-                        this.showStatusMessage(`Auto-playing: ${this.formatFileName(nextVideo.name, true)}`, 'info');
-                    } else {
-                        this.showStatusMessage('No more videos in this directory', 'info');
-                    }
-                } else {
-                    this.showStatusMessage('Only one video in this directory', 'info');
+                if (currentIndex !== -1 && currentIndex < searchVideos.length - 1) {
+                    const nextVideo = searchVideos[currentIndex + 1];
+                    this.playVideo(nextVideo);
+                    this.showStatusMessage(`Auto-playing from search: ${this.formatFileName(nextVideo.name, true)}`, 'info');
+                    return;
+                } else if (currentIndex !== -1) {
+                    this.showStatusMessage('No more videos in search results', 'info');
+                    return;
                 }
             }
+
+            console.log(`🔍 Trying strategies:`, strategies);
+
+            for (const videoDirectory of strategies) {
+                console.log(`🔍 Looking for next video in directory: "${videoDirectory}"`);
+                console.log(`📁 Current video: "${this.currentVideo.name}" (${this.currentVideo.path})`);
+                
+                // Loading directory for path
+                const response = await fetch(`/api/browse?path=${encodeURIComponent(videoDirectory)}`, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.items) {
+                    // Filter only video files
+                    const videos = data.items.filter(item => item.isVideo);
+                    console.log(`📊 Found ${videos.length} videos in directory "${videoDirectory}":`, videos.map(v => v.name));
+                    
+                    if (videos.length > 1) {
+                        // Find current video index
+                        const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
+                        console.log(`🎯 Current video index: ${currentIndex} (looking for: "${this.currentVideo.path}")`);
+                        
+                        if (currentIndex !== -1 && currentIndex < videos.length - 1) {
+                            // Play next video
+                            const nextVideo = videos[currentIndex + 1];
+                            this.playVideo(nextVideo);
+                            this.showStatusMessage(`Auto-playing: ${this.formatFileName(nextVideo.name, true)}`, 'info');
+                            return; // Success, exit the function
+                        } else if (currentIndex !== -1) {
+                            // Found the video but it's the last one in this directory
+                            this.showStatusMessage('No more videos in this directory', 'info');
+                            return;
+                        }
+                        // If currentIndex is -1, the video wasn't found in this directory, try next strategy
+                    }
+                }
+            }
+            
+            // If we get here, no strategy found multiple videos
+            this.showStatusMessage('Only one video in related directories', 'info');
+            
         } catch (error) {
             console.error('Error playing next video in directory:', error);
         }
+    }
+
+    getParentDirectory(directoryPath) {
+        if (!directoryPath || !directoryPath.includes('/')) {
+            return '';
+        }
+        
+        const pathParts = directoryPath.split('/');
+        pathParts.pop(); // Remove last part
+        return pathParts.join('/');
     }
 
     getVideoDirectory(videoPath) {
