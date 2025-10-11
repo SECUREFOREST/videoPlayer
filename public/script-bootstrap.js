@@ -1219,7 +1219,6 @@ class ModernVideoPlayerBrowser {
 
             // Strategy 4: If we have search results, try to find the next video from search results
             if (this.searchResults && this.searchResults.length > 1) {
-                console.log(`🔍 Strategy 4: Looking in search results (${this.searchResults.length} results)`);
                 const searchVideos = this.searchResults.filter(item => item.isVideo);
                 const currentIndex = searchVideos.findIndex(video => video.path === this.currentVideo.path);
                 
@@ -1234,12 +1233,7 @@ class ModernVideoPlayerBrowser {
                 }
             }
 
-            console.log(`🔍 Trying strategies:`, strategies);
-
             for (const videoDirectory of strategies) {
-                console.log(`🔍 Looking for next video in directory: "${videoDirectory}"`);
-                console.log(`📁 Current video: "${this.currentVideo.name}" (${this.currentVideo.path})`);
-                
                 // Loading directory for path
                 const response = await fetch(`/api/browse?path=${encodeURIComponent(videoDirectory)}`, {
                     cache: 'no-cache',
@@ -1254,12 +1248,10 @@ class ModernVideoPlayerBrowser {
                 if (response.ok && data.items) {
                     // Filter only video files
                     const videos = data.items.filter(item => item.isVideo);
-                    console.log(`📊 Found ${videos.length} videos in directory "${videoDirectory}":`, videos.map(v => v.name));
                     
                     if (videos.length > 1) {
                         // Find current video index
                         const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
-                        console.log(`🎯 Current video index: ${currentIndex} (looking for: "${this.currentVideo.path}")`);
                         
                         if (currentIndex !== -1 && currentIndex < videos.length - 1) {
                             // Play next video
@@ -1298,7 +1290,6 @@ class ModernVideoPlayerBrowser {
     getVideoDirectory(videoPath) {
         // Extract directory from video path
         if (!videoPath) {
-            console.log(`❌ No video path provided`);
             return '';
         }
         
@@ -1308,12 +1299,10 @@ class ModernVideoPlayerBrowser {
             const pathParts = videoPath.split('/');
             pathParts.pop(); // Remove filename
             const directory = pathParts.join('/');
-            console.log(`📂 Extracted directory from "${videoPath}" -> "${directory}"`);
             return directory;
         }
         
         // If no slashes, it's likely a root file
-        console.log(`📂 Video is in root directory: "${videoPath}"`);
         return '';
     }
 
