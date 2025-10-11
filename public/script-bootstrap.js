@@ -547,7 +547,9 @@ class ModernVideoPlayerBrowser {
                 if (videoData.isHLS && videoData.extension === '.m3u8') {
                     // Remove hls/ prefix from path to avoid double hls/
                     const hlsPath = item.path.startsWith('hls/') ? item.path.substring(4) : item.path;
-                    const videoUrl = `/hls/${encodeURIComponent(hlsPath)}`;
+                    // Add cache busting parameter to prevent browser caching
+                    const cacheBuster = `?t=${Date.now()}`;
+                    const videoUrl = `/hls/${encodeURIComponent(hlsPath)}${cacheBuster}`;
                     // Constructed HLS URL for video
                     // Item data available
                     await this.playHLSVideo(videoUrl, videoData);
@@ -638,6 +640,24 @@ class ModernVideoPlayerBrowser {
                 // Clear video element completely to prevent segment mixing
                 this.video.removeAttribute('src');
                 this.video.load();
+
+                // Clear browser cache for HLS content
+                if ('caches' in window) {
+                    try {
+                        const cacheNames = await caches.keys();
+                        for (const cacheName of cacheNames) {
+                            const cache = await caches.open(cacheName);
+                            const requests = await cache.keys();
+                            for (const request of requests) {
+                                if (request.url.includes('/hls/')) {
+                                    await cache.delete(request);
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.log('Cache clearing not available:', error);
+                    }
+                }
 
                 // Wait for cleanup to complete
                 await new Promise(resolve => setTimeout(resolve, 200));
@@ -755,15 +775,19 @@ class ModernVideoPlayerBrowser {
                     
                     // Network optimization
                     xhrSetup: (xhr, url) => {
-                        // Add performance headers (avoid unsafe headers)
-                        xhr.setRequestHeader('Cache-Control', 'no-cache');
+                        // Add cache busting headers to prevent browser caching
+                        xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
                         xhr.setRequestHeader('Pragma', 'no-cache');
+                        xhr.setRequestHeader('Expires', '0');
+                        // Add timestamp to prevent caching
+                        const timestamp = Date.now();
+                        xhr.setRequestHeader('X-Cache-Buster', timestamp.toString());
                         // Note: Connection header is unsafe and removed
                     }
                 });
 
-                // Load the HLS source
-                
+                // Load the HLS source with cache busting
+                console.log('Loading HLS source:', videoUrl);
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
                 
@@ -870,7 +894,12 @@ class ModernVideoPlayerBrowser {
                 // Wait for cleanup
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
-                this.video.src = videoUrl;
+                // Add cache busting for native HLS
+                const cacheBuster = videoUrl.includes('?') ? '&' : '?';
+                const nativeHlsUrl = `${videoUrl}${cacheBuster}t=${Date.now()}`;
+                console.log('Loading native HLS source:', nativeHlsUrl);
+                
+                this.video.src = nativeHlsUrl;
                 this.video.load();
             } else {
                 throw new Error('HLS is not supported in this browser');
@@ -2886,17 +2915,20 @@ class ModernVideoPlayerBrowser {
                 this.video.pause();
                 this.video.currentTime = 0;
                 
-                // Clear any buffered data
-                if (this.video.buffered && this.video.buffered.length > 0) {
-                    // Force clear buffer by setting currentTime
-                    this.video.currentTime = 0;
-                }
+                // Clear any buffered data by removing and re-adding src
+                this.video.removeAttribute('src');
+                this.video.load();
+                
+                // Force clear buffer by setting currentTime multiple times
+                this.video.currentTime = 0;
+                this.video.currentTime = 0.1;
+                this.video.currentTime = 0;
             }
             
             console.log('HLS cleanup completed');
             
             // Wait a bit more to ensure cleanup is complete
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200));
             
         } catch (error) {
             console.error('Error during HLS cleanup:', error);
