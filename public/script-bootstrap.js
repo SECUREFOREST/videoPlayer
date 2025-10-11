@@ -584,6 +584,10 @@ class ModernVideoPlayerBrowser {
 
             if (response.ok) {
                 this.currentVideo = item;
+                // Update currentPath to the video's directory for proper navigation
+                this.currentPath = this.getVideoDirectory(item.path);
+                // Update breadcrumb display
+                this.updateBreadcrumb();
                 // Reset video state duration to prevent showing previous video's duration
                 this.videoState.duration = 0;
                 this.videoTitle.innerHTML = `${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}`;
@@ -1197,10 +1201,17 @@ class ModernVideoPlayerBrowser {
 
     async playNextInDirectory() {
         try {
-            // Get current directory videos
-            const pathToUse = this.currentPath || '';
+            if (!this.currentVideo || !this.currentVideo.path) {
+                this.showStatusMessage('No video currently playing', 'info');
+                return;
+            }
+
+            // Get the directory of the current video
+            const videoDirectory = this.getVideoDirectory(this.currentVideo.path);
+            console.log(`Looking for next video in directory: ${videoDirectory}`);
+            
             // Loading directory for path
-            const response = await fetch(`/api/browse?path=${encodeURIComponent(pathToUse)}`, {
+            const response = await fetch(`/api/browse?path=${encodeURIComponent(videoDirectory)}`, {
                 cache: 'no-cache',
                 headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -1213,10 +1224,12 @@ class ModernVideoPlayerBrowser {
             if (response.ok && data.items) {
                 // Filter only video files
                 const videos = data.items.filter(item => item.isVideo);
+                console.log(`Found ${videos.length} videos in directory:`, videos.map(v => v.name));
                 
                 if (videos.length > 1) {
                     // Find current video index
                     const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
+                    console.log(`Current video: ${this.currentVideo.name}, Index: ${currentIndex}`);
                     
                     if (currentIndex !== -1 && currentIndex < videos.length - 1) {
                         // Play next video
@@ -1233,6 +1246,25 @@ class ModernVideoPlayerBrowser {
         } catch (error) {
             console.error('Error playing next video in directory:', error);
         }
+    }
+
+    getVideoDirectory(videoPath) {
+        // Extract directory from video path
+        if (!videoPath) return '';
+        
+        // Handle different path formats
+        if (videoPath.includes('/')) {
+            // Regular file path - get directory by removing filename
+            const pathParts = videoPath.split('/');
+            pathParts.pop(); // Remove filename
+            const directory = pathParts.join('/');
+            console.log(`Video path: ${videoPath}, Directory: ${directory}`);
+            return directory;
+        }
+        
+        // If no slashes, it's likely a root file
+        console.log(`Video path: ${videoPath}, Directory: (root)`);
+        return '';
     }
 
     goBack() {
