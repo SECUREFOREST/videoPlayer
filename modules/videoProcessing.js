@@ -658,13 +658,17 @@ async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
                         continue;
                     }
                     
-                    const relativePath = path.relative(VIDEOS_ROOT, fullPath);
+                    // Determine the correct base path for relative path calculation
+                    const isHLS = isHLSFile(ext);
+                    const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
+                    const relativePath = path.relative(basePath, fullPath);
+                    
                     videoList.push({
                         path: fullPath,
                         relativePath: relativePath,
                         name: entry.name,
                         extension: ext,
-                        isHLS: isHLSFile(ext)
+                        isHLS: isHLS
                     });
                 }
             }
@@ -683,6 +687,13 @@ async function buildDurationCache() {
     try {
         const allVideos = [];
         await findAllVideos(VIDEOS_ROOT, allVideos, 50000);
+        
+        // Also scan HLS directory for HLS videos
+        const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+        if (fs.existsSync(hlsRootPath)) {
+            console.log('📁 Scanning HLS directory for videos...');
+            await findAllVideos(hlsRootPath, allVideos, 50000);
+        }
         
         console.log(`📊 Found ${allVideos.length} videos to process`);
         
