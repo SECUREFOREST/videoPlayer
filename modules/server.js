@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
-const { APP_CONFIG, VIDEOS_ROOT } = require('./config');
+const { APP_CONFIG, VIDEOS_ROOT, HLS_ROOT } = require('./config');
 const { validateFFmpegInstallation } = require('./ffmpeg');
 const { requireAuth, getLoginPageHTML } = require('./auth');
 const { ensureDirectoryExists } = require('./fileUtils');
@@ -157,7 +157,6 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 // ===== HLS STREAMING =====
 
 // HLS configuration
-const HLS_ROOT = path.join(path.dirname(VIDEOS_ROOT), 'hls');
 const masterPlaylistStore = new Map();
 
 // Clean up old sessions periodically (every 30 minutes)
@@ -414,6 +413,7 @@ async function startServer() {
 
         // Ensure required directories exist
         await ensureDirectoryExists(VIDEOS_ROOT);
+        await ensureDirectoryExists(HLS_ROOT);
         await ensureDirectoryExists(path.join(__dirname, '..', 'thumbnails'));
 
         // Ensure JSON files exist
@@ -428,6 +428,7 @@ async function startServer() {
         app.listen(APP_CONFIG.port, () => {
             console.log(`🚀 Server running on http://localhost:${APP_CONFIG.port}`);
             console.log(`📁 Videos directory: ${VIDEOS_ROOT}`);
+            console.log(`📁 HLS directory: ${HLS_ROOT}`);
             console.log(`🔐 Authentication: ${APP_CONFIG.password ? 'Enabled' : 'Disabled'}`);
         });
 

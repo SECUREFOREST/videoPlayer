@@ -13,6 +13,7 @@ const APP_CONFIG = {
 
 // File paths
 const VIDEOS_ROOT = path.join(__dirname, '..', 'videos');
+const HLS_ROOT = path.join(__dirname, '..', 'hls');
 const DURATIONS_CACHE_FILE = path.join(__dirname, '..', 'video-durations.json');
 
 // Supported file extensions
@@ -22,6 +23,7 @@ const HLS_EXTENSIONS = ['.m3u8'];
 module.exports = {
     APP_CONFIG,
     VIDEOS_ROOT,
+    HLS_ROOT,
     DURATIONS_CACHE_FILE,
     VIDEO_EXTENSIONS,
     HLS_EXTENSIONS
