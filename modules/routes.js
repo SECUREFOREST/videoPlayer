@@ -154,10 +154,11 @@ router.get('/api/browse', async (req, res) => {
         for (const entry of entries) {
             // Use cached data from directory cache
             const itemPath = entry.path;
-            const ext = entry.extension;
-            const isHLS = entry.isHLS;
-            const size = entry.size;
-            const modified = entry.modified;
+            const ext = entry.extension || '';
+            const isHLS = entry.isHLS || false;
+            const isVideo = entry.isVideo || false;
+            const size = entry.size || 0;
+            const modified = entry.modified || new Date();
             
             // Determine base path and relative path
             let basePath, relativeItemPath;
@@ -220,17 +221,17 @@ router.get('/api/browse', async (req, res) => {
                 size: size,
                 modified: modified,
                 extension: ext,
-                isDirectory: entry.isDirectory(),
-                isVideo: isVideoOrHLSFile(ext),
-                isHLS: isHLSFile(ext),
+                isDirectory: entry.isDirectory || false,
+                isVideo: isVideo,
+                isHLS: isHLS,
                 isHLSDirectory: entry.isHLSDirectory || false,
                 isMasterPlaylist: entry.isMasterPlaylist || false,
-                mimeType: isVideoOrHLSFile(ext) ? getVideoMimeType(ext) : null,
+                mimeType: isVideo ? getVideoMimeType(ext) : null,
                 fileCount: fileCount
             };
 
             // Add thumbnail URL and duration for video files
-            if (isVideoOrHLSFile(ext) || entry.isMasterPlaylist) {
+            if (isVideo || entry.isMasterPlaylist) {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLSFile(ext) && ext === '.m3u8' && !entry.isMasterPlaylist) {

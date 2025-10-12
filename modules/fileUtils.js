@@ -66,14 +66,23 @@ function resolveSafePath(requestedPath) {
 
 // File type checking functions
 function isVideoFile(extension) {
+    if (!extension || typeof extension !== 'string') {
+        return false;
+    }
     return VIDEO_EXTENSIONS.includes(extension.toLowerCase());
 }
 
 function isHLSFile(extension) {
+    if (!extension || typeof extension !== 'string') {
+        return false;
+    }
     return HLS_EXTENSIONS.includes(extension.toLowerCase());
 }
 
 function isVideoOrHLSFile(extension) {
+    if (!extension || typeof extension !== 'string') {
+        return false;
+    }
     return isVideoFile(extension) || isHLSFile(extension);
 }
 

@@ -63,7 +63,7 @@ async function getDirectoryContents(dirPath) {
                 isHLS: isHLS,
                 size: size,
                 modified: modified,
-                extension: ext
+                extension: ext || '' // Ensure extension is never undefined
             });
         }
         
