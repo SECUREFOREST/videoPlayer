@@ -1079,7 +1079,6 @@ class ModernVideoPlayerBrowser {
             const size = this.formatFileSize(videoData.size);
             const date = this.formatDate(videoData.modified);
             this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}<br>
                 <strong>Size:</strong> ${size}<br>
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
@@ -1088,7 +1087,6 @@ class ModernVideoPlayerBrowser {
             // Use duration from currentVideo if available (for HLS), otherwise use video.duration
             const duration = this.currentVideo.duration || this.video.duration || 0;
             this.videoInfo.innerHTML = `
-                <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
                 <strong>Duration:</strong> ${this.formatTime(duration)}<br>
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
