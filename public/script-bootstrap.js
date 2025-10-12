@@ -1080,7 +1080,6 @@ class ModernVideoPlayerBrowser {
             const date = this.formatDate(videoData.modified);
             this.videoInfo.innerHTML = `
                 <strong>File:</strong> ${this.formatFileName(videoData.name, videoData.isVideo, videoData.isHLS)}<br>
-                <strong>Directory:</strong> ${this.currentVideoDirectory || 'Root'}<br>
                 <strong>Size:</strong> ${size}<br>
                 <strong>Modified:</strong> ${date}<br>
                 <strong>Format:</strong> ${videoData.extension.toUpperCase()}
@@ -1090,7 +1089,6 @@ class ModernVideoPlayerBrowser {
             const duration = this.currentVideo.duration || this.video.duration || 0;
             this.videoInfo.innerHTML = `
                 <strong>File:</strong> ${this.formatFileName(this.currentVideo.name, this.currentVideo.isVideo, this.currentVideo.isHLS)}<br>
-                <strong>Directory:</strong> ${this.currentVideoDirectory || 'Root'}<br>
                 <strong>Duration:</strong> ${this.formatTime(duration)}<br>
                 <strong>Status:</strong> ${this.videoState.isPlaying ? 'Playing' : 'Paused'}
             `;
