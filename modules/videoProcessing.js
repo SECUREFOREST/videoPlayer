@@ -8,95 +8,8 @@ const { DURATIONS_CACHE_FILE } = require('./config');
 // Duration cache
 let durationCache = {};
 
-// Directory structure cache
-let directoryCache = new Map();
-
 // Warning cache to prevent duplicate warnings
 let warnedFiles = new Set();
-
-// Directory cache TTL (5 minutes)
-const DIRECTORY_CACHE_TTL = 5 * 60 * 1000;
-
-// Check if directory cache entry is valid
-function isDirectoryCacheValid(entry) {
-    return entry && (Date.now() - entry.timestamp) < DIRECTORY_CACHE_TTL;
-}
-
-// Get directory contents from cache or filesystem
-async function getDirectoryContents(dirPath) {
-    const cacheKey = dirPath;
-    const cached = directoryCache.get(cacheKey);
-    
-    if (isDirectoryCacheValid(cached)) {
-        return cached.data;
-    }
-    
-    // Cache miss or expired, read from filesystem
-    try {
-        const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-        const items = [];
-        
-        for (const entry of entries) {
-            const fullPath = path.join(dirPath, entry.name);
-            let stats;
-            let size = 0;
-            let modified = new Date();
-            
-            try {
-                stats = await fsPromises.stat(fullPath);
-                size = stats.size;
-                modified = stats.mtime;
-            } catch (error) {
-                // Skip files we can't access
-                continue;
-            }
-            
-            const ext = path.extname(entry.name).toLowerCase();
-            const isHLS = isHLSFile(ext);
-            const isVideo = isVideoOrHLSFile(ext);
-            
-            items.push({
-                name: entry.name,
-                path: fullPath,
-                isDirectory: entry.isDirectory(),
-                isVideo: isVideo,
-                isHLS: isHLS,
-                size: size,
-                modified: modified,
-                extension: ext || '' // Ensure extension is never undefined
-            });
-        }
-        
-        // Cache the result
-        directoryCache.set(cacheKey, {
-            data: items,
-            timestamp: Date.now()
-        });
-        
-        return items;
-    } catch (error) {
-        console.error(`Error reading directory ${dirPath}:`, error);
-        return [];
-    }
-}
-
-// Invalidate directory cache for a specific path and its parents
-function invalidateDirectoryCache(dirPath) {
-    // Remove the specific directory
-    directoryCache.delete(dirPath);
-    
-    // Remove parent directories (they might be affected by changes)
-    const pathParts = dirPath.split(path.sep);
-    for (let i = pathParts.length; i > 0; i--) {
-        const parentPath = pathParts.slice(0, i).join(path.sep);
-        directoryCache.delete(parentPath);
-    }
-}
-
-// Clear all directory cache
-function clearDirectoryCache() {
-    directoryCache.clear();
-}
 
 // Load duration cache from file
 async function loadDurationCache() {
@@ -846,9 +759,5 @@ module.exports = {
     findVideosWithoutThumbnails,
     generateAllMissingThumbnails,
     buildDurationCache,
-    durationCache,
-    getDirectoryContents,
-    invalidateDirectoryCache,
-    clearDirectoryCache,
-    directoryCache
+    durationCache
 };

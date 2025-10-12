@@ -126,25 +126,11 @@ app.get('/thumbnails/*', (req, res) => {
     }
 });
 
-// Serve static files from the public directory with smart caching
+// Serve static files from the public directory
 app.use('/', express.static(path.join(__dirname, '..', 'public'), {
     setHeaders: (res, filePath) => {
-        // Smart caching based on file type
-        if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
-            // Static assets - cache for 1 year with versioning
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            res.setHeader('Vary', 'Accept-Encoding');
-        } else if (filePath.endsWith('.html')) {
-            // HTML files - short cache with revalidation
-            res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
-            res.setHeader('Vary', 'Accept-Encoding');
-        } else if (filePath.endsWith('.svg') || filePath.endsWith('.ico')) {
-            // Icons and images - cache for 1 month
-            res.setHeader('Cache-Control', 'public, max-age=2592000');
-            res.setHeader('Vary', 'Accept-Encoding');
-        } else {
-            // Other files - no cache
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache');
         }
     }
 }));

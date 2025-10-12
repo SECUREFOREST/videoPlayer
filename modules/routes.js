@@ -13,9 +13,7 @@ const {
     getThumbnailUrl,
     generateThumbnailAsync,
     findVideosWithoutThumbnails,
-    durationCache,
-    getDirectoryContents,
-    invalidateDirectoryCache
+    durationCache
 } = require('./videoProcessing');
 
 const router = express.Router();
@@ -104,8 +102,7 @@ router.get('/api/browse', async (req, res) => {
             return res.status(404).json({ error: 'Directory not found or not accessible' });
         }
 
-        // Use directory cache for better performance
-        let entries = await getDirectoryContents(fullPath);
+        let entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
         
         // If videos directory is empty and we're at root, also scan HLS directory
         if (relativePath === '' && entries.length === 0) {
@@ -152,23 +149,54 @@ router.get('/api/browse', async (req, res) => {
         }
 
         for (const entry of entries) {
-            // Use cached data from directory cache
-            const itemPath = entry.path;
-            const ext = entry.extension || '';
-            const isHLS = entry.isHLS || false;
-            const isVideo = entry.isVideo || false;
-            const size = entry.size || 0;
-            const modified = entry.modified || new Date();
+            let itemPath, ext, isHLS, basePath, relativeItemPath;
             
-            // Determine base path and relative path
-            let basePath, relativeItemPath;
-            if (relativePath.startsWith('hls/') || relativePath === 'hls') {
+            // Handle HLS directories specially
+            if (entry.isHLSDirectory) {
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                itemPath = path.join(hlsRootPath, entry.originalName);
+                ext = '';
+                isHLS = false;
                 basePath = hlsRootPath;
-                relativeItemPath = path.relative(hlsRootPath, itemPath);
+                relativeItemPath = entry.originalName;
+            } else if (entry.isMasterPlaylist) {
+                // This is a master playlist file found by findMasterPlaylists
+                itemPath = entry.originalPath;
+                ext = '.m3u8';
+                isHLS = true;
+                basePath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                relativeItemPath = entry.relativePath;
+                
+            } else if (relativePath.startsWith('hls/') || relativePath === 'hls') {
+                // We're browsing inside an HLS directory
+                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
+                const hlsRelativePath = relativePath === 'hls' ? '' : relativePath.substring(4); // Remove 'hls/' prefix
+                itemPath = path.join(hlsRootPath, hlsRelativePath, entry.name);
+                ext = path.extname(entry.name).toLowerCase();
+                isHLS = isHLSFile(ext);
+                basePath = hlsRootPath;
+                relativeItemPath = path.join(hlsRelativePath, entry.name);
             } else {
+                itemPath = path.join(fullPath, entry.name);
+                ext = path.extname(entry.name).toLowerCase();
+                isHLS = isHLSFile(ext);
                 basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                 relativeItemPath = path.relative(basePath, itemPath);
+            }
+            
+            let stats;
+            let size = 0;
+            let modified = new Date();
+            
+            try {
+                stats = await fsPromises.stat(itemPath);
+                size = stats.size || 0;
+                modified = stats.mtime || new Date();
+            } catch (error) {
+                console.warn(`Warning: Could not get stats for ${itemPath}:`, error.message);
+                // Use fallback values for corrupted files
+                size = 0;
+                modified = new Date();
             }
             
             let fileCount = null;
@@ -221,28 +249,28 @@ router.get('/api/browse', async (req, res) => {
                 size: size,
                 modified: modified,
                 extension: ext,
-                isDirectory: entry.isDirectory || false,
-                isVideo: isVideo,
-                isHLS: isHLS,
+                isDirectory: entry.isDirectory(),
+                isVideo: isVideoOrHLSFile(ext),
+                isHLS: isHLSFile(ext),
                 isHLSDirectory: entry.isHLSDirectory || false,
                 isMasterPlaylist: entry.isMasterPlaylist || false,
-                mimeType: isVideo ? getVideoMimeType(ext) : null,
+                mimeType: isVideoOrHLSFile(ext) ? getVideoMimeType(ext) : null,
                 fileCount: fileCount
             };
 
             // Add thumbnail URL and duration for video files
-            if (isVideo || entry.isMasterPlaylist) {
+            if (isVideoOrHLSFile(ext) || entry.isMasterPlaylist) {
                 try {
                     // Skip HLS files in videos directory - they should only be in hls directory
-                    if (isHLS && ext === '.m3u8' && !entry.isMasterPlaylist) {
+                    if (isHLSFile(ext) && ext === '.m3u8' && !entry.isMasterPlaylist) {
                         // Note: We can't use the warnedFiles cache here since it's in a different module
                         console.log(`⚠️ Skipping HLS file in videos directory: ${itemPath} - HLS files should be in hls directory`);
                         continue; // Skip this item entirely
-                    } else if (isVideo && !isHLS) {
+                    } else if (isVideoFile(ext)) {
                         // For regular video files, get thumbnail and duration
                         item.thumbnailUrl = getThumbnailUrl(itemPath);
                         item.duration = await getVideoDuration(itemPath);
-                    } else if (isHLS || entry.isMasterPlaylist) {
+                    } else if (isHLSFile(ext) || entry.isMasterPlaylist) {
                         // For HLS files and master playlists, get HLS thumbnail and duration
                         item.thumbnailUrl = await getHLSThumbnail(itemPath);
                         item.duration = await getHLSDuration(itemPath);
