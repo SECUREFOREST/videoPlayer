@@ -13,7 +13,9 @@ const {
     getThumbnailUrl,
     generateThumbnailAsync,
     findVideosWithoutThumbnails,
-    durationCache
+    durationCache,
+    getDirectoryContents,
+    invalidateDirectoryCache
 } = require('./videoProcessing');
 
 const router = express.Router();
@@ -102,7 +104,8 @@ router.get('/api/browse', async (req, res) => {
             return res.status(404).json({ error: 'Directory not found or not accessible' });
         }
 
-        let entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
+        // Use directory cache for better performance
+        let entries = await getDirectoryContents(fullPath);
         
         // If videos directory is empty and we're at root, also scan HLS directory
         if (relativePath === '' && entries.length === 0) {
@@ -149,54 +152,22 @@ router.get('/api/browse', async (req, res) => {
         }
 
         for (const entry of entries) {
-            let itemPath, ext, isHLS, basePath, relativeItemPath;
+            // Use cached data from directory cache
+            const itemPath = entry.path;
+            const ext = entry.extension;
+            const isHLS = entry.isHLS;
+            const size = entry.size;
+            const modified = entry.modified;
             
-            // Handle HLS directories specially
-            if (entry.isHLSDirectory) {
+            // Determine base path and relative path
+            let basePath, relativeItemPath;
+            if (relativePath.startsWith('hls/') || relativePath === 'hls') {
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                itemPath = path.join(hlsRootPath, entry.originalName);
-                ext = '';
-                isHLS = false;
                 basePath = hlsRootPath;
-                relativeItemPath = entry.originalName;
-            } else if (entry.isMasterPlaylist) {
-                // This is a master playlist file found by findMasterPlaylists
-                itemPath = entry.originalPath;
-                ext = '.m3u8';
-                isHLS = true;
-                basePath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                relativeItemPath = entry.relativePath;
-                
-            } else if (relativePath.startsWith('hls/') || relativePath === 'hls') {
-                // We're browsing inside an HLS directory
-                const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                const hlsRelativePath = relativePath === 'hls' ? '' : relativePath.substring(4); // Remove 'hls/' prefix
-                itemPath = path.join(hlsRootPath, hlsRelativePath, entry.name);
-                ext = path.extname(entry.name).toLowerCase();
-                isHLS = isHLSFile(ext);
-                basePath = hlsRootPath;
-                relativeItemPath = path.join(hlsRelativePath, entry.name);
+                relativeItemPath = path.relative(hlsRootPath, itemPath);
             } else {
-                itemPath = path.join(fullPath, entry.name);
-                ext = path.extname(entry.name).toLowerCase();
-                isHLS = isHLSFile(ext);
                 basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                 relativeItemPath = path.relative(basePath, itemPath);
-            }
-            
-            let stats;
-            let size = 0;
-            let modified = new Date();
-            
-            try {
-                stats = await fsPromises.stat(itemPath);
-                size = stats.size || 0;
-                modified = stats.mtime || new Date();
-            } catch (error) {
-                console.warn(`Warning: Could not get stats for ${itemPath}:`, error.message);
-                // Use fallback values for corrupted files
-                size = 0;
-                modified = new Date();
             }
             
             let fileCount = null;
