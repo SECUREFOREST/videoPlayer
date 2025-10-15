@@ -387,23 +387,9 @@
                     for (const cacheName of cacheNames) {
                         await caches.delete(cacheName);
                     }
-                    console.log('✅ Cleared all service worker caches');
                 }
-                
-                // Clear localStorage
                 localStorage.clear();
-                console.log('✅ Cleared localStorage');
-                
-                // Clear sessionStorage
                 sessionStorage.clear();
-                console.log('✅ Cleared sessionStorage');
-                
-                // Clear IndexedDB if available
-                if ('indexedDB' in window) {
-                    // Note: This is a simplified approach - in production you might want to be more specific
-                    console.log('✅ IndexedDB available for clearing');
-                }
-                
                 return true;
             } catch (error) {
                 console.error('❌ Error clearing caches:', error);
@@ -448,7 +434,7 @@
                 // Update meta description
                 document.querySelector('meta[name="description"]').setAttribute('content', config.description);
             } catch (error) {
-                console.error('Failed to load app configuration:', error);
+                console.error('❌ Failed to load app configuration:', error);
                 // Fallback to default values
                 document.getElementById('app-title').textContent = 'Tie Them Down!';
                 document.getElementById('app-name').textContent = 'Tie Them Down!';
