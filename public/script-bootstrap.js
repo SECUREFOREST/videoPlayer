@@ -1324,7 +1324,7 @@ class ModernVideoPlayerBrowser {
         }
 
         if (this.currentPathDisplay) {
-            this.currentPathDisplay.textContent = this.currentPath || 'Root';
+            this.currentPathDisplay.textContent = this.currentPath || 'Home';
         }
     }
 
