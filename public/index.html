@@ -14,6 +14,12 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    
+    <!-- Prevent white flash before CSS loads -->
+    <style>
+        html { background: #0b0b0b; }
+        body { background: #0b0b0b; color: #e5e7eb; }
+    </style>
     <title id="app-title">Loading...</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="alternate icon" href="favicon.svg">
@@ -28,6 +34,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preconnect to CSS CDNs to speed up stylesheet fetch -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style-bootstrap.css?v=13" id="custom-css">
