@@ -147,15 +147,18 @@ async function warmThumbnailCache() {
     const concurrency = 8;
     let index = 0;
 
+    const nginxServerName = process.env.NGINX_SERVER_NAME || 'ttd.deviantdare.com';
+
     function fetchThumb(filename) {
         return new Promise((resolve) => {
             const options = {
                 host: '127.0.0.1',
                 port: 80,
                 path: `/thumbnails/${encodeURIComponent(filename)}`,
-                method: 'GET',
+                method: 'HEAD',
                 headers: {
-                    'User-Agent': 'ThumbnailWarmup/1.0'
+                    'User-Agent': 'ThumbnailWarmup/1.0',
+                    'Host': nginxServerName
                 },
                 timeout: 10000
             };
