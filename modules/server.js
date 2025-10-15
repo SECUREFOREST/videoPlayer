@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
 const { APP_CONFIG, VIDEOS_ROOT, HLS_ROOT } = require('./config');
+const http = require('http');
 const { validateFFmpegInstallation } = require('./ffmpeg');
 const { requireAuth, getLoginPageHTML } = require('./auth');
 const { ensureDirectoryExists } = require('./fileUtils');
@@ -125,6 +126,65 @@ app.get('/thumbnails/*', (req, res) => {
         res.status(500).send('Error serving thumbnail');
     }
 });
+
+// Warm up Nginx proxy cache by requesting all thumbnails through Nginx
+async function warmThumbnailCache() {
+    const thumbnailsDir = path.join(__dirname, '..', 'thumbnails');
+    if (!fs.existsSync(thumbnailsDir)) {
+        console.warn('⚠️ Thumbnails directory does not exist, skipping warm-up');
+        return;
+    }
+
+    const files = await fs.promises.readdir(thumbnailsDir);
+    const jpgs = files.filter(f => f.toLowerCase().endsWith('.jpg'));
+    if (jpgs.length === 0) {
+        console.log('ℹ️ No thumbnails to warm');
+        return;
+    }
+
+    console.log(`🔥 Warming thumbnail cache for ${jpgs.length} files`);
+
+    const concurrency = 8;
+    let index = 0;
+
+    function fetchThumb(filename) {
+        return new Promise((resolve) => {
+            const options = {
+                host: '127.0.0.1',
+                port: 80,
+                path: `/thumbnails/${encodeURIComponent(filename)}`,
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'ThumbnailWarmup/1.0'
+                },
+                timeout: 10000
+            };
+            const req = http.request(options, (resp) => {
+                // Drain response to free socket
+                resp.on('data', () => {});
+                resp.on('end', () => resolve({ statusCode: resp.statusCode }));
+            });
+            req.on('error', () => resolve({ error: true }));
+            req.on('timeout', () => { req.destroy(); resolve({ timeout: true }); });
+            req.end();
+        });
+    }
+
+    async function worker() {
+        while (true) {
+            const current = index++;
+            if (current >= jpgs.length) break;
+            const file = jpgs[current];
+            const res = await fetchThumb(file);
+            if (res && res.statusCode) {
+                if (current % 50 === 0) console.log(`Warmed ${current + 1}/${jpgs.length} (status ${res.statusCode})`);
+            }
+        }
+    }
+
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
+    console.log('✅ Thumbnail cache warm-up finished');
+}
 
 // Serve static files from the public directory
 app.use('/', express.static(path.join(__dirname, '..', 'public'), {
@@ -432,10 +492,15 @@ async function startServer() {
             console.log(`🔐 Authentication: ${APP_CONFIG.password ? 'Enabled' : 'Disabled'}`);
         });
 
-        // Generate missing thumbnails in background
+        // Generate missing thumbnails in background, then warm Nginx cache
         console.log('🔄 Starting background thumbnail generation...');
-        generateAllMissingThumbnails().then(() => {
+        generateAllMissingThumbnails().then(async () => {
             console.log('✅ Background thumbnail generation completed');
+            try {
+                await warmThumbnailCache();
+            } catch (e) {
+                console.error('❌ Thumbnail cache warm-up failed:', e.message);
+            }
         }).catch(error => {
             console.error('❌ Error generating thumbnails:', error.message);
         });

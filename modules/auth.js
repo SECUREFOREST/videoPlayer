@@ -3,7 +3,7 @@ const { APP_CONFIG } = require('./config');
 // Check if user is authenticated
 function requireAuth(req, res, next) {
     // Skip auth for login endpoint, config, and static files
-    if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/api/auth/login') || req.path.startsWith('/api/config') || req.path.startsWith('/static/')) {
+	if (req.path === '/login' || req.path.startsWith('/api/login') || req.path.startsWith('/api/auth/login') || req.path.startsWith('/api/config') || req.path.startsWith('/static/') || req.path.startsWith('/thumbnails/')) {
         return next();
     }
 
