@@ -3382,7 +3382,37 @@ class ModernVideoPlayerBrowser {
 
 
     handleKeyboard(e) {
-        // Basic keyboard navigation
+        // Playback controls when video modal is open
+        if (this.videoPlayerModal && this.videoPlayerModal._isShown && this.video) {
+            switch (e.key) {
+                case ' ': // Space (Safari reports ' ')
+                case 'Spacebar': // Older browsers
+                    e.preventDefault();
+                    if (this.video.paused) {
+                        this.video.play();
+                    } else {
+                        this.video.pause();
+                    }
+                    return;
+                case 'ArrowLeft': {
+                    e.preventDefault();
+                    const step = e.shiftKey ? 10 : 5;
+                    this.video.currentTime = Math.max(0, this.video.currentTime - step);
+                    return;
+                }
+                case 'ArrowRight': {
+                    e.preventDefault();
+                    const step = e.shiftKey ? 10 : 5;
+                    this.video.currentTime = Math.min(this.video.duration || Infinity, this.video.currentTime + step);
+                    return;
+                }
+                case 'Escape':
+                    this.closeVideo();
+                    return;
+            }
+        }
+
+        // Global basic navigation fallback
         if (e.key === 'Escape') {
             if (this.videoPlayerModal && this.videoPlayerModal._isShown) {
                 this.closeVideo();
