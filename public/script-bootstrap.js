@@ -37,8 +37,26 @@ class ModernVideoPlayerBrowser {
 
         // DOM elements
         this.initializeElements();
+        this.installFetchGuard();
         this.init();
     }
+    // Redirect to /login on any 401 from API calls
+    installFetchGuard() {
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = async (input, init = {}) => {
+            try {
+                const response = await originalFetch(input, init);
+                if (response && response.status === 401) {
+                    window.location.href = '/login';
+                    return response;
+                }
+                return response;
+            } catch (err) {
+                throw err;
+            }
+        };
+    }
+
 
     initializeElements() {
         // Main elements
