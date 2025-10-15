@@ -103,10 +103,20 @@ app.get('/thumbnails/*', (req, res) => {
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', filename);
         
         // Check if thumbnail exists
-
         if (fs.existsSync(thumbnailPath)) {
+            const stats = fs.statSync(thumbnailPath);
+            const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
+            res.setHeader('ETag', etag);
+            res.setHeader('Last-Modified', stats.mtime.toUTCString());
             res.setHeader('Content-Type', 'image/jpeg');
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+            // Conditional GET handling
+            const inm = req.headers['if-none-match'];
+            const ims = req.headers['if-modified-since'];
+            if ((inm && inm === etag) || (ims && new Date(ims).getTime() >= stats.mtime.getTime())) {
+                return res.status(304).end();
+            }
             res.sendFile(thumbnailPath);
         } else {
             // Try with quotes around the filename (ffmpeg sometimes adds quotes)
@@ -114,8 +124,17 @@ app.get('/thumbnails/*', (req, res) => {
             const quotedThumbnailPath = path.join(__dirname, '..', 'thumbnails', quotedFilename);
             
             if (fs.existsSync(quotedThumbnailPath)) {
+                const stats = fs.statSync(quotedThumbnailPath);
+                const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
+                res.setHeader('ETag', etag);
+                res.setHeader('Last-Modified', stats.mtime.toUTCString());
                 res.setHeader('Content-Type', 'image/jpeg');
                 res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+                const inm2 = req.headers['if-none-match'];
+                const ims2 = req.headers['if-modified-since'];
+                if ((inm2 && inm2 === etag) || (ims2 && new Date(ims2).getTime() >= stats.mtime.getTime())) {
+                    return res.status(304).end();
+                }
                 res.sendFile(quotedThumbnailPath);
             } else {
                 res.status(404).send('Thumbnail not found');
@@ -155,7 +174,7 @@ async function warmThumbnailCache() {
                 host: '127.0.0.1',
                 port: 80,
                 path: `/thumbnails/${encodeURIComponent(filename)}`,
-                method: 'HEAD',
+                method: 'GET',
                 headers: {
                     'User-Agent': 'ThumbnailWarmup/1.0',
                     'Host': nginxServerName
