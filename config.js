@@ -7,13 +7,13 @@ module.exports = {
     // Application Identity
     name: 'Tie Them Down!',
     description: 'Advanced Video Player',
-    
+
     // Security Settings
     password: 'bringbeerforpassword',
-    
+
     // Server Settings
     port: process.env.PORT || 4000,
-    
+
     // FFmpeg Configuration
     ffmpeg: {
         // Path to ffmpeg executable (leave empty for system PATH)

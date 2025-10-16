@@ -39,12 +39,12 @@ function resolveSafePath(requestedPath) {
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         const hlsRelativePath = normalizedPath.substring(4); // Remove 'hls/' prefix
         const fullPath = path.resolve(hlsRootPath, hlsRelativePath);
-        
+
         // Ensure the resolved path is inside HLS_ROOT
         if (!fullPath.startsWith(hlsRootPath)) {
             throw new Error('Access denied: Path outside HLS directory');
         }
-        
+
         return fullPath;
     }
 

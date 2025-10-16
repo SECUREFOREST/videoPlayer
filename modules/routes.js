@@ -4,11 +4,11 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const { resolveSafePath, isVideoFile, isHLSFile, isVideoOrHLSFile, getVideoMimeType } = require('./fileUtils');
 const { VIDEOS_ROOT } = require('./config');
-const { 
-    getVideoDuration, 
-    getHLSDuration, 
-    getHLSInfo, 
-    getHLSThumbnail, 
+const {
+    getVideoDuration,
+    getHLSDuration,
+    getHLSInfo,
+    getHLSThumbnail,
     generateHLSThumbnail,
     getThumbnailUrl,
     generateThumbnailAsync,
@@ -22,26 +22,26 @@ const router = express.Router();
 function processHLSPath(itemPath) {
     let processedPath = itemPath;
     let isHLSDirectory = false;
-    
+
     if (itemPath.startsWith('hls/') && !itemPath.endsWith('.m3u8')) {
         // This is an HLS directory path, convert to master.m3u8 path
         processedPath = itemPath + '/master.m3u8';
         isHLSDirectory = true;
     }
-    
+
     return { processedPath, isHLSDirectory };
 }
 
 // Function to recursively find all master.m3u8 files in a directory
 async function findMasterPlaylists(dirPath, hlsRootPath) {
     const masterFiles = [];
-    
+
     try {
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             const fullPath = path.join(dirPath, entry.name);
-            
+
             if (entry.isDirectory()) {
                 // Recursively search subdirectories
                 const subMasterFiles = await findMasterPlaylists(fullPath, hlsRootPath);
@@ -51,8 +51,8 @@ async function findMasterPlaylists(dirPath, hlsRootPath) {
                 const relativePath = path.relative(hlsRootPath, fullPath);
                 const relativeDir = path.dirname(relativePath);
                 const videoName = path.basename(relativeDir);
-                
-                
+
+
                 // Create a fake directory entry for the master.m3u8 file
                 const masterEntry = {
                     name: videoName,
@@ -63,14 +63,14 @@ async function findMasterPlaylists(dirPath, hlsRootPath) {
                     originalPath: fullPath,
                     relativePath: relativePath
                 };
-                
+
                 masterFiles.push(masterEntry);
             }
         }
     } catch (error) {
         console.log(`Error scanning directory ${dirPath}:`, error.message);
     }
-    
+
     return masterFiles;
 }
 
@@ -103,7 +103,7 @@ router.get('/api/browse', async (req, res) => {
         }
 
         let entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
-        
+
         // If videos directory is empty and we're at root, also scan HLS directory
         if (relativePath === '' && entries.length === 0) {
             const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -115,7 +115,7 @@ router.get('/api/browse', async (req, res) => {
                     hlsItem.name = hlsEntry.name; // Remove (HLS) from name
                     hlsItem.isHLSDirectory = true;
                     hlsItem.originalName = hlsEntry.name;
-                    
+
                     // Calculate file count for HLS directories
                     try {
                         const hlsDirPath = path.join(hlsRootPath, hlsEntry.name);
@@ -124,20 +124,20 @@ router.get('/api/browse', async (req, res) => {
                     } catch (error) {
                         hlsItem.fileCount = 0;
                     }
-                    
+
                     entries.push(hlsItem);
                 }
             } catch (hlsError) {
                 console.log('HLS directory not found or not accessible:', hlsError.message);
             }
         }
-        
+
         // If we're browsing an HLS directory, find all master.m3u8 files recursively
         if (relativePath.startsWith('hls/') || relativePath === 'hls') {
             const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
             const hlsRelativePath = relativePath === 'hls' ? '' : relativePath.substring(4); // Remove 'hls/' prefix
             const hlsFullPath = path.join(hlsRootPath, hlsRelativePath);
-            
+
             try {
                 // Find all master.m3u8 files recursively in this directory
                 const masterFiles = await findMasterPlaylists(hlsFullPath, hlsRootPath);
@@ -150,7 +150,7 @@ router.get('/api/browse', async (req, res) => {
 
         for (const entry of entries) {
             let itemPath, ext, isHLS, basePath, relativeItemPath;
-            
+
             // Handle HLS directories specially
             if (entry.isHLSDirectory) {
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -166,7 +166,7 @@ router.get('/api/browse', async (req, res) => {
                 isHLS = true;
                 basePath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                 relativeItemPath = entry.relativePath;
-                
+
             } else if (relativePath.startsWith('hls/') || relativePath === 'hls') {
                 // We're browsing inside an HLS directory
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -183,11 +183,11 @@ router.get('/api/browse', async (req, res) => {
                 basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                 relativeItemPath = path.relative(basePath, itemPath);
             }
-            
+
             let stats;
             let size = 0;
             let modified = new Date();
-            
+
             try {
                 stats = await fsPromises.stat(itemPath);
                 size = stats.size || 0;
@@ -198,9 +198,9 @@ router.get('/api/browse', async (req, res) => {
                 size = 0;
                 modified = new Date();
             }
-            
+
             let fileCount = null;
-            
+
             // For HLS directories, use the pre-calculated fileCount
             if (entry.isHLSDirectory && entry.fileCount !== undefined) {
                 fileCount = entry.fileCount;
@@ -209,7 +209,7 @@ router.get('/api/browse', async (req, res) => {
                     const dirEntries = await fsPromises.readdir(itemPath);
                     // Count regular files first
                     let regularFileCount = dirEntries.length;
-                    
+
                     // Count HLS versions for video files in this directory
                     let hlsCount = 0;
                     for (const dirEntry of dirEntries) {
@@ -220,7 +220,7 @@ router.get('/api/browse', async (req, res) => {
                                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                                 const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(itemPath, dirEntry.name)).replace(dirEntryExt, ''));
                                 const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
-                                
+
                                 try {
                                     const hlsStats = await fsPromises.stat(masterPlaylistPath);
                                     if (hlsStats.isFile()) {
@@ -232,17 +232,17 @@ router.get('/api/browse', async (req, res) => {
                             }
                         }
                     }
-                    
+
                     fileCount = regularFileCount + hlsCount;
                 } catch (error) {
                     // Directory might not be accessible
                 }
             }
             //
-            const finalPath = entry.isHLSDirectory ? 'hls/' + relativeItemPath : 
-                              entry.isMasterPlaylist ? relativeItemPath :
-                              (relativePath.startsWith('hls/') || relativePath === 'hls') ? 'hls/' + relativeItemPath : relativeItemPath;
-            
+            const finalPath = entry.isHLSDirectory ? 'hls/' + relativeItemPath :
+                entry.isMasterPlaylist ? relativeItemPath :
+                    (relativePath.startsWith('hls/') || relativePath === 'hls') ? 'hls/' + relativeItemPath : relativeItemPath;
+
             const item = {
                 name: entry.name,
                 path: finalPath,
@@ -275,7 +275,7 @@ router.get('/api/browse', async (req, res) => {
                         item.thumbnailUrl = await getHLSThumbnail(itemPath);
                         item.duration = await getHLSDuration(itemPath);
                     }
-                    
+
                     // Check if thumbnail exists
                     if (!item.thumbnailUrl) {
                         // No thumbnail available
@@ -292,7 +292,7 @@ router.get('/api/browse', async (req, res) => {
                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                 const hlsPath = path.join(hlsRootPath, relativeItemPath.replace(ext, ''));
                 const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
-                
+
                 try {
                     const hlsStats = await fsPromises.stat(masterPlaylistPath);
                     if (hlsStats.isFile()) {
@@ -311,7 +311,7 @@ router.get('/api/browse', async (req, res) => {
                             fileCount: null,
                             originalVideo: relativeItemPath // Reference to original video
                         };
-                        
+
                         // Add thumbnail URL and duration for HLS item
                         try {
                             hlsItem.thumbnailUrl = await getHLSThumbnail(masterPlaylistPath);
@@ -321,7 +321,7 @@ router.get('/api/browse', async (req, res) => {
                             hlsItem.thumbnailUrl = null;
                             hlsItem.duration = null;
                         }
-                        
+
                         items.push(hlsItem);
                     }
                 } catch (error) {
@@ -347,7 +347,7 @@ router.get('/api/browse', async (req, res) => {
         // Sort items
         items.sort((a, b) => {
             let comparison = 0;
-            
+
             if (sortBy === 'name') {
                 comparison = a.name.localeCompare(b.name);
             } else if (sortBy === 'size') {
@@ -355,7 +355,7 @@ router.get('/api/browse', async (req, res) => {
             } else if (sortBy === 'modified') {
                 comparison = new Date(a.modified) - new Date(b.modified);
             }
-            
+
             return sortOrder === 'desc' ? -comparison : comparison;
         });
 
@@ -368,8 +368,8 @@ router.get('/api/browse', async (req, res) => {
             // For HLS root, show a friendly name
             displayPath = 'HLS Videos';
         }
-        
-        res.json({ 
+
+        res.json({
             items,
             currentPath: displayPath,
             parentPath: relativePath ? path.dirname(relativePath) : null
@@ -383,7 +383,7 @@ router.get('/api/browse', async (req, res) => {
             sortOrder: req.query.sortOrder,
             filterType: req.query.filterType
         });
-        
+
         if (error.message.includes('Access denied')) {
             res.status(403).json({ error: error.message });
         } else if (error.code === 'ENOENT') {
@@ -405,28 +405,28 @@ router.get('/api/video-info', async (req, res) => {
     try {
         let videoPath;
         const ext = path.extname(relativePath).toLowerCase();
-        
+
         // Check if this is an HLS file and resolve to hls folder
         if (isHLSFile(ext)) {
             // For HLS files, resolve to the hls folder at root level
             const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
             const normalizedPath = path.normalize(relativePath);
-            
+
             // Remove leading slash if present
             let cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
-            
+
             // Remove hls/ prefix if present to avoid double hls/
             if (cleanPath.startsWith('hls/')) {
                 cleanPath = cleanPath.substring(4);
             }
-            
+
             // Check for directory traversal attempts
             if (cleanPath.includes('..')) {
                 throw new Error('Access denied: Invalid path');
             }
-            
+
             videoPath = path.resolve(hlsRootPath, cleanPath);
-            
+
             // Ensure the resolved path is inside hls folder
             if (!videoPath.startsWith(hlsRootPath)) {
                 throw new Error('Access denied: Path outside hls directory');
@@ -435,7 +435,7 @@ router.get('/api/video-info', async (req, res) => {
             // For regular video files, use the standard path resolution
             videoPath = resolveSafePath(relativePath);
         }
-        
+
         let stats;
         try {
             stats = await fsPromises.stat(videoPath);
@@ -443,7 +443,7 @@ router.get('/api/video-info', async (req, res) => {
             console.warn(`Warning: Could not get stats for ${videoPath}:`, error.message);
             return res.status(404).json({ error: 'File not found or inaccessible' });
         }
-        
+
         // Get video info for the requested path
 
         if (!isVideoOrHLSFile(ext)) {
@@ -540,13 +540,13 @@ router.get('/api/search', async (req, res) => {
     try {
         const results = [];
         await searchDirectory(VIDEOS_ROOT, searchTerm, type, results);
-        
+
         // Also search HLS directory for HLS files and master playlists
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         if (fs.existsSync(hlsRootPath)) {
             await searchHLSDirectory(hlsRootPath, searchTerm, type, results);
         }
-        
+
         // Apply type filter to search results
         let filteredResults = results;
         if (type === 'videos') {
@@ -557,7 +557,7 @@ router.get('/api/search', async (req, res) => {
             // For 'all' type, only show videos (not directories) to avoid clutter
             filteredResults = results.filter(item => item.isVideo);
         }
-        
+
         res.json({
             results: filteredResults,
             totalResults: filteredResults.length,
@@ -573,10 +573,10 @@ router.get('/api/search', async (req, res) => {
 async function searchHLSDirectory(dirPath, searchTerm, type, results) {
     try {
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             const fullPath = path.join(dirPath, entry.name);
-            
+
             if (entry.isDirectory()) {
                 // Skip hidden directories and system directories
                 if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
@@ -587,11 +587,11 @@ async function searchHLSDirectory(dirPath, searchTerm, type, results) {
                 // Found a master playlist file - check if its directory name matches search
                 const dirName = path.basename(path.dirname(fullPath));
                 const matchesSearch = dirName.toLowerCase().includes(searchTerm.toLowerCase());
-                
+
                 if (matchesSearch) {
                     const relativePath = path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath);
                     const videoName = path.basename(path.dirname(fullPath));
-                    
+
                     const result = {
                         name: videoName,
                         path: 'hls/' + relativePath,
@@ -605,7 +605,7 @@ async function searchHLSDirectory(dirPath, searchTerm, type, results) {
                         mimeType: 'application/vnd.apple.mpegurl',
                         relativePath: 'hls/' + relativePath
                     };
-                    
+
                     // Add duration and thumbnail for HLS files
                     try {
                         result.duration = await getHLSDuration(fullPath);
@@ -615,7 +615,7 @@ async function searchHLSDirectory(dirPath, searchTerm, type, results) {
                         result.duration = null;
                         result.thumbnailUrl = null;
                     }
-                    
+
                     results.push(result);
                 }
             }
@@ -629,26 +629,26 @@ async function searchHLSDirectory(dirPath, searchTerm, type, results) {
 async function searchDirectory(dirPath, searchTerm, type, results) {
     try {
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             const fullPath = path.join(dirPath, entry.name);
             // Determine if this is the HLS directory or videos directory
             const isHLSDirectory = dirPath.includes(path.join(path.dirname(VIDEOS_ROOT), 'hls'));
-            const relativePath = isHLSDirectory ? 
+            const relativePath = isHLSDirectory ?
                 path.relative(path.join(path.dirname(VIDEOS_ROOT), 'hls'), fullPath) :
                 path.relative(VIDEOS_ROOT, fullPath);
-            
+
             if (entry.isDirectory()) {
                 // Skip hidden directories and system directories
                 if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
                     // Check if directory name matches search term
                     const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase());
-                    
+
                     if (matchesSearch) {
                         try {
                             const stats = await fsPromises.stat(fullPath);
                             const dirEntries = await fsPromises.readdir(fullPath);
-                            
+
                             // Count HLS versions for video files in this directory
                             let hlsCount = 0;
                             for (const dirEntry of dirEntries) {
@@ -659,7 +659,7 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                                         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                                         const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(fullPath, dirEntry.name)).replace(dirEntryExt, ''));
                                         const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
-                                        
+
                                         try {
                                             const hlsStats = await fsPromises.stat(masterPlaylistPath);
                                             if (hlsStats.isFile()) {
@@ -671,7 +671,7 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                                     }
                                 }
                             }
-                            
+
                             const result = {
                                 name: entry.name,
                                 path: relativePath,
@@ -685,13 +685,13 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                                 mimeType: null,
                                 relativePath: relativePath
                             };
-                            
+
                             results.push(result);
                         } catch (error) {
                             // Directory might not be accessible
                         }
                     }
-                    
+
                     // Continue searching in subdirectories
                     await searchDirectory(fullPath, searchTerm, type, results);
                 }
@@ -707,7 +707,7 @@ async function searchDirectory(dirPath, searchTerm, type, results) {
                     if (isHLSFile(ext) && !isHLSDirectory) {
                         continue;
                     }
-                    
+
                     const result = {
                         name: entry.name,
                         path: isHLSDirectory ? 'hls/' + relativePath : relativePath,
@@ -754,7 +754,7 @@ router.get('/api/playlists', async (req, res) => {
         const playlistsData = await fsPromises.readFile(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         // Add thumbnail URLs and duration to videos in playlists
         for (const playlist of playlists) {
             if (playlist.videos) {
@@ -762,7 +762,7 @@ router.get('/api/playlists', async (req, res) => {
                     if (item.path) {
                         // Handle HLS directory paths - convert to master.m3u8 path
                         const { processedPath, isHLSDirectory } = processHLSPath(item.path);
-                        
+
                         const ext = path.extname(processedPath).toLowerCase();
                         if (isVideoOrHLSFile(ext) || isHLSDirectory) {
                             // Convert relative path to absolute path for thumbnail generation
@@ -775,7 +775,7 @@ router.get('/api/playlists', async (req, res) => {
                                 // For regular video files, use VIDEOS_ROOT
                                 absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
                             }
-                            
+
                             // Add thumbnail and duration for video files
                             if (isVideoFile(ext)) {
                                 try {
@@ -813,7 +813,7 @@ router.get('/api/playlists', async (req, res) => {
                                                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                                                 const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(absolutePath, dirEntry.name)).replace(dirEntryExt, ''));
                                                 const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
-                                                
+
                                                 try {
                                                     const hlsStats = await fsPromises.stat(masterPlaylistPath);
                                                     if (hlsStats.isFile()) {
@@ -836,7 +836,7 @@ router.get('/api/playlists', async (req, res) => {
                 }));
             }
         }
-        
+
         res.json({ playlists });
     } catch (error) {
         console.error('Error loading playlists:', error);
@@ -847,7 +847,7 @@ router.get('/api/playlists', async (req, res) => {
 router.post('/api/playlists', async (req, res) => {
     try {
         const { name, videos } = req.body;
-        
+
         if (!name || !videos || !Array.isArray(videos)) {
             return res.status(400).json({ error: 'Name and videos array are required' });
         }
@@ -855,21 +855,21 @@ router.post('/api/playlists', async (req, res) => {
         const playlistsData = await fsPromises.readFile(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         const newPlaylist = {
             id: Date.now().toString(),
             name: name,
             videos: videos,
             createdAt: new Date().toISOString()
         };
-        
+
         playlists.push(newPlaylist);
-        
+
         await fsPromises.writeFile(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true, playlist: newPlaylist });
     } catch (error) {
         console.error('Error creating playlist:', error);
@@ -880,31 +880,31 @@ router.post('/api/playlists', async (req, res) => {
 // API endpoint to expand directory in playlist (get all videos from directory)
 router.get('/api/expand-directory', async (req, res) => {
     const relativePath = req.query.path;
-    
+
     if (!relativePath) {
         return res.status(400).json({ error: 'Path parameter is required' });
     }
-    
+
     try {
         const fullPath = resolveSafePath(relativePath);
         const videos = [];
-        
+
         // Check if it's a directory
         const stats = await fsPromises.stat(fullPath);
         if (!stats.isDirectory()) {
             return res.status(400).json({ error: 'Path is not a directory' });
         }
-        
+
         // Get all video files from directory
         const entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             if (entry.isFile()) {
                 const ext = path.extname(entry.name).toLowerCase();
                 if (isVideoFile(ext)) {
                     const videoPath = path.join(fullPath, entry.name);
                     const relativeVideoPath = path.relative(VIDEOS_ROOT, videoPath);
-                    
+
                     try {
                         const videoStats = await fsPromises.stat(videoPath);
                         const video = {
@@ -919,14 +919,14 @@ router.get('/api/expand-directory', async (req, res) => {
                             thumbnailUrl: getThumbnailUrl(videoPath),
                             duration: await getVideoDuration(videoPath)
                         };
-                        
+
                         videos.push(video);
-                        
+
                         // Also add HLS version if it exists
                         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                         const hlsPath = path.join(hlsRootPath, relativeVideoPath.replace(ext, ''));
                         const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
-                        
+
                         try {
                             const hlsStats = await fsPromises.stat(masterPlaylistPath);
                             if (hlsStats.isFile()) {
@@ -953,7 +953,7 @@ router.get('/api/expand-directory', async (req, res) => {
                 }
             }
         }
-        
+
         res.json({ videos });
     } catch (error) {
         console.error('Error expanding directory:', error);
@@ -967,13 +967,13 @@ router.get('/api/favorites', async (req, res) => {
         const favoritesData = await fsPromises.readFile(path.join(__dirname, '..', 'favorites.json'), 'utf8');
         const favoritesJson = JSON.parse(favoritesData);
         const favorites = favoritesJson.favorites || [];
-        
+
         // Add thumbnail URLs to favorites
         for (const favorite of favorites) {
             if (favorite.path) {
                 // Handle HLS directory paths - convert to master.m3u8 path
                 const { processedPath, isHLSDirectory } = processHLSPath(favorite.path);
-                
+
                 const ext = path.extname(processedPath).toLowerCase();
                 if (isVideoOrHLSFile(ext) || isHLSDirectory) {
                     // Convert relative path to absolute path
@@ -986,7 +986,7 @@ router.get('/api/favorites', async (req, res) => {
                         // For regular video files, use VIDEOS_ROOT
                         absolutePath = path.isAbsolute(favorite.path) ? favorite.path : path.join(VIDEOS_ROOT, favorite.path);
                     }
-                    
+
                     // Add thumbnail and duration for video files
                     if (isVideoFile(ext)) {
                         try {
@@ -1036,7 +1036,7 @@ router.get('/api/favorites', async (req, res) => {
                                         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
                                         const hlsPath = path.join(hlsRootPath, path.relative(VIDEOS_ROOT, path.join(absolutePath, dirEntry.name)).replace(dirEntryExt, ''));
                                         const masterPlaylistPath = path.join(hlsPath, 'master.m3u8');
-                                        
+
                                         try {
                                             const hlsStats = await fsPromises.stat(masterPlaylistPath);
                                             if (hlsStats.isFile()) {
@@ -1057,7 +1057,7 @@ router.get('/api/favorites', async (req, res) => {
                 }
             }
         }
-        
+
         res.json({ favorites });
     } catch (error) {
         console.error('Error loading favorites:', error);
@@ -1068,7 +1068,7 @@ router.get('/api/favorites', async (req, res) => {
 router.post('/api/favorites', (req, res) => {
     try {
         const { name, path: videoPath } = req.body;
-        
+
         if (!name || !videoPath) {
             return res.status(400).json({ error: 'Name and path are required' });
         }
@@ -1076,21 +1076,21 @@ router.post('/api/favorites', (req, res) => {
         const favoritesData = fs.readFileSync(path.join(__dirname, '..', 'favorites.json'), 'utf8');
         const favoritesJson = JSON.parse(favoritesData);
         const favorites = favoritesJson.favorites || [];
-        
+
         const newFavorite = {
             id: Date.now().toString(),
             name: name,
             path: videoPath,
             addedAt: new Date().toISOString()
         };
-        
+
         favorites.push(newFavorite);
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'favorites.json'), 
+            path.join(__dirname, '..', 'favorites.json'),
             JSON.stringify({ favorites }, null, 2)
         );
-        
+
         res.json({ success: true, favorite: newFavorite });
     } catch (error) {
         console.error('Error adding favorite:', error);
@@ -1101,23 +1101,23 @@ router.post('/api/favorites', (req, res) => {
 router.delete('/api/favorites/:id', (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const favoritesData = fs.readFileSync(path.join(__dirname, '..', 'favorites.json'), 'utf8');
         const favoritesJson = JSON.parse(favoritesData);
         const favorites = favoritesJson.favorites || [];
-        
+
         const favoriteIndex = favorites.findIndex(fav => fav.id === id);
         if (favoriteIndex === -1) {
             return res.status(404).json({ error: 'Favorite not found' });
         }
-        
+
         favorites.splice(favoriteIndex, 1);
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'favorites.json'), 
+            path.join(__dirname, '..', 'favorites.json'),
             JSON.stringify({ favorites }, null, 2)
         );
-        
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error removing favorite:', error);
@@ -1128,16 +1128,16 @@ router.delete('/api/favorites/:id', (req, res) => {
 router.put('/api/favorites', (req, res) => {
     try {
         const { favorites } = req.body;
-        
+
         if (!Array.isArray(favorites)) {
             return res.status(400).json({ error: 'Favorites array is required' });
         }
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'favorites.json'), 
+            path.join(__dirname, '..', 'favorites.json'),
             JSON.stringify({ favorites }, null, 2)
         );
-        
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating favorites order:', error);
@@ -1150,7 +1150,7 @@ router.put('/api/playlists/:id', (req, res) => {
     try {
         const { id } = req.params;
         const { name, videos } = req.body;
-        
+
         if (!name || !videos || !Array.isArray(videos)) {
             return res.status(400).json({ error: 'Name and videos array are required' });
         }
@@ -1158,24 +1158,24 @@ router.put('/api/playlists/:id', (req, res) => {
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
             return res.status(404).json({ error: 'Playlist not found' });
         }
-        
+
         playlists[playlistIndex] = {
             ...playlists[playlistIndex],
             name: name,
             videos: videos,
             updatedAt: new Date().toISOString()
         };
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true, playlist: playlists[playlistIndex] });
     } catch (error) {
         console.error('Error updating playlist:', error);
@@ -1186,23 +1186,23 @@ router.put('/api/playlists/:id', (req, res) => {
 router.delete('/api/playlists/:id', (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
             return res.status(404).json({ error: 'Playlist not found' });
         }
-        
+
         playlists.splice(playlistIndex, 1);
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting playlist:', error);
@@ -1213,16 +1213,16 @@ router.delete('/api/playlists/:id', (req, res) => {
 router.put('/api/playlists', (req, res) => {
     try {
         const { playlists } = req.body;
-        
+
         if (!Array.isArray(playlists)) {
             return res.status(400).json({ error: 'Playlists array is required' });
         }
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating playlists order:', error);
@@ -1234,7 +1234,7 @@ router.post('/api/playlists/:id/add-video', (req, res) => {
     try {
         const { id } = req.params;
         const { video } = req.body;
-        
+
         if (!video) {
             return res.status(400).json({ error: 'Video data is required' });
         }
@@ -1242,23 +1242,23 @@ router.post('/api/playlists/:id/add-video', (req, res) => {
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
             return res.status(404).json({ error: 'Playlist not found' });
         }
-        
+
         if (!playlists[playlistIndex].videos) {
             playlists[playlistIndex].videos = [];
         }
-        
+
         playlists[playlistIndex].videos.push(video);
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true, playlist: playlists[playlistIndex] });
     } catch (error) {
         console.error('Error adding video to playlist:', error);
@@ -1270,7 +1270,7 @@ router.post('/api/playlists/:id/remove-video', (req, res) => {
     try {
         const { id } = req.params;
         const { videoPath } = req.body;
-        
+
         if (!videoPath) {
             return res.status(400).json({ error: 'Video path is required' });
         }
@@ -1278,23 +1278,23 @@ router.post('/api/playlists/:id/remove-video', (req, res) => {
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
             return res.status(404).json({ error: 'Playlist not found' });
         }
-        
+
         if (playlists[playlistIndex].videos) {
             playlists[playlistIndex].videos = playlists[playlistIndex].videos.filter(
                 video => video.path !== videoPath
             );
         }
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true, playlist: playlists[playlistIndex] });
     } catch (error) {
         console.error('Error removing video from playlist:', error);
@@ -1306,27 +1306,27 @@ router.delete('/api/playlists/:id/videos/:videoPath', (req, res) => {
     try {
         const { id, videoPath } = req.params;
         const decodedVideoPath = decodeURIComponent(videoPath);
-        
+
         const playlistsData = fs.readFileSync(path.join(__dirname, '..', 'playlists.json'), 'utf8');
         const playlistsJson = JSON.parse(playlistsData);
         const playlists = playlistsJson.playlists || [];
-        
+
         const playlistIndex = playlists.findIndex(playlist => playlist.id === id);
         if (playlistIndex === -1) {
             return res.status(404).json({ error: 'Playlist not found' });
         }
-        
+
         if (playlists[playlistIndex].videos) {
             playlists[playlistIndex].videos = playlists[playlistIndex].videos.filter(
                 video => video.path !== decodedVideoPath
             );
         }
-        
+
         fs.writeFileSync(
-            path.join(__dirname, '..', 'playlists.json'), 
+            path.join(__dirname, '..', 'playlists.json'),
             JSON.stringify({ playlists }, null, 2)
         );
-        
+
         res.json({ success: true, playlist: playlists[playlistIndex] });
     } catch (error) {
         console.error('Error removing video from playlist:', error);
@@ -1417,31 +1417,31 @@ router.get('/api/thumbnail-status', (req, res) => {
 // API endpoint to generate HLS thumbnails
 router.post('/api/generate-hls-thumbnails', async (req, res) => {
     try {
-        
+
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-        
+
         if (!fs.existsSync(hlsRootPath)) {
-            return res.json({ 
-                success: false, 
-                message: 'HLS directory not found' 
+            return res.json({
+                success: false,
+                message: 'HLS directory not found'
             });
         }
-        
+
         // Find all HLS files without thumbnails
         const hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
-        
+
         if (hlsVideosWithoutThumbnails.length === 0) {
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 message: 'All HLS videos already have thumbnails',
                 generated: 0
             });
         }
-        
-        
+
+
         let generated = 0;
         let failed = 0;
-        
+
         for (const video of hlsVideosWithoutThumbnails) {
             try {
                 const result = await generateHLSThumbnail(video.path);
@@ -1455,19 +1455,19 @@ router.post('/api/generate-hls-thumbnails', async (req, res) => {
                 failed++;
             }
         }
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: `HLS thumbnail generation complete: ${generated} generated, ${failed} failed`,
             generated: generated,
             failed: failed
         });
-        
+
     } catch (error) {
         console.error('Error generating HLS thumbnails:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Failed to generate HLS thumbnails' 
+        res.status(500).json({
+            success: false,
+            error: 'Failed to generate HLS thumbnails'
         });
     }
 });
@@ -1491,8 +1491,8 @@ router.get('/api/thumbnail', async (req, res) => {
         // Check if thumbnail already exists
         const thumbnailUrl = getThumbnailUrl(videoPath);
         if (thumbnailUrl) {
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 thumbnailUrl: thumbnailUrl,
                 message: 'Thumbnail already exists'
             });
@@ -1508,7 +1508,7 @@ router.get('/api/thumbnail', async (req, res) => {
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
 
         let success = false;
-        
+
         // For HLS files, try to generate from first quality
         if (isHLSFile(ext) && ext === '.m3u8') {
             const hlsInfo = await getHLSInfo(videoPath);
@@ -1523,15 +1523,15 @@ router.get('/api/thumbnail', async (req, res) => {
 
         if (success && fs.existsSync(thumbnailPath)) {
             const newThumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
-            res.json({ 
-                success: true, 
+            res.json({
+                success: true,
                 thumbnailUrl: newThumbnailUrl,
                 message: 'Thumbnail generated successfully'
             });
         } else {
-            res.status(500).json({ 
-                success: false, 
-                error: 'Failed to generate thumbnail' 
+            res.status(500).json({
+                success: false,
+                error: 'Failed to generate thumbnail'
             });
         }
 

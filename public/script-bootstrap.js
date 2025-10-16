@@ -141,7 +141,7 @@ class ModernVideoPlayerBrowser {
                 const originalHTML = this.refreshBtn.innerHTML;
                 this.refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 this.refreshBtn.disabled = true;
-                
+
                 // Call force refresh
                 window.forceRefresh();
             } else {
@@ -193,7 +193,7 @@ class ModernVideoPlayerBrowser {
 
                 const orderIcon = this.sortOrder.value === 'asc' ? '↑' : '↓';
                 this.updateSortDropdownText(`${e.target.textContent.trim()} ${orderIcon}`);
-                
+
                 // Check if we're on the search results tab
                 const searchResultsTab = document.getElementById('search-results-pane');
                 if (searchResultsTab && searchResultsTab.classList.contains('active')) {
@@ -239,7 +239,7 @@ class ModernVideoPlayerBrowser {
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => this.cleanup());
-        
+
         // Add keyboard shortcut for force refresh (Ctrl+F5 or Cmd+Shift+R)
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey && e.key === 'F5') || (e.metaKey && e.shiftKey && e.key === 'R')) {
@@ -258,11 +258,11 @@ class ModernVideoPlayerBrowser {
 
         return this.safeAsyncOperation(async () => {
             this.showLoading();
-            
+
             // Ensure path is valid
             const validPath = (path === undefined || path === null) ? '' : path;
             // Loading directory
-            
+
             const params = new URLSearchParams({
                 path: validPath,
                 search: this.searchInput.value,
@@ -524,12 +524,12 @@ class ModernVideoPlayerBrowser {
     createClickablePath(relativePath, fullPath) {
         // Create clickable path
         if (!relativePath) return '';
-        
+
         // Split the path into parts
         const pathParts = relativePath.split('/').filter(part => part !== '');
-        
+
         if (pathParts.length === 0) return relativePath;
-        
+
         // For HLS videos, show only the main category (first level after hls)
         let folderParts;
         if (pathParts[0] === 'hls' && pathParts.length > 1) {
@@ -542,31 +542,31 @@ class ModernVideoPlayerBrowser {
             // For regular files, remove the last part (filename)
             folderParts = pathParts.slice(0, -1);
         }
-        
+
         if (folderParts.length === 0) {
             // If no folders, just show the filename
             return pathParts[pathParts.length - 1];
         }
-        
+
         // Create clickable breadcrumb-style path for folders only
         let clickablePath = '';
         let currentPath = '';
-        
+
         folderParts.forEach((part, index) => {
             currentPath += (currentPath ? '/' : '') + part;
-            
+
             // For HLS videos, ensure the data-path includes the hls/ prefix
             const dataPath = pathParts[0] === 'hls' ? 'hls/' + currentPath : currentPath;
-            
+
             // Create clickable span for each folder
             clickablePath += `<span class="clickable-folder" data-path="${dataPath}" style="cursor: pointer; color: #B91C1C; font-weight: bold; transition: all 0.2s ease; padding: 2px 4px; border-radius: 3px;" title="Navigate to ${dataPath}" onmouseover="this.style.backgroundColor='#B91C1C'; this.style.color='#FFFFFF';" onmouseout="this.style.backgroundColor=''; this.style.color='#B91C1C';">${part}</span>`;
-            
+
             // Add separator if not the last folder
             if (index < folderParts.length - 1) {
                 clickablePath += ' / ';
             }
         });
-        
+
         // Truncate if too long (check actual text content, not HTML)
         const textContent = folderParts.join('/');
         if (textContent.length > 50) {
@@ -576,7 +576,7 @@ class ModernVideoPlayerBrowser {
             // Path truncated for display
             return truncated;
         }
-        
+
         // Return final clickable path
         return clickablePath;
     }
@@ -585,10 +585,10 @@ class ModernVideoPlayerBrowser {
         try {
             // Reset error handling state when starting a new video
             this.isHandlingVideoError = false;
-            
+
             // Show loading state
             this.setLoadingState('video', true);
-            
+
             const response = await fetch(`/api/video-info?path=${encodeURIComponent(item.path)}`, {
                 cache: 'no-cache',
                 headers: {
@@ -620,11 +620,11 @@ class ModernVideoPlayerBrowser {
                 } else {
                     // Regular video file - clean up any existing HLS instance
                     await this.cleanupHLSInstance();
-                    
+
                     // Clear video element to prevent segment mixing
                     this.video.removeAttribute('src');
                     this.video.load();
-                    
+
                     const videoUrl = `/videos/${encodeURIComponent(item.path)}`;
                     console.log('Loading regular video:', {
                         videoUrl,
@@ -636,7 +636,7 @@ class ModernVideoPlayerBrowser {
                             duration: videoData.duration
                         }
                     });
-                    
+
                     // Debug: Check video element state before setting source
                     console.log('Video element state before setting source:', {
                         currentSrc: this.video.currentSrc,
@@ -644,11 +644,11 @@ class ModernVideoPlayerBrowser {
                         networkState: this.video.networkState,
                         readyState: this.video.readyState
                     });
-                    
+
                     this.videoSource.src = videoUrl;
                     this.videoSource.type = videoData.mimeType;
                     this.video.src = videoUrl;
-                    
+
                     // Debug: Check video element state after setting source
                     console.log('Video element state after setting source:', {
                         currentSrc: this.video.currentSrc,
@@ -656,7 +656,7 @@ class ModernVideoPlayerBrowser {
                         networkState: this.video.networkState,
                         readyState: this.video.readyState
                     });
-                    
+
                     this.video.load();
                 }
 
@@ -676,7 +676,7 @@ class ModernVideoPlayerBrowser {
                 this.video.play().catch(error => {
                     // Autoplay failed
                 });
-                
+
                 // Clear loading state
                 this.setLoadingState('video', false);
             } else {
@@ -693,11 +693,11 @@ class ModernVideoPlayerBrowser {
         try {
             // Reset video state duration to prevent showing previous video's duration
             this.videoState.duration = 0;
-            
+
             // Check if HLS is supported
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 // Using HLS.js for HLS playback
-                
+
                 // Comprehensive HLS cleanup to prevent segment mixing
                 await this.cleanupHLSInstance();
 
@@ -730,26 +730,26 @@ class ModernVideoPlayerBrowser {
                 this.hls = new Hls({
                     debug: false,  // Disable debug mode to reduce logging
                     enableWorker: true,
-                    
+
                     // Buffer management for memory optimization and smooth seeking
                     backBufferLength: 30, // Reduced for memory efficiency
                     maxBufferLength: 60, // Limit buffer size
                     maxMaxBufferLength: 120, // Maximum buffer limit
-                    
+
                     // Additional logging control
                     verbose: false,
                     maxBufferSize: 60 * 1000 * 1000, // 60MB buffer size limit
                     maxBufferHole: 0.1, // Reduce buffer holes
                     highBufferWatchdogPeriod: 2, // Monitor buffer health
-                    
+
                     // Enhanced buffer management for seeking
                     maxBufferStarvationDelay: 1, // Minimal delay for buffer starvation
-                    
+
                     // Seeking and playback optimization
                     nudgeOffset: 0.1, // Fine-tune seeking
                     nudgeMaxRetry: 3, // Retry failed seeks
                     maxFragLookUpTolerance: 0.25, // Fragment lookup tolerance
-                    
+
                     // Enhanced seeking for smooth scrubbing
                     seekHole: 0.1, // Allow seeking within segments
                     seekMode: 'accurate', // Use accurate seeking mode
@@ -757,12 +757,12 @@ class ModernVideoPlayerBrowser {
                     seekRangeEnd: Infinity, // Allow seeking to end
                     seekToStart: true, // Allow seeking to start
                     seekToEnd: true, // Allow seeking to end
-                    
+
                     // Live streaming optimization
                     liveSyncDurationCount: 3, // Live sync optimization
                     liveMaxLatencyDurationCount: 10, // Max latency for live
                     liveDurationInfinity: true, // Handle infinite live streams
-                    
+
                     // Network and loading optimization (modern API)
                     manifestLoadPolicy: {
                         default: {
@@ -812,12 +812,12 @@ class ModernVideoPlayerBrowser {
                             }
                         }
                     },
-                    
+
                     // Preloading strategies
                     startFragPrefetch: true, // Prefetch start fragment
                     testBandwidth: true, // Test bandwidth for quality selection
                     progressive: false, // Disable progressive for better streaming
-                    
+
                     // Quality selection optimization - Always use best quality
                     abrEwmaFastLive: 1.0, // Very fast adaptation to best quality
                     abrEwmaSlowLive: 1.0, // Very slow adaptation (stick to best)
@@ -830,13 +830,13 @@ class ModernVideoPlayerBrowser {
                     maxStarvationDelay: 1, // Minimal starvation delay
                     maxLoadingDelay: 1, // Minimal loading delay
                     minAutoBitrate: 10000000, // High minimum bitrate to force best quality
-                    
+
                     // Security and compatibility
                     enableSoftwareAES: true, // Software AES for compatibility
                     emeEnabled: false, // Disable EME for better performance
                     widevineLicenseUrl: null, // No widevine
                     drmSystemOptions: {}, // No DRM options
-                    
+
                     // Network optimization
                     xhrSetup: (xhr, url) => {
                         // Add cache busting headers to prevent browser caching
@@ -853,14 +853,14 @@ class ModernVideoPlayerBrowser {
                 // Load the HLS source with cache busting
                 this.hls.loadSource(videoUrl);
                 this.hls.attachMedia(this.video);
-                
+
                 // HLS setup complete
-                
+
                 // Enhanced seeking behavior for HLS
                 this.video.addEventListener('seeking', () => {
                     // Video seeking
                 });
-                
+
                 this.video.addEventListener('seeked', () => {
                     // Video seeked
                 });
@@ -868,19 +868,19 @@ class ModernVideoPlayerBrowser {
                 // Handle HLS events
                 this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     // HLS manifest parsed
-                    
+
                     // Automatically select the best quality (highest bitrate)
                     if (this.hls.levels && this.hls.levels.length > 0) {
                         let bestLevelIndex = 0;
                         let bestBitrate = this.hls.levels[0].bitrate;
-                        
+
                         for (let i = 1; i < this.hls.levels.length; i++) {
                             if (this.hls.levels[i].bitrate > bestBitrate) {
                                 bestBitrate = this.hls.levels[i].bitrate;
                                 bestLevelIndex = i;
                             }
                         }
-                        
+
                         // Selecting best quality level
                         this.hls.currentLevel = bestLevelIndex;
                     }
@@ -946,42 +946,42 @@ class ModernVideoPlayerBrowser {
                 // Using native HLS support (Safari)
                 // Reset video state duration to prevent showing previous video's duration
                 this.videoState.duration = 0;
-                
+
                 // Clean up any existing HLS instance for native HLS
                 await this.cleanupHLSInstance();
-                
+
                 // Clear video element completely
                 this.video.removeAttribute('src');
                 this.video.load();
-                
+
                 // Wait for cleanup
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
+
                 // Add cache busting for native HLS
                 const cacheBuster = videoUrl.includes('?') ? '&' : '?';
                 const nativeHlsUrl = `${videoUrl}${cacheBuster}t=${Date.now()}`;
                 console.log('Loading native HLS source:', nativeHlsUrl);
-                
+
                 this.video.src = nativeHlsUrl;
                 this.video.load();
             } else {
                 throw new Error('HLS is not supported in this browser');
             }
-            
+
             // Update video info after HLS setup
             this.updateVideoInfo(videoData);
-            
+
             // Update favorite button state
             this.updateFavoriteButtonState();
-            
+
             // Show modal
             this.videoPlayerModal.show();
-            
+
             // Restore progress if available
             if (this.currentVideo && this.currentVideo.path) {
                 this.restoreProgress(this.currentVideo.path);
             }
-            
+
             // Check for domain name issue before playing
             if (this.video.src && (this.video.src === window.location.href || this.video.src === window.location.origin + '/')) {
                 console.error('CRITICAL: Video src is set to domain name before play! Clearing it...', {
@@ -990,21 +990,21 @@ class ModernVideoPlayerBrowser {
                     isHLS: this.currentVideo?.isHLS || false,
                     timestamp: new Date().toISOString()
                 });
-                
+
                 this.video.removeAttribute('src');
                 this.video.load();
                 return;
             }
-            
+
             // Autoplay the video (wait for manifest to be parsed)
             this.video.play().catch(error => {
                 console.log('Autoplay failed (will retry after manifest parsed):', error.message);
             });
-            
+
         } catch (error) {
             console.error('HLS playback error:', error);
             this.showStatusMessage('HLS playback error: ' + error.message, 'error');
-            
+
             // Fallback: Try to find and play the original video file
             this.fallbackToOriginalVideo(videoData);
         }
@@ -1017,9 +1017,9 @@ class ModernVideoPlayerBrowser {
                 this.showStatusMessage('No fallback available for this file type', 'error');
                 return;
             }
-            
+
             console.log('Attempting fallback for HLS video:', videoData);
-            
+
             // Clean up HLS instance properly to prevent further errors
             if (this.hls) {
                 console.log('Cleaning up HLS instance');
@@ -1028,18 +1028,18 @@ class ModernVideoPlayerBrowser {
                 this.hls.destroy(); // Destroy the instance
                 this.hls = null;
             }
-            
+
             // Clear the video element completely to prevent further errors
             this.video.removeAttribute('src');
             this.video.load();
-            
+
             // For HLS-only content, just show a helpful message
             // Don't try to find original files as they likely don't exist
             this.showStatusMessage('HLS video failed to load. This appears to be HLS-only content with no original video file.', 'info');
-            
+
             // Reset the error handling flag
             this.isHandlingVideoError = false;
-            
+
         } catch (error) {
             console.error('Fallback error:', error);
             this.showStatusMessage('Fallback failed: ' + error.message, 'error');
@@ -1056,15 +1056,15 @@ class ModernVideoPlayerBrowser {
             error: errorData.error ? String(errorData.error) : 'no error object',
             timestamp: new Date().toISOString()
         };
-        
+
         console.error('HLS fatal error:', hlsErrorInfo);
-        
+
         // Prevent infinite loop if we're already handling a video error
         if (this.isHandlingVideoError) {
             console.log('Already handling video error, skipping HLS error handling');
             return;
         }
-        
+
         switch (errorData.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
                 this.showStatusMessage('HLS network error - retrying...', 'warning');
@@ -1175,14 +1175,14 @@ class ModernVideoPlayerBrowser {
         this.videoPlayerModal.hide();
         this.video.pause();
         this.video.currentTime = 0;
-        
+
         // Clean up HLS instance if exists
         if (this.hls) {
             this.hls.destroy();
             this.hls = null;
         }
-        
-        
+
+
         this.currentVideo = null;
     }
 
@@ -1232,7 +1232,7 @@ class ModernVideoPlayerBrowser {
             if (this.searchResults && this.searchResults.length > 1) {
                 const searchVideos = this.searchResults.filter(item => item.isVideo);
                 const currentIndex = searchVideos.findIndex(video => video.path === this.currentVideo.path);
-                
+
                 if (currentIndex !== -1 && currentIndex < searchVideos.length - 1) {
                     const nextVideo = searchVideos[currentIndex + 1];
                     this.playVideo(nextVideo);
@@ -1255,15 +1255,15 @@ class ModernVideoPlayerBrowser {
                     }
                 });
                 const data = await response.json();
-                
+
                 if (response.ok && data.items) {
                     // Filter only video files
                     const videos = data.items.filter(item => item.isVideo);
-                    
+
                     if (videos.length > 1) {
                         // Find current video index
                         const currentIndex = videos.findIndex(video => video.path === this.currentVideo.path);
-                        
+
                         if (currentIndex !== -1 && currentIndex < videos.length - 1) {
                             // Play next video
                             const nextVideo = videos[currentIndex + 1];
@@ -1279,10 +1279,10 @@ class ModernVideoPlayerBrowser {
                     }
                 }
             }
-            
+
             // If we get here, no strategy found multiple videos
             this.showStatusMessage('Only one video in related directories', 'info');
-            
+
         } catch (error) {
             console.error('Error playing next video in directory:', error);
         }
@@ -1292,7 +1292,7 @@ class ModernVideoPlayerBrowser {
         if (!directoryPath || !directoryPath.includes('/')) {
             return '';
         }
-        
+
         const pathParts = directoryPath.split('/');
         pathParts.pop(); // Remove last part
         return pathParts.join('/');
@@ -1303,7 +1303,7 @@ class ModernVideoPlayerBrowser {
         if (!videoPath) {
             return '';
         }
-        
+
         // Handle different path formats
         if (videoPath.includes('/')) {
             // Regular file path - get directory by removing filename
@@ -1312,7 +1312,7 @@ class ModernVideoPlayerBrowser {
             const directory = pathParts.join('/');
             return directory;
         }
-        
+
         // If no slashes, it's likely a root file
         return '';
     }
@@ -1469,10 +1469,10 @@ class ModernVideoPlayerBrowser {
                 </div>
                 <div class="file-name" style="font-size: 0.9rem; margin-bottom: 0.25rem;" title="${item.name}">${this.formatFileName(item.name, item.isVideo, item.isHLS)}</div>
                 <div class="file-details text-muted small mb-2" style="font-size: 0.75rem;">
-                    ${item.isDirectory ? 
-                        `Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}${item.isHLSDirectory ? ' (HLS)' : ''}` :
-                        (item.isVideo ? 'Video' : 'File') + (item.isVideo ? ` • ${item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown'}` : ` • ${size}`)
-                    }
+                    ${item.isDirectory ?
+                    `Directory${item.fileCount !== null && item.fileCount !== undefined ? ` (${item.fileCount} items)` : ''}${item.isHLSDirectory ? ' (HLS)' : ''}` :
+                    (item.isVideo ? 'Video' : 'File') + (item.isVideo ? ` • ${item.duration ? `Duration: ${this.formatTime(item.duration)}` : 'Duration: Unknown'}` : ` • ${size}`)
+                }
                 </div>
                 <div class="search-path text-muted small" style="font-size: 0.7rem;" title="${item.relativePath || item.path}">
                     ${this.createClickablePath(item.relativePath || item.path, item.path) || 'No path available'}
@@ -1578,7 +1578,7 @@ class ModernVideoPlayerBrowser {
 
             // Use same styling as folders in browser
             const icon = '📁'; // Same as getFileIcon for directories
-            
+
             div.innerHTML = `
                 <div class="file-icon">${icon}</div>
                 <div class="file-name">${playlist.name}</div>
@@ -1619,10 +1619,10 @@ class ModernVideoPlayerBrowser {
             div.addEventListener('drop', (e) => {
                 e.preventDefault();
                 div.classList.remove('drag-over');
-                
+
                 const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
                 const targetIndex = index;
-                
+
                 if (draggedIndex !== targetIndex) {
                     this.reorderPlaylists(draggedIndex, targetIndex);
                 }
@@ -1820,10 +1820,10 @@ class ModernVideoPlayerBrowser {
             div.addEventListener('drop', (e) => {
                 e.preventDefault();
                 div.classList.remove('drag-over');
-                
+
                 const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
                 const targetIndex = index;
-                
+
                 if (draggedIndex !== targetIndex) {
                     this.reorderPlaylistVideos(playlist.id, draggedIndex, targetIndex);
                 }
@@ -1869,7 +1869,7 @@ class ModernVideoPlayerBrowser {
             if (response.ok) {
                 // Update local playlist
                 playlist.videos = videos;
-                
+
                 // Update current playlist if we're viewing it
                 if (this.currentPlaylist && this.currentPlaylist.id === playlistId) {
                     this.currentPlaylist.videos = videos;
@@ -2038,10 +2038,10 @@ class ModernVideoPlayerBrowser {
             div.addEventListener('drop', (e) => {
                 e.preventDefault();
                 div.classList.remove('drag-over');
-                
+
                 const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
                 const targetIndex = index;
-                
+
                 if (draggedIndex !== targetIndex) {
                     this.reorderFavorites(draggedIndex, targetIndex);
                 }
@@ -2117,12 +2117,12 @@ class ModernVideoPlayerBrowser {
         }
 
         this.showPlaylistModal();
-        
+
         // Display the item being added
         const icon = isDirectory ? '📁' : (currentItem.isVideo ? '🎬' : '📄');
         const itemType = isDirectory ? 'Directory' : (currentItem.isVideo ? 'Video' : 'File');
         const fileCount = isDirectory && currentItem.fileCount ? ` (${currentItem.fileCount} items)` : '';
-        
+
         this.playlistVideos.innerHTML = `
             <div class="alert alert-info">
                 <span class="me-2">${icon}</span>
@@ -2381,7 +2381,7 @@ class ModernVideoPlayerBrowser {
             const response = await fetch(`/api/playlists/${this.selectedPlaylistId}/add-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     video: currentItem,
                     isDirectory: isDirectory
                 })
@@ -2415,8 +2415,8 @@ class ModernVideoPlayerBrowser {
                 // Remove from favorites
                 const favorite = this.favorites.find(fav => fav.path === currentItem.path);
                 if (favorite) {
-                    const response = await fetch(`/api/favorites/${favorite.id}`, { 
-                        method: 'DELETE' 
+                    const response = await fetch(`/api/favorites/${favorite.id}`, {
+                        method: 'DELETE'
                     });
 
                     if (response.ok) {
@@ -2462,7 +2462,7 @@ class ModernVideoPlayerBrowser {
 
     updateFavoriteButtonState() {
         if (!this.currentVideo) return;
-        
+
         // Check if current video is favorited
         const isFavorited = this.favorites.some(fav => fav.path === this.currentVideo.path);
         this.updateFavoriteButton(isFavorited);
@@ -2640,17 +2640,17 @@ class ModernVideoPlayerBrowser {
         this.video.addEventListener('error', (e) => this.handleVideoError(e));
         this.video.addEventListener('seeking', () => this.handleVideoSeeking());
         this.video.addEventListener('seeked', () => this.handleVideoSeeked());
-        
+
         // Monitor video source changes to detect unexpected modifications
         this.monitorVideoSourceChanges();
-        
+
         // Add immediate check for domain name issue
         this.checkForDomainNameIssue();
     }
-    
+
     checkForDomainNameIssue() {
         if (!this.video) return;
-        
+
         // Check immediately if video src is set to domain name
         if (this.video.src && this.video.src === window.location.href) {
             console.error('CRITICAL: Video src is set to current page URL on initialization!', {
@@ -2659,12 +2659,12 @@ class ModernVideoPlayerBrowser {
                 isHLS: this.currentVideo?.isHLS || false,
                 timestamp: new Date().toISOString()
             });
-            
+
             // Clear it immediately
             this.video.removeAttribute('src');
             this.video.load();
         }
-        
+
         // Also check if it's just the domain name
         if (this.video.src && this.video.src === window.location.origin + '/') {
             console.error('CRITICAL: Video src is set to domain name on initialization!', {
@@ -2673,59 +2673,59 @@ class ModernVideoPlayerBrowser {
                 isHLS: this.currentVideo?.isHLS || false,
                 timestamp: new Date().toISOString()
             });
-            
+
             // Clear it immediately
             this.video.removeAttribute('src');
             this.video.load();
         }
     }
-    
+
     monitorVideoSourceChanges() {
         if (!this.video) return;
-        
+
         // Ensure video src is not set to the domain name initially
         if (this.video.src && this.video.src === window.location.href) {
             console.warn('Video src was set to current page URL, clearing it');
             this.video.removeAttribute('src');
         }
-        
+
         // Store the last known source
         let lastSrc = this.video.src;
-        
+
         // Check for source changes every 100ms
         const sourceMonitor = setInterval(() => {
             if (this.video && this.video.src !== lastSrc) {
                 const newSrc = this.video.src;
-                
-                
+
+
                 // Monitor video source changes silently
-                
+
                 // Check if the new source is unexpectedly the domain name (but not a blob URL)
                 if (newSrc && !newSrc.startsWith('blob:') && newSrc.includes(window.location.hostname) && !newSrc.includes('/video') && !newSrc.includes('/hls')) {
                     console.warn('Video source set to domain name - clearing it');
-                    
+
                     // Automatically clear the invalid src to prevent errors
                     this.video.removeAttribute('src');
                     this.video.load();
                     lastSrc = '';
                     return;
                 }
-                
+
                 // Additional check for exact domain match
                 if (newSrc && (newSrc === window.location.href || newSrc === window.location.origin + '/')) {
                     console.warn('Video source set to current page URL - clearing it');
-                    
+
                     // Automatically clear the invalid src to prevent errors
                     this.video.removeAttribute('src');
                     this.video.load();
                     lastSrc = '';
                     return;
                 }
-                
+
                 lastSrc = newSrc;
             }
         }, 100);
-        
+
         // Store the interval ID so it can be cleared if needed
         this.videoSourceMonitor = sourceMonitor;
     }
@@ -2736,12 +2736,12 @@ class ModernVideoPlayerBrowser {
 
     handleVideoLoadedMetadata() {
         this.videoState.duration = this.video.duration;
-        
+
         // Update currentVideo duration if it exists
         if (this.currentVideo) {
             this.currentVideo.duration = this.video.duration;
         }
-        
+
         this.updateVideoInfo();
     }
 
@@ -2767,7 +2767,7 @@ class ModernVideoPlayerBrowser {
         if (!this.videoState.isSeeking) {
             this.videoState.currentTime = this.video.currentTime;
             this.updateProgress();
-            
+
             // Update video info for HLS videos (debounced to improve performance)
             if (this.currentVideo && this.currentVideo.isHLS) {
                 this.debounceVideoInfoUpdate();
@@ -2796,38 +2796,38 @@ class ModernVideoPlayerBrowser {
     handleVideoError(e) {
         const video = e.target;
         const error = video.error;
-        
+
         // Prevent infinite loop by checking if we're already handling a video error
         if (this.isHandlingVideoError) {
             console.log('Already handling video error, preventing infinite loop');
             return;
         }
-        
+
         // Ignore errors from blob URLs that are being cleaned up
         if (video.src && video.src.startsWith('blob:') && !this.hls) {
             console.log('Ignoring error from cleaned up blob URL');
             return;
         }
-        
+
         // IMMEDIATE FIX: If video src is set to domain name, clear it immediately
-        if (video.src && (video.src === window.location.href || video.src === window.location.origin + '/' || 
+        if (video.src && (video.src === window.location.href || video.src === window.location.origin + '/' ||
             (video.src.includes(window.location.hostname) && !video.src.includes('/video') && !video.src.includes('/hls') && !video.src.startsWith('blob:')))) {
             console.warn('IMMEDIATE FIX: Video src is domain name, clearing it to prevent error');
             video.removeAttribute('src');
             video.load();
             return; // Exit early to prevent error processing
         }
-        
+
         // Debug: Log if video source is unexpectedly set to domain name (but not a blob URL)
         if (video.src && !video.src.startsWith('blob:') && video.src.includes(window.location.hostname) && !video.src.includes('/video') && !video.src.includes('/hls')) {
             console.warn('Video source set to domain name - this should not happen');
         }
-        
+
         // Get detailed error information
         let errorMessage = 'Video playback error occurred';
         let errorCode = 'UNKNOWN';
         let errorDetails = '';
-        
+
         if (error) {
             switch (error.code) {
                 case MediaError.MEDIA_ERR_ABORTED:
@@ -2850,10 +2850,10 @@ class ModernVideoPlayerBrowser {
                     errorCode = 'UNKNOWN';
                     errorMessage = 'Unknown video error occurred';
             }
-            
+
             errorDetails = `Code: ${errorCode}, Message: ${error.message || 'No additional details'}`;
         }
-        
+
         // Log detailed error information with completely safe primitive values
         const videoSrc = video.src ? String(video.src) : 'null';
         const videoCurrentSrc = video.currentSrc ? String(video.currentSrc) : 'null';
@@ -2864,7 +2864,7 @@ class ModernVideoPlayerBrowser {
         const videoNetworkState = Number(video.networkState);
         const videoReadyState = Number(video.readyState);
         const timestamp = new Date().toISOString();
-        
+
         console.error('Video error details:', {
             errorCode,
             errorMessage,
@@ -2879,7 +2879,7 @@ class ModernVideoPlayerBrowser {
             hlsUrl,
             timestamp
         });
-        
+
         // Additional debugging for SRC_NOT_SUPPORTED errors
         if (errorCode === 'SRC_NOT_SUPPORTED') {
             // Create completely safe primitive values to prevent console reference issues
@@ -2889,7 +2889,7 @@ class ModernVideoPlayerBrowser {
             const hlsAttached = this.hls ? 'yes' : 'no';
             const srcDebugHlsUrl = this.hls?.url ? String(this.hls.url) : 'null';
             const srcDebugTimestamp = new Date().toISOString();
-            
+
             console.error('SRC_NOT_SUPPORTED debugging:', {
                 videoSrc: srcDebugVideoSrc,
                 videoCurrentSrc: srcDebugVideoCurrentSrc,
@@ -2899,17 +2899,17 @@ class ModernVideoPlayerBrowser {
                 timestamp: srcDebugTimestamp
             });
         }
-        
+
         // Show user-friendly error message
         this.showStatusMessage(`Video Error: ${errorMessage}`, 'error');
         this.videoState.isPlaying = false;
-        
+
         // Set flag to prevent infinite loop
         this.isHandlingVideoError = true;
-        
+
         // Handle different error types with appropriate recovery strategies
         this.handleVideoErrorRecovery(errorCode, errorMessage);
-        
+
         // Reset flag after a delay to allow for retry if needed
         setTimeout(() => {
             this.isHandlingVideoError = false;
@@ -2928,7 +2928,7 @@ class ModernVideoPlayerBrowser {
                         this.showStatusMessage('Video format not supported by your browser. Try using a different browser or update your current one.', 'error');
                     }
                     break;
-                    
+
                 case 'NETWORK':
                     // For network errors, attempt automatic retry
                     this.showStatusMessage('Network error occurred. Attempting to retry...', 'warning');
@@ -2938,17 +2938,17 @@ class ModernVideoPlayerBrowser {
                         }
                     });
                     break;
-                    
+
                 case 'DECODE':
                     // For decode errors, suggest different browser or codec
                     this.showStatusMessage('Video decoding error. This video may be corrupted or use an unsupported codec.', 'error');
                     break;
-                    
+
                 case 'ABORTED':
                     // For aborted errors, usually user-initiated, just log
                     console.log('Video playback was aborted');
                     break;
-                    
+
                 default:
                     // For unknown errors, try basic recovery
                     this.showStatusMessage('Unknown video error occurred. Please try refreshing the page.', 'error');
@@ -2978,7 +2978,7 @@ class ModernVideoPlayerBrowser {
 
         this.retryCount = (this.retryCount || 0) + 1;
         const delay = baseDelay * Math.pow(2, this.retryCount - 1); // Exponential backoff
-        
+
         console.log(`Retrying video load (attempt ${this.retryCount}/${maxRetries}) in ${delay}ms`);
         this.showStatusMessage(`Retrying video load (attempt ${this.retryCount}/${maxRetries})...`, 'info');
 
@@ -3046,38 +3046,38 @@ class ModernVideoPlayerBrowser {
         try {
             // Stop all HLS operations
             this.hls.stopLoad();
-            
+
             // Remove all event listeners
             this.hls.off();
-            
+
             // Detach from video element
             this.hls.detachMedia();
-            
+
             // Destroy the instance
             this.hls.destroy();
-            
+
             // Clear the reference
             this.hls = null;
-            
+
             // Additional cleanup for video element
             if (this.video) {
                 // Pause and reset video
                 this.video.pause();
                 this.video.currentTime = 0;
-                
+
                 // Clear any buffered data by removing and re-adding src
                 this.video.removeAttribute('src');
                 this.video.load();
-                
+
                 // Force clear buffer by setting currentTime multiple times
                 this.video.currentTime = 0;
                 this.video.currentTime = 0.1;
                 this.video.currentTime = 0;
             }
-            
+
             // Wait a bit more to ensure cleanup is complete
             await new Promise(resolve => setTimeout(resolve, 200));
-            
+
         } catch (error) {
             console.error('Error during HLS cleanup:', error);
             // Force clear the reference even if cleanup failed
@@ -3267,7 +3267,7 @@ class ModernVideoPlayerBrowser {
 
     handleError(error, context = '') {
         console.error(`Error in ${context}:`, error);
-        
+
         // Provide more specific error messages based on context
         let userMessage = 'Something went wrong';
         if (context.includes('video')) {
@@ -3281,7 +3281,7 @@ class ModernVideoPlayerBrowser {
         } else if (error.message) {
             userMessage = error.message;
         }
-        
+
         this.showStatusMessage(`Error: ${userMessage}`, 'error');
         this.announceToScreenReader(`Error: ${userMessage}`);
     }
@@ -3308,20 +3308,20 @@ class ModernVideoPlayerBrowser {
         if (this.searchInput) {
             this.searchInput.value = '';
         }
-        
+
         // Clear search results
         this.searchResults = [];
-        
+
         // Reset search count
         if (this.searchCount) {
             this.searchCount.textContent = '0 results';
         }
-        
+
         // Clear search list
         if (this.searchList) {
             this.searchList.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4"><i class="fas fa-search fa-2x mb-2"></i><p>No search performed yet</p></div></div>';
         }
-        
+
         // Load current directory
         this.loadDirectory();
     }
@@ -3492,7 +3492,7 @@ class ModernVideoPlayerBrowser {
             }
             this.hls = null;
         }
-        
+
         // Reset error handling state
         this.isHandlingVideoError = false;
 
@@ -3501,7 +3501,7 @@ class ModernVideoPlayerBrowser {
             this.video.pause();
             this.video.removeAttribute('src');
             this.video.load();
-            
+
             // Remove all event listeners
             this.video.removeEventListener('loadstart', this.handleVideoLoadStart);
             this.video.removeEventListener('loadedmetadata', this.handleVideoLoadedMetadata);

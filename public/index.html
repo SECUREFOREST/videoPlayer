@@ -5,16 +5,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Tie Them Down!">
+    <meta name="description" content="Tie Them Down!">
     <meta name="theme-color" content="#000000">
     <meta name="version" content="2.3.0">
-    
+
     <!-- Cache Control Headers -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    
+
     <title id="app-title">Loading...</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="alternate icon" href="favicon.svg">
@@ -29,7 +28,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Preconnect to CSS CDNs to speed up stylesheet fetch -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
@@ -38,7 +37,6 @@
     <link rel="stylesheet" href="style-bootstrap.css?v=13" id="custom-css">
 
     <style>
-
         /* Playlist selection styles */
         .playlist-item-selected {
             border-color: #059669 !important;
@@ -111,7 +109,7 @@
             <!-- Logout Button -->
             <button id="logout-btn" class="btn btn-outline-danger" title="Logout">
                 <i class="fas fa-sign-out-alt"></i>
-            </button> 
+            </button>
         </div>
     </nav>
 
@@ -229,7 +227,8 @@
                                 <h4 class="mb-0">
                                     <i class="fas fa-search me-2"></i>Search Results
                                 </h4>
-                                <span id="search-count" class="badge" style="background-color: #B91C1C; color: white; font-weight: 500;">0 results</span>
+                                <span id="search-count" class="badge"
+                                    style="background-color: #B91C1C; color: white; font-weight: 500;">0 results</span>
                             </div>
                             <div id="search-list" class="row g-3">
                                 <div class="col-12">
@@ -351,20 +350,20 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Load App Configuration -->
     <script>
         // Cache busting functionality
         function addCacheBuster() {
             const timestamp = Date.now();
-            
+
             // Update CSS with cache buster
             const cssLink = document.getElementById('custom-css');
             if (cssLink) {
                 const currentHref = cssLink.href.split('?')[0];
                 cssLink.href = `${currentHref}?v=13&t=${timestamp}`;
             }
-            
+
             // Update JS with cache buster
             const jsScript = document.getElementById('custom-js');
             if (jsScript) {
@@ -372,7 +371,7 @@
                 jsScript.src = `${currentSrc}?v=182&t=${timestamp}`;
             }
         }
-        
+
         // Clear all browser caches
         async function clearAllCaches() {
             try {
@@ -391,18 +390,18 @@
                 return false;
             }
         }
-        
+
         // Force refresh with cache clearing
         function forceRefresh() {
             clearAllCaches().then(() => {
                 // Add cache buster to current resources
                 addCacheBuster();
-                
+
                 // Force reload with cache bypass
                 window.location.reload(true);
             });
         }
-        
+
         // Load app configuration and update UI
         async function loadAppConfig() {
             try {
@@ -415,17 +414,17 @@
                     }
                 });
                 const config = await response.json();
-                
+
                 // Update page title
                 document.getElementById('app-title').textContent = config.name;
                 document.title = config.name;
-                
+
                 // Update navbar
                 document.getElementById('app-name').textContent = config.name;
-                
+
                 // Update modal
                 document.getElementById('app-name-modal').textContent = config.name;
-                
+
                 // Update meta description
                 document.querySelector('meta[name="description"]').setAttribute('content', config.description);
             } catch (error) {
@@ -436,20 +435,20 @@
                 document.getElementById('app-name-modal').textContent = 'Tie Them Down!';
             }
         }
-        
+
         // Add cache busting on page load
         document.addEventListener('DOMContentLoaded', () => {
             addCacheBuster();
             loadAppConfig();
         });
-        
+
         // Expose force refresh globally for the refresh button
         window.forceRefresh = forceRefresh;
     </script>
-    
+
     <!-- HLS.js for HLS streaming support -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js"></script>
-    
+
     <!-- Custom JS -->
     <script src="script-bootstrap.js?v=195" id="custom-js"></script>
 </body>

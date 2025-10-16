@@ -101,7 +101,7 @@ app.get('/thumbnails/*', (req, res) => {
     try {
         const filename = decodeURIComponent(req.params[0]);
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', filename);
-        
+
         // Check if thumbnail exists
         if (fs.existsSync(thumbnailPath)) {
             const stats = fs.statSync(thumbnailPath);
@@ -122,7 +122,7 @@ app.get('/thumbnails/*', (req, res) => {
             // Try with quotes around the filename (ffmpeg sometimes adds quotes)
             const quotedFilename = `'${filename}'`;
             const quotedThumbnailPath = path.join(__dirname, '..', 'thumbnails', quotedFilename);
-            
+
             if (fs.existsSync(quotedThumbnailPath)) {
                 const stats = fs.statSync(quotedThumbnailPath);
                 const etag = `"${stats.mtime.getTime()}-${stats.size}"`;
@@ -183,7 +183,7 @@ async function warmThumbnailCache() {
             };
             const req = http.request(options, (resp) => {
                 // Drain response to free socket
-                resp.on('data', () => {});
+                resp.on('data', () => { });
                 resp.on('end', () => resolve({ statusCode: resp.statusCode }));
             });
             req.on('error', () => resolve({ error: true }));
@@ -224,7 +224,7 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
             res.setHeader('Accept-Ranges', 'bytes');
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             res.setHeader('X-Content-Type-Options', 'nosniff');
-            
+
             if (filePath.match(/\.(m3u8|ts)$/i)) {
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -245,7 +245,7 @@ const masterPlaylistStore = new Map();
 setInterval(() => {
     const now = Date.now();
     const maxAge = 30 * 60 * 1000; // 30 minutes
-    
+
     for (const [sessionId, data] of masterPlaylistStore.entries()) {
         if (data.timestamp && (now - data.timestamp) > maxAge) {
             masterPlaylistStore.delete(sessionId);
@@ -260,7 +260,7 @@ function getSessionId(req) {
     if (req.sessionID) {
         return req.sessionID;
     }
-    
+
     // Use IP + User-Agent as fallback for more consistency
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const userAgent = req.get('User-Agent') || 'unknown';
@@ -287,11 +287,11 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
     const sessionId = getSessionId(req);
     let sessionData = masterPlaylistStore.get(sessionId);
     let masterPath = sessionData ? sessionData.path : null;
-    
+
     console.log(`HLS quality playlist request - Session: ${sessionId}, Quality: ${quality}, Master Path: ${masterPath}`);
     console.log(`Session data:`, sessionData);
     console.log(`Available sessions:`, Array.from(masterPlaylistStore.keys()));
-    
+
     // If no master path found, try to find it from the referer
     if (!masterPath) {
         masterPath = findMasterPlaylistFromRequest(req);
@@ -303,29 +303,29 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
             console.log(`Found master playlist from referer: ${masterPath}`);
         }
     }
-    
+
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
         console.error('Available sessions:', Array.from(masterPlaylistStore.keys()));
         console.error('Session store contents:', Array.from(masterPlaylistStore.entries()));
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
-    
+
     // Convert master playlist path to directory path
     // First decode the URL-encoded path, then remove /hls/ prefix and /master.m3u8 suffix
     const decodedMasterPath = decodeURIComponent(masterPath);
     const masterDir = decodedMasterPath.replace('/hls/', '').replace('/master.m3u8', '');
-    
+
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, 'playlist.m3u8');
-        
+
         console.log(`Looking for quality playlist at: ${correctPath}`);
-        
+
         if (!fs.existsSync(correctPath)) {
             console.error('Quality playlist not found:', correctPath);
             return res.status(404).json({ error: 'Quality playlist not found' });
         }
-        
+
         // Set appropriate headers
         res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
         // Use shorter cache for playlists to prevent mixing - playlists should be cached but not immutable
@@ -338,7 +338,7 @@ app.get('/hls/:quality/playlist.m3u8', async (req, res) => {
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
         res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
-        
+
         res.sendFile(correctPath);
     } catch (error) {
         console.error('Error processing HLS quality playlist:', error);
@@ -353,11 +353,11 @@ app.get('/hls/:quality/:segment', async (req, res) => {
     const sessionId = getSessionId(req);
     let sessionData = masterPlaylistStore.get(sessionId);
     let masterPath = sessionData ? sessionData.path : null;
-    
+
     console.log(`HLS segment request - Session: ${sessionId}, Quality: ${quality}, Segment: ${segmentFile}, Master Path: ${masterPath}`);
     console.log(`Session data:`, sessionData);
     console.log(`Available sessions:`, Array.from(masterPlaylistStore.keys()));
-    
+
     // If no master path found, try to find it from the referer
     if (!masterPath) {
         masterPath = findMasterPlaylistFromRequest(req);
@@ -369,29 +369,29 @@ app.get('/hls/:quality/:segment', async (req, res) => {
             console.log(`Found master playlist from referer: ${masterPath}`);
         }
     }
-    
+
     if (!masterPath) {
         console.error('No master playlist path found for session:', sessionId);
         console.error('Available sessions:', Array.from(masterPlaylistStore.keys()));
         console.error('Session store contents:', Array.from(masterPlaylistStore.entries()));
         return res.status(404).json({ error: 'No master playlist path found for session' });
     }
-    
+
     // Convert master playlist path to directory path
     // First decode the URL-encoded path, then remove /hls/ prefix and /master.m3u8 suffix
     const decodedMasterPath = decodeURIComponent(masterPath);
     const masterDir = decodedMasterPath.replace('/hls/', '').replace('/master.m3u8', '');
-    
+
     try {
         const correctPath = path.join(HLS_ROOT, masterDir, quality, segmentFile);
-        
+
         console.log(`Looking for segment at: ${correctPath}`);
-        
+
         if (!fs.existsSync(correctPath)) {
             console.error('Segment not found:', correctPath);
             return res.status(404).json({ error: 'Video segment not found' });
         }
-        
+
         // Set appropriate headers for video segments
         res.setHeader('Content-Type', 'video/mp2t');
         res.setHeader('Accept-Ranges', 'bytes');
@@ -405,7 +405,7 @@ app.get('/hls/:quality/:segment', async (req, res) => {
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Range');
         res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
-        
+
         res.sendFile(correctPath);
     } catch (error) {
         console.error('Error processing HLS video segment:', error);
@@ -418,14 +418,14 @@ app.use('/hls', (req, res, next) => {
     const relativePath = req.path;
     const fullPath = `/hls${relativePath}`;
     const sessionId = getSessionId(req);
-    
+
     console.log(`HLS request - Relative Path: ${relativePath}, Full Path: ${fullPath}, Session: ${sessionId}`);
-    
+
     // Decode the path to handle URL-encoded characters
     const decodedPath = decodeURIComponent(relativePath);
     console.log(`Decoded path: ${decodedPath}`);
     console.log(`Path ends with /master.m3u8: ${decodedPath.endsWith('/master.m3u8')}`);
-    
+
     // Only store master playlist paths (not segments or quality playlists)
     if (decodedPath.endsWith('/master.m3u8')) {
         // Store master playlist path for session with timestamp
@@ -438,7 +438,7 @@ app.use('/hls', (req, res, next) => {
     } else {
         console.log(`❌ Not storing path - does not end with /master.m3u8`);
     }
-    
+
     // Continue to next middleware
     next();
 });
@@ -479,7 +479,7 @@ app.get('/', (req, res) => {
     res.setHeader('Expires', '0');
     res.setHeader('Last-Modified', new Date().toUTCString());
     res.setHeader('ETag', `"${Date.now()}"`);
-    
+
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 

@@ -25,18 +25,18 @@ function getFFprobePath() {
 async function validateFFmpegInstallation() {
     const ffmpegPath = getFFmpegPath();
     const ffprobePath = getFFprobePath();
-    
+
     try {
         // Test ffmpeg
         const ffmpegCommand = `"${ffmpegPath}" -version`;
         await execAsync(ffmpegCommand);
         console.log(`✅ FFmpeg found at: ${ffmpegPath}`);
-        
+
         // Test ffprobe
         const ffprobeCommand = `"${ffprobePath}" -version`;
         await execAsync(ffprobeCommand);
         console.log(`✅ FFprobe found at: ${ffprobePath}`);
-        
+
         return true;
     } catch (error) {
         console.error('❌ FFmpeg/FFprobe not found. Please install FFmpeg:');

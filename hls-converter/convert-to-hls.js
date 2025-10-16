@@ -398,7 +398,7 @@ class HLSConverter {
 
             // Check if this is a master playlist or quality playlist
             const isMasterPlaylist = content.includes('#EXT-X-STREAM-INF');
-            
+
             if (isMasterPlaylist) {
                 // For master playlists, check that referenced quality playlists exist
                 const qualityPlaylistLines = content.split('\n').filter(line => line.trim() && !line.startsWith('#'));
@@ -458,10 +458,10 @@ class HLSConverter {
         try {
             const content = await fs.readFile(playlistPath, 'utf8');
             const lines = content.split('\n');
-            
+
             let totalDuration = 0;
             let segmentCount = 0;
-            
+
             for (const line of lines) {
                 if (line.startsWith('#EXTINF:')) {
                     const duration = parseFloat(line.split(':')[1].split(',')[0]);
@@ -469,7 +469,7 @@ class HLSConverter {
                     segmentCount++;
                 }
             }
-            
+
             return { duration: totalDuration, segmentCount };
         } catch (error) {
             console.error(`Error getting HLS duration for ${playlistPath}:`, error.message);
@@ -480,35 +480,35 @@ class HLSConverter {
     async validateDurationAlignment(originalPath, hlsDir) {
         try {
             console.log(`🔍 Validating duration alignment for ${path.basename(originalPath)}...`);
-            
+
             // Get original video duration
             const originalDuration = await this.getOriginalVideoDuration(originalPath);
             if (!originalDuration) {
                 console.log(`⚠️  Could not get original duration for ${path.basename(originalPath)}`);
                 return false;
             }
-            
+
             console.log(`📹 Original duration: ${originalDuration.toFixed(2)} seconds`);
-            
+
             // Check each quality playlist
             const qualityDirs = await fs.readdir(hlsDir);
             let allAligned = true;
-            
+
             for (const qualityDir of qualityDirs) {
                 const qualityPath = path.join(hlsDir, qualityDir);
                 const stat = await fs.stat(qualityPath);
-                
+
                 if (stat.isDirectory()) {
                     const playlistPath = path.join(qualityPath, 'playlist.m3u8');
-                    
+
                     try {
                         const hlsInfo = await this.getHLSDuration(playlistPath);
                         if (hlsInfo) {
                             const durationDiff = Math.abs(originalDuration - hlsInfo.duration);
                             const tolerance = 2.0; // 2 second tolerance
-                            
+
                             console.log(`   ${qualityDir}: ${hlsInfo.duration.toFixed(2)}s (${hlsInfo.segmentCount} segments)`);
-                            
+
                             if (durationDiff <= tolerance) {
                                 console.log(`   ✅ ${qualityDir} aligned (diff: ${durationDiff.toFixed(2)}s)`);
                             } else {
@@ -525,7 +525,7 @@ class HLSConverter {
                     }
                 }
             }
-            
+
             return allAligned;
         } catch (error) {
             console.error(`Error validating duration alignment:`, error.message);
@@ -568,7 +568,7 @@ class HLSConverter {
         // Check if FFmpeg is installed
         const ffmpegPath = getFFmpegPath();
         const ffprobePath = getFFprobePath();
-        
+
         try {
             const { stdout } = await execAsync(`"${ffmpegPath}" -version`);
             const version = stdout.split('\n')[0];
@@ -638,33 +638,33 @@ class HLSConverter {
 
     async validateExistingHLSFiles() {
         console.log('🔍 Validating existing HLS files...\n');
-        
+
         try {
             const hlsOutputDir = this.config.outputDir;
             const hlsDirs = await fs.readdir(hlsOutputDir);
-            
+
             let totalValidated = 0;
             let totalAligned = 0;
             let misalignedFiles = [];
-            
+
             for (const hlsDir of hlsDirs) {
                 const hlsPath = path.join(hlsOutputDir, hlsDir);
                 const stat = await fs.stat(hlsPath);
-                
+
                 if (stat.isDirectory()) {
                     // Look for subdirectories with master playlists
                     const subDirs = await fs.readdir(hlsPath);
-                    
+
                     for (const subDir of subDirs) {
                         const subPath = path.join(hlsPath, subDir);
                         const subStat = await fs.stat(subPath);
-                        
+
                         if (subStat.isDirectory()) {
                             const masterPlaylistPath = path.join(subPath, 'master.m3u8');
-                            
+
                             try {
                                 await fs.access(masterPlaylistPath);
-                                
+
                                 // Find corresponding original video
                                 const originalVideoPath = await this.findOriginalVideo(subDir);
                                 if (originalVideoPath) {
@@ -695,22 +695,22 @@ class HLSConverter {
                     }
                 }
             }
-            
+
             console.log(`\n📊 Validation Summary:`);
             console.log(`   Total HLS directories validated: ${totalValidated}`);
             console.log(`   Properly aligned: ${totalAligned}`);
             console.log(`   Misaligned: ${totalValidated - totalAligned}`);
-            
+
             if (misalignedFiles.length > 0) {
                 console.log(`\n🔧 Files marked for re-conversion:`);
                 misalignedFiles.forEach(file => {
                     console.log(`   - ${file.name}`);
                 });
             }
-            
+
             // Store misaligned files for processing
             this.misalignedFiles = misalignedFiles;
-            
+
         } catch (error) {
             console.error('Error validating HLS files:', error.message);
         }
@@ -719,12 +719,12 @@ class HLSConverter {
     async findOriginalVideo(hlsDirName) {
         try {
             const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.flv', '.wmv', '.3gp', '.ogv'];
-            
+
             // First try direct search in input directory
             for (const ext of videoExtensions) {
                 const videoName = hlsDirName + ext;
                 const videoPath = path.join(this.config.inputDir, videoName);
-                
+
                 try {
                     await fs.access(videoPath);
                     return videoPath;
@@ -739,18 +739,18 @@ class HLSConverter {
                     }
                 }
             }
-            
+
             // If not found directly, search in subdirectories
             const inputDirs = await fs.readdir(this.config.inputDir);
             for (const inputDir of inputDirs) {
                 const inputPath = path.join(this.config.inputDir, inputDir);
                 const stat = await fs.stat(inputPath);
-                
+
                 if (stat.isDirectory()) {
                     for (const ext of videoExtensions) {
                         const videoName = hlsDirName + ext;
                         const videoPath = path.join(inputPath, videoName);
-                        
+
                         try {
                             await fs.access(videoPath);
                             return videoPath;
@@ -767,7 +767,7 @@ class HLSConverter {
                     }
                 }
             }
-            
+
             return null;
         } catch (error) {
             return null;
@@ -878,15 +878,15 @@ class HLSConverter {
                     videoFiles.push(...subDirVideos);
                 } else if (item.isFile()) {
                     // Skip macOS metadata files, hidden files, and system files
-                    if (item.name.startsWith('._') || 
-                        item.name.startsWith('.') || 
+                    if (item.name.startsWith('._') ||
+                        item.name.startsWith('.') ||
                         item.name === '.DS_Store' ||
                         item.name === 'Thumbs.db' ||
                         item.name.endsWith('.tmp') ||
                         item.name.endsWith('.temp')) {
                         continue;
                     }
-                    
+
                     const ext = path.extname(item.name).toLowerCase();
                     if (this.config.supportedFormats.includes(ext)) {
                         videoFiles.push(fullPath);
@@ -940,13 +940,13 @@ class HLSConverter {
         if (!videoInfo) {
             throw new Error('videoInfo is required but was not provided');
         }
-        
+
         // Check if this file should be skipped (already completed and validated)
         const baseName = path.parse(videoInfo.name).name;
         if (this.stats.conversionState[baseName]?.completed && this.stats.conversionState[baseName]?.validated) {
             return { success: true, hlsDir: null, skipped: true };
         }
-        
+
         const relativePath = path.relative(this.config.inputDir, videoInfo.path);
         const outputDir = path.join(this.config.outputDir, path.dirname(relativePath));
 
@@ -959,9 +959,9 @@ class HLSConverter {
         const sourceHeight = videoInfo.height;
         const sourceWidth = videoInfo.width;
         const sourceResolution = `${sourceWidth}x${sourceHeight}`;
-        
+
         console.log(`📐 Source resolution: ${sourceResolution}`);
-        
+
         // Filter qualities to only include those that make sense
         const applicableQualities = this.getApplicableQualities(sourceHeight);
         console.log(`🎯 Generating qualities: ${applicableQualities.map(q => q.name).join(', ')}`);
@@ -1020,10 +1020,10 @@ class HLSConverter {
 
     buildFFmpegCommand(inputPath, playlistPath, segmentPattern, quality, videoInfo) {
         const ffmpegPath = getFFmpegPath();
-        
+
         // Build command parts in correct order
         const commandParts = [`"${ffmpegPath}"`];
-        
+
         // Add hardware acceleration (must come first)
         if (this.config.hardwareDecoding) {
             if (this.config.useNvidiaGPU) {
@@ -1034,20 +1034,20 @@ class HLSConverter {
                 commandParts.push('-hwaccel', 'videotoolbox');
             }
         }
-        
+
         // Add input file
         commandParts.push('-i', `"${inputPath}"`);
-        
+
         // Add video codec
         const codec = this.getVideoCodec(quality);
         commandParts.push(...codec);
-        
+
         // Add audio codec and settings
         commandParts.push(
             '-c:a', 'aac',
             '-b:a', quality.audioBitrate
         );
-        
+
         // Add video filters and settings
         commandParts.push(
             '-vf', `scale=${quality.resolution}`,
@@ -1057,7 +1057,7 @@ class HLSConverter {
             '-keyint_min', `${this.config.segmentDuration * 30}`,
             '-sc_threshold', '0'
         );
-        
+
         // Add HLS settings
         commandParts.push(
             '-f', 'hls',
@@ -1068,14 +1068,14 @@ class HLSConverter {
             '-hls_allow_cache', '1',
             '-hls_segment_type', 'mpegts'
         );
-        
+
         // Add web optimization settings
         if (this.config.webOptimized) {
             // Fast start for better streaming
             if (this.config.fastStart) {
                 commandParts.push('-movflags', '+faststart');
             }
-            
+
             // Web compatibility optimizations
             if (this.config.webCompatible) {
                 commandParts.push(
@@ -1084,7 +1084,7 @@ class HLSConverter {
                     '-level', '4.0'         // H.264 level 4.0 for broad compatibility
                 );
             }
-            
+
             // Mobile optimization
             if (this.config.mobileOptimized) {
                 commandParts.push(
@@ -1093,9 +1093,9 @@ class HLSConverter {
                 );
             }
         }
-        
+
         commandParts.push('-y'); // Overwrite output files
-        
+
         // Add output file
         commandParts.push(`"${playlistPath}"`);
 
@@ -1146,7 +1146,7 @@ class HLSConverter {
 
     getCompressionSettings() {
         const settings = [];
-        
+
         // Use CRF (Constant Rate Factor) for better quality-based compression
         if (this.config.useCRF) {
             settings.push('-crf', this.config.crfValue.toString());
@@ -1154,7 +1154,7 @@ class HLSConverter {
             // Fallback to bitrate-based encoding
             // This will be handled by the quality.bitrate in the main command
         }
-        
+
         // Add compression level presets
         switch (this.config.compressionLevel) {
             case 'maximum':
@@ -1168,7 +1168,7 @@ class HLSConverter {
                 settings.push('-preset', 'fast', '-tune', 'film');
                 break;
         }
-        
+
         // Add adaptive bitrate settings
         if (this.config.adaptiveBitrate) {
             settings.push(
@@ -1178,7 +1178,7 @@ class HLSConverter {
                 '-refs', '6'
             );
         }
-        
+
         return settings;
     }
 
@@ -1238,7 +1238,7 @@ class HLSConverter {
             console.error(`❌ createMasterPlaylist called without videoInfo for ${videoName}`);
             return;
         }
-        
+
         const masterPlaylistPath = path.join(hlsDir, 'master.m3u8');
 
         let masterContent = '#EXTM3U\n#EXT-X-VERSION:6\n\n';
@@ -1316,64 +1316,64 @@ class HLSConverter {
         if (!this.config.adaptiveStreaming) {
             return this.getEqualQuality(sourceHeight);
         }
-        
+
         // If smart quality selection is disabled, return all qualities
         if (!this.config.smartQualitySelection) {
             return this.config.qualities;
         }
-        
+
         const applicableQualities = [];
         const minHeight = sourceHeight * this.config.minQualityRatio;
         const maxHeight = sourceHeight * this.config.maxQualityRatio;
-        
+
         console.log(`🎯 Quality range: ${Math.round(minHeight)}p - ${Math.round(maxHeight)}p (source: ${sourceHeight}p)`);
-        
+
         for (const quality of this.config.qualities) {
             const qualityHeight = parseInt(quality.resolution.split('x')[1]);
-            
+
             // Only include qualities that are within the acceptable range
             if (qualityHeight >= minHeight && qualityHeight <= maxHeight) {
                 applicableQualities.push(quality);
             }
         }
-        
+
         // If no qualities are applicable (very low resolution source), 
         // include the lowest quality as a fallback
         if (applicableQualities.length === 0) {
             console.log(`⚠️  No applicable qualities found, using lowest quality as fallback`);
             applicableQualities.push(this.config.qualities[this.config.qualities.length - 1]);
         }
-        
+
         // Sort by resolution (highest first)
         applicableQualities.sort((a, b) => {
             const aHeight = parseInt(a.resolution.split('x')[1]);
             const bHeight = parseInt(b.resolution.split('x')[1]);
             return bHeight - aHeight;
         });
-        
+
         return applicableQualities;
     }
 
     getEqualQuality(sourceHeight) {
         // Find the quality that best matches the source resolution
         const sourceHeightInt = parseInt(sourceHeight);
-        
+
         // Find the closest quality to source resolution
         let bestMatch = this.config.qualities[0]; // Default to first quality
         let minDifference = Math.abs(parseInt(bestMatch.resolution.split('x')[1]) - sourceHeightInt);
-        
+
         for (const quality of this.config.qualities) {
             const qualityHeight = parseInt(quality.resolution.split('x')[1]);
             const difference = Math.abs(qualityHeight - sourceHeightInt);
-            
+
             if (difference < minDifference) {
                 minDifference = difference;
                 bestMatch = quality;
             }
         }
-        
+
         console.log(`🎯 Equal quality mode: Using ${bestMatch.name} (${bestMatch.resolution}) for ${sourceHeight}p source`);
-        
+
         return [bestMatch];
     }
 
@@ -1387,7 +1387,7 @@ class HLSConverter {
         // If we have misaligned files, prioritize them
         if (this.misalignedFiles && this.misalignedFiles.length > 0) {
             console.log('🔧 Prioritizing misaligned files for re-conversion...\n');
-            
+
             // Clean up misaligned files first
             for (const misalignedFile of this.misalignedFiles) {
                 console.log(`🗑️  Cleaning up misaligned HLS directory: ${misalignedFile.name}`);
@@ -1451,7 +1451,7 @@ class HLSConverter {
                             this.stats.processedFiles++;
                             console.log(`✅ Completed: ${videoInfo.name}`);
                         }
-                        
+
                         // State saving disabled
                     } else {
                         this.stats.failedFiles++;
@@ -1525,12 +1525,12 @@ class HLSConverter {
     async run() {
         try {
             await this.initialize();
-            
+
             // If validation-only mode, don't process videos
             if (this.config.validateOnly) {
                 return;
             }
-            
+
             await this.processVideos();
             await this.generateReport();
         } catch (error) {

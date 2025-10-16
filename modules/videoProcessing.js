@@ -40,7 +40,7 @@ async function getVideoDuration(videoPath) {
     const isHLS = ext === '.m3u8';
     const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
     const relativePath = path.relative(basePath, videoPath);
-    
+
     if (durationCache[relativePath]) {
         return durationCache[relativePath];
     }
@@ -51,7 +51,7 @@ async function getVideoDuration(videoPath) {
         const command = `"${ffprobePath}" -v quiet -show_entries format=duration -of csv="p=0" "${videoPath}"`;
         const { stdout } = await execAsync(command);
         const duration = parseFloat(stdout.trim());
-        
+
         if (!isNaN(duration) && duration > 0) {
             // Cache the result
             durationCache[relativePath] = duration;
@@ -61,7 +61,7 @@ async function getVideoDuration(videoPath) {
     } catch (error) {
         console.error(`Error getting duration for ${videoPath}:`, error.message);
     }
-    
+
     return null;
 }
 
@@ -76,7 +76,7 @@ async function getHLSDuration(masterPlaylistPath) {
             }
             return null;
         }
-        
+
         // Check if file exists before trying to read it
         try {
             await fsPromises.access(masterPlaylistPath);
@@ -84,10 +84,10 @@ async function getHLSDuration(masterPlaylistPath) {
             console.warn(`HLS file not found: ${masterPlaylistPath}`);
             return null;
         }
-        
+
         const content = await fsPromises.readFile(masterPlaylistPath, 'utf8');
         const lines = content.split('\n');
-        
+
         for (const line of lines) {
             if (line.startsWith('#EXT-X-TARGETDURATION:')) {
                 const targetDuration = parseFloat(line.split(':')[1]);
@@ -95,14 +95,14 @@ async function getHLSDuration(masterPlaylistPath) {
                 return segmentCount * targetDuration;
             }
         }
-        
+
         const hlsInfo = await getHLSInfo(masterPlaylistPath);
         if (hlsInfo.qualities.length > 0) {
             const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
             try {
                 const qualityContent = await fsPromises.readFile(firstQualityPath, 'utf8');
                 const qualityLines = qualityContent.split('\n');
-                
+
                 let totalDuration = 0;
                 for (const line of qualityLines) {
                     if (line.startsWith('#EXTINF:')) {
@@ -115,7 +115,7 @@ async function getHLSDuration(masterPlaylistPath) {
                 // Could not read quality playlist for duration
             }
         }
-        
+
         return null;
     } catch (error) {
         console.error('Error getting HLS duration:', error);
@@ -137,11 +137,11 @@ async function getHLSInfo(masterPlaylistPath) {
                 totalQualities: 0
             };
         }
-        
+
         const content = await fsPromises.readFile(masterPlaylistPath, 'utf8');
         const lines = content.split('\n');
         const qualities = [];
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith('#EXT-X-STREAM-INF:')) {
@@ -150,7 +150,7 @@ async function getHLSInfo(masterPlaylistPath) {
                     const bandwidthMatch = line.match(/BANDWIDTH=(\d+)/);
                     const resolutionMatch = line.match(/RESOLUTION=(\d+x\d+)/);
                     const codecsMatch = line.match(/CODECS="([^"]+)"/);
-                    
+
                     qualities.push({
                         quality: resolutionMatch ? resolutionMatch[1] : 'unknown',
                         bandwidth: bandwidthMatch ? parseInt(bandwidthMatch[1]) : 0,
@@ -160,7 +160,7 @@ async function getHLSInfo(masterPlaylistPath) {
                 }
             }
         }
-        
+
         return {
             isMasterPlaylist: true,
             qualities: qualities,
@@ -180,7 +180,7 @@ async function getHLSInfo(masterPlaylistPath) {
 async function getHLSThumbnail(masterPlaylistPath) {
     try {
         // Get HLS thumbnail
-        
+
         // Check if thumbnail already exists
         // For HLS files, calculate relative path from hls folder instead of videos folder
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -188,15 +188,15 @@ async function getHLSThumbnail(masterPlaylistPath) {
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
-        
+
         // Check if thumbnail exists
-        
+
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
             // HLS thumbnail found
             return thumbnailUrl;
         }
-        
+
         // HLS thumbnail not found
         return null;
     } catch (error) {
@@ -210,24 +210,24 @@ async function generateHLSThumbnail(masterPlaylistPath) {
     try {
         console.log('🔄 Generating HLS thumbnail for:', masterPlaylistPath);
         console.log('🔄 HLS thumbnail generation started at:', new Date().toISOString());
-        
+
         // For HLS files, calculate relative path from hls folder instead of videos folder
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         const relativePath = path.relative(hlsRootPath, masterPlaylistPath);
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
-        
+
         console.log('🔄 HLS thumbnail details:');
         console.log('  📁 Safe name:', safeName);
-        
+
         // Check if existing thumbnail needs updating
         if (fs.existsSync(thumbnailPath)) {
             const stats = fs.statSync(thumbnailPath);
             const fileAge = Date.now() - stats.mtime.getTime();
             const isOldThumbnail = fileAge > 24 * 60 * 60 * 1000; // Older than 24 hours
             const isSmallThumbnail = stats.size < 5000; // Smaller than 5KB
-            
+
             if (isOldThumbnail || isSmallThumbnail) {
                 console.log('🔄 HLS thumbnail needs updating');
                 fs.unlinkSync(thumbnailPath);
@@ -236,13 +236,13 @@ async function generateHLSThumbnail(masterPlaylistPath) {
                 return thumbnailUrl; // Return existing thumbnail
             }
         }
-        
+
         // Try to generate thumbnail from first quality segment
         const hlsInfo = await getHLSInfo(masterPlaylistPath);
-        
+
         if (hlsInfo.qualities.length > 0) {
             const firstQualityPath = path.join(path.dirname(masterPlaylistPath), hlsInfo.qualities[0].playlist);
-            
+
             // Get HLS duration to determine optimal thumbnail time
             let duration = null;
             try {
@@ -250,11 +250,11 @@ async function generateHLSThumbnail(masterPlaylistPath) {
             } catch (error) {
                 // Use default time if duration unavailable
             }
-            
+
             const optimalTime = getOptimalThumbnailTime(duration);
             const seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
             const success = await generateThumbnailAsync(firstQualityPath, thumbnailPath);
-            
+
             if (success && fs.existsSync(thumbnailPath)) {
                 const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
                 // HLS thumbnail generated successfully
@@ -304,14 +304,14 @@ function getThumbnailUrl(videoPath) {
         const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
         const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
         const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
-        
+
         // Check if thumbnail exists
-        
+
         if (fs.existsSync(thumbnailPath)) {
             const thumbnailUrl = `/thumbnails/${encodeURIComponent(safeName + '.jpg')}`;
             return thumbnailUrl;
         }
-        
+
         console.log('❌ Thumbnail not found for:', videoPath);
         return null;
     } catch (error) {
@@ -325,7 +325,7 @@ function getOptimalThumbnailTime(duration) {
     if (!duration || duration <= 0) {
         return 15; // Default to 15 seconds if duration is unknown
     }
-    
+
     if (duration >= 300) { // 5 minutes or longer
         return 30;
     } else if (duration >= 120) { // 2 minutes or longer
@@ -345,14 +345,14 @@ function getOptimalThumbnailTime(duration) {
 async function generateThumbnailAsync(videoPath, thumbnailPath) {
     try {
         console.log('🔄 Generating thumbnail for:', videoPath);
-        
+
         // Force delete existing thumbnail to ensure regeneration
         if (fs.existsSync(thumbnailPath)) {
             const stats = fs.statSync(thumbnailPath);
             const fileAge = Date.now() - stats.mtime.getTime();
             const isOldThumbnail = fileAge > 24 * 60 * 60 * 1000; // Older than 24 hours
             const isSmallThumbnail = stats.size < 5000; // Smaller than 5KB
-            
+
             if (isOldThumbnail || isSmallThumbnail) {
                 console.log('🔄 Updating thumbnail');
                 fs.unlinkSync(thumbnailPath);
@@ -360,7 +360,7 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
                 return true; // Skip regeneration
             }
         }
-        
+
         // Get video duration and determine optimal thumbnail time
         let duration = null;
         try {
@@ -368,53 +368,53 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
         } catch (error) {
             // Use default time if duration unavailable
         }
-        
+
         const optimalTime = getOptimalThumbnailTime(duration);
         let seekTime = duration && duration > 0 ? Math.min(optimalTime, duration - 1) : optimalTime;
         seekTime = Math.max(15, seekTime);
-        
+
         const ffmpegPath = getFFmpegPath();
-        
+
         // Try multiple time points if the first attempt fails
         const timePoints = [seekTime, 15, 20, 25, 30].filter(time => time >= 15 && time <= (duration || 60));
         if (timePoints.length === 0) {
             timePoints.push(15);
         }
-        
+
         // Special handling for very short videos
         if (duration && duration < 15) {
             const middleTime = Math.max(1, Math.floor(duration / 2));
             timePoints.unshift(middleTime);
         }
-        
+
         for (let i = 0; i < timePoints.length; i++) {
             const currentTime = timePoints[i];
             const timeString = currentTime.toString();
-            
+
             const isHLS = videoPath.includes('.m3u8');
-            const command = isHLS ? 
+            const command = isHLS ?
                 `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 -live_start_index -1 "${thumbnailPath}"` :
                 `"${ffmpegPath}" -accurate_seek -ss ${timeString} -i "${videoPath}" -vframes 1 -q:v 2 "${thumbnailPath}"`;
-            
+
             console.log(`🔄 FFmpeg attempt ${i + 1}/${timePoints.length} at ${currentTime}s`);
-            
+
             const startTime = Date.now();
             try {
                 await execAsync(command);
                 const endTime = Date.now();
                 const executionTime = endTime - startTime;
-                
+
                 // Check if thumbnail was created
                 if (fs.existsSync(thumbnailPath)) {
                     const stats = fs.statSync(thumbnailPath);
                     console.log('✅ Thumbnail generated successfully!');
-                    
+
                     // Check if thumbnail is not just a black frame
                     if (stats.size < 1000) {
                         console.log('⚠️ Thumbnail too small, trying next time point...');
                         continue;
                     }
-                    
+
                     return true;
                 } else {
                     console.log(`❌ Thumbnail not created, trying next time point...`);
@@ -422,14 +422,14 @@ async function generateThumbnailAsync(videoPath, thumbnailPath) {
             } catch (error) {
                 console.log(`❌ FFmpeg failed, trying next time point...`);
             }
-            
+
             // If we've tried all time points, give up
             if (i === timePoints.length - 1) {
                 console.log('❌ All thumbnail generation attempts failed');
                 return false;
             }
         }
-        
+
         console.log('❌ All thumbnail generation attempts failed');
         return false;
     } catch (error) {
@@ -445,15 +445,15 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
         console.log('Warning: findVideosWithoutThumbnails called with undefined dirPath');
         return videoList;
     }
-    
+
     try {
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             if (videoList.length >= maxVideos) break;
-            
+
             const fullPath = path.join(dirPath, entry.name);
-            
+
             if (entry.isDirectory()) {
                 // Skip hidden directories and system directories
                 if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
@@ -467,7 +467,7 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                     if (isHLS && entry.name !== 'master.m3u8') {
                         continue; // Skip quality playlist files
                     }
-                    
+
                     // Skip HLS files in videos directory - they should only be in hls directory
                     if (isHLS && fullPath.includes(VIDEOS_ROOT)) {
                         if (!warnedFiles.has(fullPath)) {
@@ -476,16 +476,16 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
                         }
                         continue;
                     }
-                    
+
                     // For HLS files, use hls folder as base, otherwise use videos folder
                     const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                     const relativePath = path.relative(basePath, fullPath);
                     const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
                     const safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
-                    
+
                     // Check if HLS thumbnail exists
-                    
+
                     if (!fs.existsSync(thumbnailPath)) {
                         videoList.push({
                             path: fullPath,
@@ -501,14 +501,14 @@ async function findVideosWithoutThumbnails(dirPath, videoList = [], maxVideos = 
     } catch (error) {
         console.log(`Skipping directory ${dirPath || 'unknown'}: ${error.message}`);
     }
-    
+
     return videoList;
 }
 
 // Function to generate all missing thumbnails on startup
 async function generateAllMissingThumbnails() {
     console.log('🔍 Scanning for videos without thumbnails...');
-    
+
     try {
         // Always start with HLS directory first
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -516,23 +516,23 @@ async function generateAllMissingThumbnails() {
         if (fs.existsSync(hlsRootPath)) {
             hlsVideosWithoutThumbnails = await findVideosWithoutThumbnails(hlsRootPath);
         }
-        
+
         // Then scan videos directory
         const videosWithoutThumbnails = await findVideosWithoutThumbnails(VIDEOS_ROOT);
-        
+
         // Combine with HLS first, then regular videos
         const allVideosWithoutThumbnails = [...hlsVideosWithoutThumbnails, ...videosWithoutThumbnails];
-        
+
         if (allVideosWithoutThumbnails.length === 0) {
             console.log('✅ All videos already have thumbnails');
             return;
         }
-        
+
         console.log(`📸 Found ${allVideosWithoutThumbnails.length} videos without thumbnails (${hlsVideosWithoutThumbnails.length} HLS, ${videosWithoutThumbnails.length} regular)`);
         console.log('🔄 Generating thumbnails in background (HLS FIRST)...');
         const startTime = new Date().toISOString();
         console.log('🔄 Background generation started at:', startTime);
-        
+
         // Log HLS files that need thumbnails (PRIORITY)
         if (hlsVideosWithoutThumbnails.length > 0) {
             console.log('📸 HLS files needing thumbnails (PRIORITY):');
@@ -540,7 +540,7 @@ async function generateAllMissingThumbnails() {
                 console.log(`  ${index + 1}. ${video.name} (${video.path})`);
             });
         }
-        
+
         // Log regular videos that need thumbnails (SECONDARY)
         if (videosWithoutThumbnails.length > 0) {
             console.log('📸 Regular videos needing thumbnails (SECONDARY):');
@@ -548,14 +548,14 @@ async function generateAllMissingThumbnails() {
                 console.log(`  ${index + 1}. ${video.name} (${video.path})`);
             });
         }
-        
+
         let generated = 0;
         let failed = 0;
-        
+
         for (const video of allVideosWithoutThumbnails) {
             try {
                 let relativePath, safeName;
-                
+
                 if (video.isHLS && video.extension === '.m3u8') {
                     // For HLS files, calculate relative path from hls folder
                     const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
@@ -564,11 +564,11 @@ async function generateAllMissingThumbnails() {
                     // For regular video files, calculate relative path from videos folder
                     relativePath = path.relative(VIDEOS_ROOT, video.path);
                 }
-                
+
                 const pathWithoutExt = relativePath.replace(/\.[^/.]+$/, '');
                 safeName = pathWithoutExt.replace(/[^a-zA-Z0-9._-]/g, '_');
                 const thumbnailPath = path.join(__dirname, '..', 'thumbnails', safeName + '.jpg');
-                
+
                 // For HLS files, use the same logic as generateHLSThumbnail
                 if (video.isHLS && video.extension === '.m3u8') {
                     console.log(`🔄 Processing HLS file (PRIORITY): ${video.name}`);
@@ -592,21 +592,21 @@ async function generateAllMissingThumbnails() {
                         console.log(`❌ Failed to generate thumbnail for: ${video.name}`);
                     }
                 }
-                
+
                 // Log progress every 10 videos
                 if ((generated + failed) % 10 === 0) {
                     console.log(`📸 Progress: ${generated + failed}/${allVideosWithoutThumbnails.length} processed`);
                 }
-                
+
             } catch (error) {
                 console.error(`Error generating thumbnail for ${video.name}:`, error.message);
                 failed++;
             }
         }
-        
+
         const endTime = new Date().toISOString();
         const totalTime = Date.now() - new Date(startTime).getTime();
-        
+
         console.log(`✅ Thumbnail generation complete: ${generated} generated, ${failed} failed`);
         console.log('📊 Generation summary:');
         console.log('  ⏱️ Start time:', startTime);
@@ -615,7 +615,7 @@ async function generateAllMissingThumbnails() {
         console.log('  📸 Generated:', generated);
         console.log('  ❌ Failed:', failed);
         console.log('  📊 Success rate:', `${Math.round((generated / (generated + failed)) * 100)}%`);
-        
+
     } catch (error) {
         console.error('❌ Error during thumbnail generation:', error);
         console.error('❌ Error details:', {
@@ -632,15 +632,15 @@ async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
         console.log('Warning: findAllVideos called with undefined dirPath');
         return videoList;
     }
-    
+
     try {
         const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             if (videoList.length >= maxVideos) break;
-            
+
             const fullPath = path.join(dirPath, entry.name);
-            
+
             if (entry.isDirectory()) {
                 // Skip hidden directories and system directories
                 if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
@@ -657,12 +657,12 @@ async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
                         }
                         continue;
                     }
-                    
+
                     // Determine the correct base path for relative path calculation
                     const isHLS = isHLSFile(ext);
                     const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                     const relativePath = path.relative(basePath, fullPath);
-                    
+
                     videoList.push({
                         path: fullPath,
                         relativePath: relativePath,
@@ -676,43 +676,43 @@ async function findAllVideos(dirPath, videoList = [], maxVideos = 50000) {
     } catch (error) {
         console.log(`Skipping directory ${dirPath || 'unknown'}: ${error.message}`);
     }
-    
+
     return videoList;
 }
 
 // Function to scan all videos and build duration cache
 async function buildDurationCache() {
     console.log('🚀 Building video duration cache...');
-    
+
     try {
         const allVideos = [];
         await findAllVideos(VIDEOS_ROOT, allVideos, 50000);
-        
+
         // Also scan HLS directory for HLS videos
         const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
         if (fs.existsSync(hlsRootPath)) {
             console.log('📁 Scanning HLS directory for videos...');
             await findAllVideos(hlsRootPath, allVideos, 50000);
         }
-        
+
         console.log(`📊 Found ${allVideos.length} videos to process`);
-        
+
         let processed = 0;
         let cached = 0;
-        
+
         for (const video of allVideos) {
             try {
                 // For HLS files, use hls folder as base, otherwise use videos folder
                 const isHLS = video.isHLS && video.extension === '.m3u8';
                 const basePath = isHLS ? path.join(path.dirname(VIDEOS_ROOT), 'hls') : VIDEOS_ROOT;
                 const relativePath = path.relative(basePath, video.path);
-                
+
                 // Check if already in cache
                 if (durationCache[relativePath]) {
                     cached++;
                     continue;
                 }
-                
+
                 // Get duration
                 let duration = null;
                 if (video.isHLS && video.extension === '.m3u8') {
@@ -720,27 +720,27 @@ async function buildDurationCache() {
                 } else {
                     duration = await getVideoDuration(video.path);
                 }
-                
+
                 if (duration && duration > 0) {
                     durationCache[relativePath] = duration;
                     processed++;
                 }
-                
+
                 // Log progress every 50 videos
                 if ((processed + cached) % 50 === 0) {
                     console.log(`📊 Duration cache progress: ${processed + cached}/${allVideos.length} processed`);
                 }
-                
+
             } catch (error) {
                 console.error(`Error processing ${video.name}:`, error.message);
             }
         }
-        
+
         // Save the updated cache
         await saveDurationCache();
-        
+
         console.log(`✅ Duration cache complete: ${processed} new entries, ${cached} already cached`);
-        
+
     } catch (error) {
         console.error('Error building duration cache:', error);
     }

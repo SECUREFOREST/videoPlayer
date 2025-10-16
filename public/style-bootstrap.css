@@ -54,7 +54,8 @@
     border: 1px solid var(--bs-border-color);
     border-radius: 0.5rem;
     background: var(--bs-secondary-bg);
-    transform: translateZ(0); /* Hardware acceleration */
+    transform: translateZ(0);
+    /* Hardware acceleration */
 }
 
 .file-item:hover {
@@ -95,7 +96,8 @@
     border-radius: 0.5rem;
     background: var(--bs-secondary-bg);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform: translateZ(0); /* Hardware acceleration */
+    transform: translateZ(0);
+    /* Hardware acceleration */
 }
 
 .file-grid-item:hover {
@@ -541,9 +543,11 @@
         background-position: 200% 0;
         opacity: 0.6;
     }
+
     50% {
         opacity: 1;
     }
+
     100% {
         background-position: -200% 0;
         opacity: 0.6;
