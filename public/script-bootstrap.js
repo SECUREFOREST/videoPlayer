@@ -334,7 +334,6 @@ class ModernVideoPlayerBrowser {
                 thumbnailHtml = `
                     <div class="file-thumbnail me-2 me-md-3 position-relative" style="width: 60px; height: 45px; background-color: #1F2937; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <img src="${item.thumbnailUrl}" 
-                             alt="Thumbnail for ${item.name}" 
                              class="img-fluid rounded" 
                              style="width: 100%; height: 100%; object-fit: cover;"
                              loading="lazy"
@@ -413,7 +412,6 @@ class ModernVideoPlayerBrowser {
                 if (thumbnailContainer) {
                     thumbnailContainer.innerHTML = `
                         <img src="${item.thumbnailUrl}" 
-                             alt="Thumbnail for ${item.name}" 
                              class="img-fluid rounded" 
                              style="width: 100%; height: 120px; object-fit: cover;"
                              loading="lazy"
@@ -1442,7 +1440,6 @@ class ModernVideoPlayerBrowser {
             if (item.isVideo && item.thumbnailUrl) {
                 thumbnailHtml = `
                     <img src="${item.thumbnailUrl}" 
-                         alt="Thumbnail for ${item.name}" 
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
@@ -1763,7 +1760,6 @@ class ModernVideoPlayerBrowser {
             if (video.isVideo && video.thumbnailUrl) {
                 thumbnailHtml = `
                     <img src="${video.thumbnailUrl}" 
-                         alt="Thumbnail for ${video.name}" 
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
@@ -1989,7 +1985,6 @@ class ModernVideoPlayerBrowser {
             if (favorite.isVideo && favorite.thumbnailUrl) {
                 thumbnailHtml = `
                     <img src="${favorite.thumbnailUrl}" 
-                         alt="Thumbnail for ${favorite.name}" 
                          class="img-fluid rounded" 
                          style="width: 100%; height: 120px; object-fit: cover;"
                          loading="lazy"
