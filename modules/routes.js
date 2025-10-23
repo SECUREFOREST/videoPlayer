@@ -770,7 +770,15 @@ router.get('/api/playlists', async (req, res) => {
                             if (isHLSFile(ext) || isHLSDirectory) {
                                 // For HLS files, use the HLS directory as base
                                 const hlsRootPath = path.join(path.dirname(VIDEOS_ROOT), 'hls');
-                                absolutePath = path.isAbsolute(processedPath) ? processedPath : path.join(hlsRootPath, processedPath);
+                                if (path.isAbsolute(processedPath)) {
+                                    absolutePath = processedPath;
+                                } else if (processedPath.startsWith('hls/')) {
+                                    // Remove 'hls/' prefix since we're already in the hls directory
+                                    const relativePath = processedPath.substring(4); // Remove 'hls/' prefix
+                                    absolutePath = path.join(hlsRootPath, relativePath);
+                                } else {
+                                    absolutePath = path.join(hlsRootPath, processedPath);
+                                }
                             } else {
                                 // For regular video files, use VIDEOS_ROOT
                                 absolutePath = path.isAbsolute(item.path) ? item.path : path.join(VIDEOS_ROOT, item.path);
