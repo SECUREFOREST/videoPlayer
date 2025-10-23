@@ -106,8 +106,14 @@ async function getHLSDuration(masterPlaylistPath) {
                 let totalDuration = 0;
                 for (const line of qualityLines) {
                     if (line.startsWith('#EXTINF:')) {
-                        const duration = parseFloat(line.split(':')[1].split(',')[0]);
-                        totalDuration += duration;
+                        const parts = line.split(':');
+                        if (parts.length > 1) {
+                            const durationPart = parts[1].split(',')[0];
+                            const duration = parseFloat(durationPart);
+                            if (!isNaN(duration)) {
+                                totalDuration += duration;
+                            }
+                        }
                     }
                 }
                 return totalDuration;

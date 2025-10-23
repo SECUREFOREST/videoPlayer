@@ -242,7 +242,7 @@ app.use('/videos', express.static(VIDEOS_ROOT, {
 const masterPlaylistStore = new Map();
 
 // Clean up old sessions periodically (every 30 minutes)
-setInterval(() => {
+const sessionCleanupInterval = setInterval(() => {
     const now = Date.now();
     const maxAge = 30 * 60 * 1000; // 30 minutes
 
@@ -253,6 +253,19 @@ setInterval(() => {
         }
     }
 }, 30 * 60 * 1000);
+
+// Clean up interval on server shutdown
+process.on('SIGINT', () => {
+    console.log('Cleaning up session cleanup interval...');
+    clearInterval(sessionCleanupInterval);
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('Cleaning up session cleanup interval...');
+    clearInterval(sessionCleanupInterval);
+    process.exit(0);
+});
 
 // Helper function to get a consistent session identifier
 function getSessionId(req) {

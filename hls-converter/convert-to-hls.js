@@ -369,8 +369,13 @@ class HLSConverter {
 
             if (this.platform === 'win32') {
                 // Windows returns bytes, convert to GB
-                const bytes = parseFloat(stdout.split('=')[1]);
-                freeSpace = bytes / (1024 * 1024 * 1024);
+                const parts = stdout.split('=');
+                if (parts.length > 1) {
+                    const bytes = parseFloat(parts[1]);
+                    if (!isNaN(bytes)) {
+                        freeSpace = bytes / (1024 * 1024 * 1024);
+                    }
+                }
             } else {
                 // Unix/Linux/macOS returns GB
                 freeSpace = parseFloat(stdout.trim());
@@ -464,9 +469,15 @@ class HLSConverter {
 
             for (const line of lines) {
                 if (line.startsWith('#EXTINF:')) {
-                    const duration = parseFloat(line.split(':')[1].split(',')[0]);
-                    totalDuration += duration;
-                    segmentCount++;
+                    const parts = line.split(':');
+                    if (parts.length > 1) {
+                        const durationPart = parts[1].split(',')[0];
+                        const duration = parseFloat(durationPart);
+                        if (!isNaN(duration)) {
+                            totalDuration += duration;
+                            segmentCount++;
+                        }
+                    }
                 }
             }
 
@@ -1248,8 +1259,10 @@ class HLSConverter {
 
         // Sort by quality (highest first) for better adaptive streaming
         successfulConversions.sort((a, b) => {
-            const aHeight = parseInt(this.getResolutionForQuality(a.quality).split('x')[1]);
-            const bHeight = parseInt(this.getResolutionForQuality(b.quality).split('x')[1]);
+            const aResolution = this.getResolutionForQuality(a.quality);
+            const bResolution = this.getResolutionForQuality(b.quality);
+            const aHeight = parseInt(aResolution.split('x')[1]) || 0;
+            const bHeight = parseInt(bResolution.split('x')[1]) || 0;
             return bHeight - aHeight;
         });
 
